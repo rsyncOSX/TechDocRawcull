@@ -211,10 +211,10 @@ flowchart TD
     B --> D{Both f and s\navailable?}
 
     D -->|Yes| E["blended = f × (1 − w) + s × w\nwhere w = salientWeight"]
-    E --> F{frac > 0.62?}
+    E --> F{"frac > 0.62?"}
     F -->|Yes| G["over = min(1, (frac − 0.62) / 0.38)\nblended ×= 1 − 0.55 × over"]
     F -->|No| H[No silhouette penalty]
-    G --> I{Vision saliency\n(not AF)?}
+    G --> I{"Vision saliency\n(not AF)?"}
     H --> I
     I -->|Yes| J["blended ×= 1 + area × subjectSizeFactor"]
     I -->|No| K[No size bonus for AF region]
