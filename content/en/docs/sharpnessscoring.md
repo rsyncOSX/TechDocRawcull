@@ -212,8 +212,7 @@ flowchart TD
 
     D -->|Yes| E["blended = f × (1 − w) + s × w\nwhere w = salientWeight"]
     E --> F{frac > 0.62?}
-    F -->|Yes| G["over = min(1, (frac − 0.62) / 0.38)
-blended ×= 1 − 0.55 × over"]
+    F -->|Yes| G["over = min(1, (frac − 0.62) / 0.38)\nblended ×= 1 − 0.55 × over"]
     F -->|No| H[No silhouette penalty]
     G --> I{Vision saliency\n(not AF)?}
     H --> I
@@ -224,8 +223,7 @@ blended ×= 1 − 0.55 × over"]
 
     D -->|s only| M([return s])
     C --> N{f available?}
-    N -->|Yes| O["p = 1 − salientWeight
-return f × p³"]
+    N -->|Yes| O["p = 1 − salientWeight\nreturn f × p³"]
     N -->|No| P([return nil])
 ```
 
