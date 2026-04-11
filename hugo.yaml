@@ -1,5 +1,5 @@
-baseURL: https://rawcull.netlify.app
-title: RawCull documents
+baseURL: https://techrawcull.netlify.app
+title: RawCull Tech documents
 
 # cSpell:ignore goldmark github hugo readingtime docsy subdir lastmod pygments linenos catmullrom norsk gu
 
@@ -218,6 +218,6 @@ module:
     - path: github.com/google/docsy
       disable: false
 
-services:
-  googleAnalytics:
-    id: G-5JSXW3Q8DG
+#services:
+#  googleAnalytics:
+#    id: G-5JSXW3Q8DG
