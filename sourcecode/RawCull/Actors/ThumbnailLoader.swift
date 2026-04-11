@@ -1,0 +1,96 @@
+//
+//  ThumbnailLoader.swift
+//  RawCull
+//
+//  Created by Thomas Evensen on 07/03/2026.
+//
+
+import AppKit
+import Foundation
+import OSLog
+
+/// ThumbnailLoader.swift - A shared, rate-limited thumbnail loader
+actor ThumbnailLoader {
+    static let shared = ThumbnailLoader()
+
+    private let maxConcurrent = 6
+    private var activeTasks = 0
+    private var pendingContinuations: [(id: UUID, continuation: CheckedContinuation<Void, Never>)] = []
+    private var cachedSettings: SavedSettings?
+
+    /// Cached settings so we don't hammer the settings actor
+    func getSettings() async -> SavedSettings {
+        if let cachedSettings { return cachedSettings }
+        let settings = await SettingsViewModel.shared.asyncgetsettings()
+        cachedSettings = settings
+        return settings
+    }
+
+    private func acquireSlot() async {
+        if activeTasks < maxConcurrent {
+            activeTasks += 1
+            return
+        }
+
+        let id = UUID()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                pendingContinuations.append((id: id, continuation: continuation))
+            }
+            activeTasks += 1
+        } onCancel: {
+            Task {
+                await self.removeAndResumePendingContinuation(id: id)
+            }
+        }
+    }
+
+    private func removeAndResumePendingContinuation(id: UUID) {
+        if let index = pendingContinuations.firstIndex(where: { $0.id == id }) {
+            let entry = pendingContinuations.remove(at: index)
+            entry.continuation.resume()
+        }
+    }
+
+    private func releaseSlot() {
+        activeTasks -= 1
+        if let next = pendingContinuations.first {
+            pendingContinuations.removeFirst()
+            next.continuation.resume()
+        }
+    }
+
+    func thumbnailLoader(file: FileItem) async -> NSImage? {
+        await acquireSlot()
+        defer { releaseSlot() }
+
+        // Check for cancellation before doing expensive work
+        guard !Task.isCancelled else { return nil }
+
+        let settings = await getSettings()
+        let cgThumb = await RequestThumbnail.shared.requestThumbnail(
+            for: file.url,
+            targetSize: settings.thumbnailSizePreview,
+        )
+
+        guard !Task.isCancelled else { return nil }
+
+        if let cgThumb {
+            return NSImage(cgImage: cgThumb, size: .zero)
+        }
+        return nil
+    }
+
+    /// Unblocks all continuations that are waiting for a concurrency slot.
+    ///
+    /// **Caller responsibility:** cancel the outer `Task`s that called `thumbnailLoader(file:)`
+    /// *before* calling this method. Only cancelled tasks will hit the `Task.isCancelled`
+    /// guard and return `nil` early; tasks whose outer `Task` is still live will proceed to
+    /// load the thumbnail after being unblocked.
+    func cancelAll() {
+        for entry in pendingContinuations {
+            entry.continuation.resume()
+        }
+        pendingContinuations.removeAll()
+    }
+}

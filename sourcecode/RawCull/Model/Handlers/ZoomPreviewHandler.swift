@@ -1,0 +1,65 @@
+//
+//  ZoomPreviewHandler.swift
+//  RawCull
+//
+//  Created by Thomas Evensen on 08/02/2026.
+//
+
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// Type to handle JPG/preview extraction and window opening
+enum ZoomPreviewHandler {
+    static func handle(
+        file: FileItem,
+        useThumbnailAsZoomPreview: Bool = false,
+        thumbnailSizePreview: Int = 2048,
+        setNSImage: @escaping (NSImage?) -> Void,
+        setCGImage: @escaping (CGImage?) -> Void,
+        openWindow: @escaping (String) -> Void,
+    ) {
+        if useThumbnailAsZoomPreview {
+            Task {
+                let cgThumb = await RequestThumbnail.shared.requestThumbnail(
+                    for: file.url,
+                    targetSize: thumbnailSizePreview,
+                )
+
+                if let cgThumb {
+                    let nsImage = NSImage(cgImage: cgThumb, size: .zero)
+                    setNSImage(nsImage)
+                }
+                openWindow(WindowIdentifier.zoomnsImage.rawValue)
+            }
+        } else {
+            let filejpg = file.url.deletingPathExtension().appendingPathExtension(SupportedFileType.jpg.rawValue)
+            if let cgImage = loadCGImage(from: filejpg) {
+                setCGImage(cgImage)
+                openWindow(WindowIdentifier.zoomcgImage.rawValue)
+            } else {
+                Task {
+                    setCGImage(nil)
+                    // Open the view here to indicate process of extracting the cgImage
+                    openWindow(WindowIdentifier.zoomcgImage.rawValue)
+                    // let extractor = ExtractEmbeddedPreview()
+                    if file.url.pathExtension.lowercased() == SupportedFileType.arw.rawValue {
+                        if let mycgImage = await JPGSonyARWExtractor.jpgSonyARWExtractor(
+                            from: file.url,
+                        ) {
+                            setCGImage(mycgImage)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static func loadCGImage(from url: URL) -> CGImage? {
+        guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil)
+        else {
+            return nil
+        }
+        return cgImage
+    }
+}

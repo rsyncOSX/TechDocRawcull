@@ -1,0 +1,235 @@
+import OSLog
+import SwiftUI
+import UniformTypeIdentifiers
+
+extension KeyPath<FileItem, String>: @unchecked @retroactive Sendable {}
+
+struct RawCullMainView: View {
+    @Environment(\.openWindow) var openWindow
+    @Environment(GridThumbnailViewModel.self) var gridthumbnailviewmodel
+
+    @Bindable var viewModel: RawCullViewModel
+
+    @Binding var nsImage: NSImage?
+    @Binding var cgImage: CGImage?
+
+    // @State var settings: settings?
+    @State private var memoryWarningOpacity: Double = 0.3
+    @State private var memoryMonitorModel = MemoryViewModel(pressureThresholdFactor: 0.85)
+    @State private var columnVisibility = NavigationSplitViewVisibility.doubleColumn
+    @State var showhorizontalthumbnailview: Bool = false
+    @State var showGridThumbnail: Bool = false
+
+    var body: some View {
+        // let _ = Self._printChanges()
+        Group {
+            if showhorizontalthumbnailview {
+                HorizontalMainThumbnailsListView(
+                    viewModel: viewModel,
+                    showhorizontalvertical: $showhorizontalthumbnailview,
+                    cgImage: $cgImage,
+                    nsImage: $nsImage,
+                    scale: $viewModel.scale,
+                    lastScale: $viewModel.lastScale,
+                    offset: $viewModel.offset,
+                )
+                .sheet(isPresented: $viewModel.showcopyARWFilesView) {
+                    CopyARWFilesView(
+                        viewModel: viewModel,
+                        sheetType: $viewModel.sheetType,
+                        selectedSource: $viewModel.selectedSource,
+                        remotedatanumbers: $viewModel.remotedatanumbers,
+                        showcopytask: $viewModel.showcopyARWFilesView,
+                    )
+                }
+            } else if showGridThumbnail {
+                GridThumbnailView(
+                    viewModel: viewModel,
+                    isPresented: $showGridThumbnail,
+                    nsImage: $nsImage,
+                    cgImage: $cgImage,
+                )
+            } else {
+                // Default view starts here
+                NavigationSplitView(columnVisibility: $columnVisibility) {
+                    ARWCatalogSidebarView(
+                        sources: $viewModel.sources,
+                        selectedSource: $viewModel.selectedSource,
+                        isShowingPicker: $viewModel.isShowingPicker,
+                        cullingModel: viewModel.cullingModel,
+                    )
+                } content: {
+                    SidebarARWCatalogFileView(
+                        viewModel: viewModel,
+                        isShowingPicker: $viewModel.isShowingPicker,
+                        progress: $viewModel.progress,
+                        selectedSource: $viewModel.selectedSource,
+                        scanning: $viewModel.scanning,
+                        creatingThumbnails: $viewModel.creatingthumbnails,
+
+                        nsImage: $nsImage,
+                        cgImage: $cgImage,
+                        issorting: viewModel.issorting,
+                        max: viewModel.max,
+                    )
+                    .navigationTitle((viewModel.selectedSource?.name ?? "Files") +
+                        " (\(viewModel.filteredFiles.count) files)")
+                    .searchable(
+                        text: $viewModel.searchText,
+                        placement: .toolbar,
+                        prompt: "Search in \(viewModel.selectedSource?.name ?? "catalog")...",
+                    )
+                    .toolbar { toolbarContent }
+                    .sheet(isPresented: $viewModel.showcopyARWFilesView) {
+                        CopyARWFilesView(
+                            viewModel: viewModel,
+                            sheetType: $viewModel.sheetType,
+                            selectedSource: $viewModel.selectedSource,
+                            remotedatanumbers: $viewModel.remotedatanumbers,
+                            showcopytask: $viewModel.showcopyARWFilesView,
+                        )
+                    }
+                    .alert(viewModel.alertTitle, isPresented: $viewModel.showingAlert) {
+                        switch viewModel.alertType {
+                        case .extractJPGs:
+                            Button("Extract", role: .destructive) {
+                                extractAllJPGS()
+                            }
+                            .frame(width: 100)
+
+                        case .clearRatedFiles:
+                            Button("Clear", role: .destructive) {
+                                if let url = viewModel.selectedSource?.url {
+                                    viewModel.ratingCache = [:]
+                                    viewModel.taggedNamesCache = []
+                                    viewModel.cullingModel.resetSavedFiles(in: url)
+                                }
+                            }
+                            .frame(width: 100)
+
+                        case .none:
+                            EmptyView()
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(viewModel.alertMessage)
+                    }
+                } detail: {
+                    RawCullDetailContainerView(
+                        viewModel: viewModel,
+                        cgImage: $cgImage,
+                        nsImage: $nsImage,
+                        selectedFileID: $viewModel.selectedFileID,
+                        scale: $viewModel.scale,
+                        lastScale: $viewModel.lastScale,
+                        offset: $viewModel.offset,
+                        handleToggleSelection: handleToggleSelection,
+                        abort: abort,
+                    )
+                }
+                .sheet(isPresented: $viewModel.showSavedFiles) {
+                    SavedFilesView()
+                }
+                // .focusedSceneValue(\.tagimage, $viewModel.focustagimage)
+                .focusedSceneValue(\.extractJPGs, $viewModel.focusExtractJPGs)
+                .focusedSceneValue(\.aborttask, $viewModel.focusaborttask)
+                .task {
+                    // Only scan new files if there is a change of source
+                    // guard viewModel.sourcechange == false else { return}
+
+                    let handlers = CreateFileHandlers().createFileHandlers(
+                        fileHandler: { _ in },
+                        maxfilesHandler: { _ in },
+                        estimatedTimeHandler: { _ in },
+                        memorypressurewarning: viewModel.memorypressurewarning,
+                    )
+                    // Set the handler for reporting memorypressurewarning
+                    await SharedMemoryCache.shared.setFileHandlers(handlers)
+                }
+                // --- RIGHT INSPECTOR ---
+                .inspector(isPresented: $viewModel.hideInspector) {
+                    FileInspectorView(
+                        file: $viewModel.selectedFile,
+                    )
+                }
+                .fileImporter(isPresented: $viewModel.isShowingPicker, allowedContentTypes: [.folder]) { result in
+                    handlePickerResult(result)
+                }
+                .task(id: viewModel.selectedSource) {
+                    guard viewModel.currentselectedSource != viewModel.selectedSource else { return }
+                    viewModel.currentselectedSource = viewModel.selectedSource
+
+                    Task(priority: .background) {
+                        if let url = viewModel.selectedSource?.url {
+                            viewModel.scanning.toggle()
+                            await viewModel.handleSourceChange(url: url)
+                        }
+                    }
+                }
+                .onChange(of: viewModel.sortOrder) { _, _ in
+                    Task(priority: .background) {
+                        await viewModel.handleSortOrderChange()
+                    }
+                }
+                .onChange(of: viewModel.searchText) { _, _ in
+                    Task(priority: .background) {
+                        await viewModel.handleSearchTextChange()
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if viewModel.memorypressurewarning {
+                        MemoryWarningLabelView(
+                            style: .full,
+                            memoryWarningOpacity: $memoryWarningOpacity,
+                            onAppearAction: startMemoryWarningFlash,
+                        )
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                    } else if viewModel.softMemoryWarning {
+                        MemoryWarningLabelView(style: .soft)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+                .task {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(for: .seconds(5))
+                        await memoryMonitorModel.updateMemoryStats()
+                        let exceeded = memoryMonitorModel.usedMemory >= memoryMonitorModel.memoryPressureThreshold
+                        if exceeded {
+                            let macOSLevel = SharedMemoryCache.shared.currentPressureLevel
+                            viewModel.softMemoryWarning = macOSLevel == .normal
+                        } else {
+                            viewModel.softMemoryWarning = false
+                        }
+                    }
+                }
+                .onChange(of: viewModel.memorypressurewarning) { _, newValue in
+                    if newValue {
+                        startMemoryWarningFlash()
+                    }
+                }
+            }
+        } // Group
+        .onChange(of: viewModel.selectedFile) { _, newFile in
+            guard let file = newFile else { return }
+            guard viewModel.zoomCGImageWindowFocused || viewModel.zoomNSImageWindowFocused else { return }
+            ZoomPreviewHandler.handle(
+                file: file,
+                useThumbnailAsZoomPreview: viewModel.useThumbnailAsZoomPreview,
+                setNSImage: { nsImage = $0 },
+                setCGImage: { cgImage = $0 },
+                openWindow: { _ in }, // window already open — don't steal focus
+            )
+        }
+    }
+
+    func abort() {
+        viewModel.abort()
+    }
+
+    private func startMemoryWarningFlash() {
+        // Create a continuous slow flashing animation
+        withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+            memoryWarningOpacity = 0.8
+        }
+    }
+}
