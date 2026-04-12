@@ -83,7 +83,13 @@ flowchart TD
 
 ### 1. Thumbnail decode
 
-`ImageIO` extracts the embedded JPEG thumbnail at the requested pixel size (`thumbnailMaxPixelSize`, default 512 px). `kCGImageSourceCreateThumbnailWithTransform: true` applies the EXIF orientation so the image is always right-side up before processing. If no embedded thumbnail is available, the full RAW is decoded with `kCGImageSourceShouldAllowFloat: true`. The full 61 MP pixel data is never read during scoring.
+Decoding uses a two-step strategy:
+
+1. **Binary fallback (primary).** `decodeBinaryFallback` reads the file bytes via `SonyMakerNoteParser.embeddedJPEGLocations` to locate the embedded JPEG (preview, thumbnail, or full JPEG). When found, the JPEG is decoded with `CGImageSource`, then re-rendered through `normalizeToSRGB` into an 8-bit sRGB RGBA `CGContext` so the Metal pipeline always receives a predictable pixel format. This path handles ARW 6.0 (RA16) files where `CGImageSourceCreateThumbnailAtIndex` returns `nil`.
+
+2. **Standard thumbnail (fallback).** If `decodeBinaryFallback` returns `nil`, `decodeThumbnail` calls `CGImageSourceCreateThumbnailAtIndex` with `kCGImageSourceCreateThumbnailFromImageIfAbsent: false`. Setting this to `false` means the thumbnail is only returned if one is already embedded — the full RAW pixel data is never decoded during scoring.
+
+`kCGImageSourceCreateThumbnailWithTransform: true` is applied in both paths so the image is always right-side up before processing.
 
 ### 2. Saliency detection and subject classification
 
@@ -181,7 +187,7 @@ return bandMean × densityFactor
 
 The algorithm scores the **p90–p97 edge band** relative to the p20 noise floor rather than an absolute p95 percentile. The `densityFactor` term applies a **sparse-edge penalty**: if fewer than 6% of pixels fall in the band (i.e., the image has very few edges), the score is scaled down proportionally. Out-of-focus images pass the noise floor check but fail the density check and score low.
 
-Percentiles are computed with an in-place quickselect (average O(n)) rather than a sort, so large Float buffers are processed efficiently.
+Percentiles are computed by sorting the buffer with `vDSP.sort` from the Accelerate framework (O(n log n)). An earlier custom quickselect was replaced because its median-of-one pivot produced O(n²) performance on zero-biased Laplacian output — the typical case for blurry or out-of-focus images at high ISO, where nearly all values are zero.
 
 ### 7. Hard blur gate
 
@@ -326,8 +332,8 @@ Calibration runs automatically before every scoring pass (`calibrateFromBurst` i
 
 **Algorithm:**
 
-1. All files are decoded in parallel (up to 8 concurrent tasks).
-2. Each file is scored with `energyMultiplier = 1.0` (no amplification) and `classify = false`. The same `computeSharpnessScalar` path runs, including saliency detection.
+1. All files are decoded and scored in parallel (up to 8 concurrent tasks) via `computeSharpnessScore(fromRawURL:config:)` — the same two-step decode used during normal scoring (binary fallback → standard thumbnail). `energyMultiplier` is forced to 1.0 and `enableSubjectClassification` is set to `false` for every calibration task.
+2. Each file is scored with `energyMultiplier = 1.0` (no amplification). The same `computeSharpnessScalar` path runs, including saliency detection.
 3. All finite positive scores are collected and sorted.
 4. Percentiles are computed:
 

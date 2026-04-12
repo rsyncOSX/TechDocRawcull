@@ -1,3 +1,4 @@
+import Accelerate
 import AppKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
@@ -165,21 +166,30 @@ final class FocusMaskModel: @unchecked Sendable {
         thumbnailMaxPixelSize: Int = 512,
         afPoint: CGPoint? = nil
     ) async -> (score: Float?, saliency: SaliencyInfo?) {
-        let cgImage: CGImage? = await Task.detached(priority: .userInitiated) {
-            Self.decodeThumbnail(at: url, maxPixelSize: thumbnailMaxPixelSize) ?? Self.decodeImage(at: url)
+        return await Task.detached(priority: .userInitiated) { [context] in
+            let binaryImg = Self.decodeBinaryFallback(at: url, maxPixelSize: thumbnailMaxPixelSize)
+
+            let cgImage: CGImage
+            if let img = binaryImg {
+                cgImage = img
+            } else {
+                guard let img = Self.decodeThumbnail(at: url, maxPixelSize: thumbnailMaxPixelSize) else {
+                    return (nil, nil)
+                }
+                cgImage = img
+            }
+
+            let (region, saliencyInfo) = Self.detectSaliencyAndClassify(
+                for: cgImage, classify: config.enableSubjectClassification)
+            let score = Self.computeSharpnessScalar(
+                from: CIImage(cgImage: cgImage),
+                salientRegion: region,
+                afPoint: afPoint,
+                context: context,
+                config: config
+            )
+            return (score, saliencyInfo)
         }.value
-
-        guard let cgImage else { return (nil, nil) }
-
-        let (region, saliencyInfo) = Self.detectSaliencyAndClassify(for: cgImage, classify: config.enableSubjectClassification)
-        let score = Self.computeSharpnessScalar(
-            from: CIImage(cgImage: cgImage),
-            salientRegion: region,
-            afPoint: afPoint,
-            context: context,
-            config: config
-        )
-        return (score, saliencyInfo)
     }
 
     // MARK: - Decode helpers
@@ -200,13 +210,50 @@ final class FocusMaskModel: @unchecked Sendable {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, srcOptions as CFDictionary) else { return nil }
 
         let thumbOptions: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+            kCGImageSourceCreateThumbnailFromImageIfAbsent: false,
             kCGImageSourceCreateThumbnailFromImageAlways: false,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
             kCGImageSourceShouldCacheImmediately: true
         ]
         return CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary)
+    }
+
+    /// Binary fallback for ARW 6.0 (RA16) files where CGImageSourceCreateThumbnailAtIndex
+    /// returns nil. Reads the embedded JPEG directly from the file bytes via
+    /// SonyMakerNoteParser, bypassing the RA16 decoder entirely.
+    private nonisolated static func decodeBinaryFallback(at url: URL, maxPixelSize: Int) -> CGImage? {
+        guard let locations = SonyMakerNoteParser.embeddedJPEGLocations(from: url),
+              let loc = locations.preview ?? locations.thumbnail ?? locations.fullJPEG,
+              let data = SonyMakerNoteParser.readEmbeddedJPEGData(at: loc, from: url),
+              let src = CGImageSourceCreateWithData(data as CFData, nil)
+        else { return nil }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        guard let raw = CGImageSourceCreateThumbnailAtIndex(src, 0, options as CFDictionary) else { return nil }
+
+        return Self.normalizeToSRGB(raw)
+    }
+
+    /// Re-renders a CGImage through an 8-bit sRGB RGBA CGContext so that the Metal
+    /// pipeline always receives a predictable pixel format, regardless of the
+    /// source JPEG's color space or bit depth.
+    private nonisolated static func normalizeToSRGB(_ image: CGImage) -> CGImage? {
+        guard let srgb = CGColorSpace(name: CGColorSpace.sRGB) else { return image }
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue)
+        guard let ctx = CGContext(
+            data: nil,
+            width: image.width, height: image.height,
+            bitsPerComponent: 8, bytesPerRow: 0,
+            space: srgb, bitmapInfo: bitmapInfo.rawValue
+        ) else { return image }
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return ctx.makeImage() ?? image
     }
 
     // MARK: - Saliency
@@ -268,31 +315,6 @@ final class FocusMaskModel: @unchecked Sendable {
 
     // MARK: - Numeric helpers
 
-    @inline(__always)
-    private nonisolated static func partition(_ a: inout [Float], lo: Int, hi: Int, p: Int) -> Int {
-        let pivot = a[p]
-        a.swapAt(p, hi)
-        var store = lo
-        for i in lo ..< hi where a[i] < pivot {
-            a.swapAt(store, i)
-            store += 1
-        }
-        a.swapAt(store, hi)
-        return store
-    }
-
-    private nonisolated static func quickselect(_ a: inout [Float], k: Int) -> Float {
-        var lo = 0
-        var hi = a.count - 1
-        while true {
-            if lo == hi { return a[lo] }
-            let pivotIndex = (lo + hi) >> 1
-            let p = partition(&a, lo: lo, hi: hi, p: pivotIndex)
-            if k == p { return a[k] }
-            if k < p { hi = p - 1 } else { lo = p + 1 }
-        }
-    }
-
     /// p90–p97 band mean relative to the p20 noise floor, penalized when fewer
     /// than 6% of pixels land in the band (sparse edges → likely out-of-focus).
     nonisolated static func robustTailScore(_ samples: [Float]) -> Float? {
@@ -300,13 +322,18 @@ final class FocusMaskModel: @unchecked Sendable {
         var a = samples
         let n = a.count
 
-        func k(_ p: Float) -> Int {
-            min(max(Int(Float(n - 1) * p), 0), n - 1)
+        // Accelerate SIMD sort: O(n log n), no worst-case O(n²) for equal-value inputs.
+        // The previous quickselect with median-of-one pivot was O(n²) when the Laplacian
+        // output is heavily zero-biased (blurry/out-of-focus images at high ISO).
+        vDSP.sort(&a, sortOrder: .ascending)
+
+        func p(_ frac: Float) -> Float {
+            a[min(max(Int(Float(n - 1) * frac), 0), n - 1)]
         }
 
-        let p20 = quickselect(&a, k: k(0.20))
-        let p90 = quickselect(&a, k: k(0.90))
-        let p97 = quickselect(&a, k: k(0.97))
+        let p20 = p(0.20)
+        let p90 = p(0.90)
+        let p97 = p(0.97)
 
         if p97 <= p90 { return max(0, p90 - p20) }
 
@@ -687,7 +714,6 @@ extension FocusMaskModel {
     ) async -> FocusCalibrationResult? {
         guard !files.isEmpty else { return nil }
 
-        let ctx = self.context
         let tSize = thumbnailMaxPixelSize
         let concurrency = max(1, min(maxConcurrentTasks, files.count))
 
@@ -701,13 +727,17 @@ extension FocusMaskModel {
                 let entry = files[nextIndex]
                 nextIndex += 1
 
-                group.addTask { [baseConfig, ctx, tSize] in
+                group.addTask { [baseConfig, tSize] in
                     var fileConfig = baseConfig
                     fileConfig.energyMultiplier = 1.0
                     fileConfig.iso = entry.iso ?? 400
-                    guard let cgImage = Self.decodeThumbnail(at: entry.url, maxPixelSize: tSize) ?? Self.decodeImage(at: entry.url) else { return nil }
-                    let (region, _) = Self.detectSaliencyAndClassify(for: cgImage, classify: false)
-                    return Self.computeSharpnessScalar(from: CIImage(cgImage: cgImage), salientRegion: region, afPoint: nil, context: ctx, config: fileConfig)
+                    fileConfig.enableSubjectClassification = false
+                    let result = await self.computeSharpnessScore(
+                        fromRawURL: entry.url,
+                        config: fileConfig,
+                        thumbnailMaxPixelSize: tSize
+                    )
+                    return result.score
                 }
             }
 
@@ -718,13 +748,17 @@ extension FocusMaskModel {
                     let entry = files[nextIndex]
                     nextIndex += 1
 
-                    group.addTask { [baseConfig, ctx, tSize] in
+                    group.addTask { [baseConfig, tSize] in
                         var fileConfig = baseConfig
                         fileConfig.energyMultiplier = 1.0
                         fileConfig.iso = entry.iso ?? 400
-                        guard let cgImage = Self.decodeThumbnail(at: entry.url, maxPixelSize: tSize) ?? Self.decodeImage(at: entry.url) else { return nil }
-                        let (region, _) = Self.detectSaliencyAndClassify(for: cgImage, classify: false)
-                        return Self.computeSharpnessScalar(from: CIImage(cgImage: cgImage), salientRegion: region, afPoint: nil, context: ctx, config: fileConfig)
+                        fileConfig.enableSubjectClassification = false
+                        let result = await self.computeSharpnessScore(
+                            fromRawURL: entry.url,
+                            config: fileConfig,
+                            thumbnailMaxPixelSize: tSize
+                        )
+                        return result.score
                     }
                 }
             }
