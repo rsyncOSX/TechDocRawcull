@@ -12,14 +12,18 @@ enum ApertureFilter: String, CaseIterable, Identifiable {
     case wide = "Wide (≤ f/5.6)"
     case landscape = "Landscape (≥ f/8)"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     func matches(_ file: FileItem) -> Bool {
         switch self {
         case .all:
             true
+
         case .wide:
             file.exifData?.apertureValue.map { $0 <= 5.6 } ?? false
+
         case .landscape:
             file.exifData?.apertureValue.map { $0 >= 8.0 } ?? false
         }
@@ -28,11 +32,6 @@ enum ApertureFilter: String, CaseIterable, Identifiable {
 
 @Observable @MainActor
 final class SharpnessScoringModel {
-    enum ShootingMode {
-        case birdsInFlight
-        case perchedWildlife
-    }
-
     var scores: [UUID: Float] = [:]
     var saliencyInfo: [UUID: SaliencyInfo] = [:]
     var isScoring: Bool = false
@@ -67,15 +66,6 @@ final class SharpnessScoringModel {
         focusMaskModel.config = .birdsInFlight
     }
 
-    func applyMode(_ mode: ShootingMode) {
-        switch mode {
-        case .birdsInFlight:
-            focusMaskModel.config = .birdsInFlight
-        case .perchedWildlife:
-            focusMaskModel.config = .perchedWildlife
-        }
-    }
-
     func reset() {
         cancelScoring()
         apertureFilter = .all
@@ -103,7 +93,7 @@ final class SharpnessScoringModel {
             files: fileEntries,
             thumbnailMaxPixelSize: thumbnailMaxPixelSize,
             minSamples: 5,
-            maxConcurrentTasks: 8
+            maxConcurrentTasks: 8,
         ) else {
             Logger.process.warning("SharpnessScoringModel: calibration failed (too few scoreable images)")
             isCalibratingSharpnessScoring = false
@@ -149,7 +139,7 @@ final class SharpnessScoringModel {
                             fromRawURL: url,
                             config: fileConfig,
                             thumbnailMaxPixelSize: thumbSize,
-                            afPoint: afPoint
+                            afPoint: afPoint,
                         )
                         return (id, result.score, result.saliency)
                     }
@@ -188,7 +178,7 @@ final class SharpnessScoringModel {
                                 fromRawURL: url,
                                 config: fileConfig,
                                 thumbnailMaxPixelSize: thumbSize,
-                                afPoint: afPoint
+                                afPoint: afPoint,
                             )
                             return (id, result.score, result.saliency)
                         }
@@ -216,7 +206,7 @@ final class SharpnessScoringModel {
     func applyPreloadedScores(
         _ files: [FileItem],
         preloadedScores: [UUID: Float],
-        preloadedSaliency: [UUID: SaliencyInfo]
+        preloadedSaliency: [UUID: SaliencyInfo],
     ) {
         guard !files.isEmpty else {
             sortBySharpness = false

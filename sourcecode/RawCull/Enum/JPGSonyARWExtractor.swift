@@ -20,9 +20,16 @@ enum JPGSonyARWExtractor {
         return await withCheckedContinuation { (continuation: CheckedContinuation<CGImage?, Never>) in
             // Dispatch to GCD to prevent Thread Pool Starvation
             DispatchQueue.global(qos: .utility).async {
-
-                guard let imageSource = CGImageSourceCreateWithURL(arwURL as CFURL, nil) else {
-                    Logger.process.warning("PreviewExtractor: Failed to create image source")
+                // kCGImageSourceShouldCache: false on the SOURCE prevents ImageIO from
+                // building a process-level cache for the ARW file itself. Without this,
+                // calling CGImageSourceCopyPropertiesAtIndex on the RA16 RAW sensor
+                // data sub-image can cause ImageIO to initialise its RA16 decoder and
+                // allocate hundreds of MB that persist well after the imageSource is
+                // released, because they are held in ImageIO's own internal cache rather
+                // than being owned by the CGImageSource object.
+                let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+                guard let imageSource = CGImageSourceCreateWithURL(arwURL as CFURL, sourceOptions) else {
+                    Logger.process.warning("JPGSonyARWExtractor: Failed to create image source")
                     continuation.resume(returning: nil)
                     return
                 }
@@ -39,7 +46,7 @@ enum JPGSonyARWExtractor {
                         nil,
                     ) as? [CFString: Any]
                     else {
-                        Logger.process.debugMessageOnly("enum: extractEmbeddedPreview(): Index \(index) - Failed to get properties")
+                        Logger.process.debugMessageOnly("JPGSonyARWExtractor: extractEmbeddedPreview(): Index \(index) - Failed to get properties")
                         continue
                     }
 
@@ -56,45 +63,57 @@ enum JPGSonyARWExtractor {
                     }
                 }
 
-                var result: CGImage?
+                var imageIOResult: CGImage?
 
                 if targetIndex != -1 {
                     let requiresDownsampling = CGFloat(targetWidth) > maxThumbnailSize
 
                     // 2. Decode & Downsample using ImageIO directly
                     if requiresDownsampling {
-                        Logger.process.info("PreviewExtractor: Native downsampling to \(maxThumbnailSize)px")
+                        Logger.process.info("JPGSonyARWExtractor: Native downsampling to \(maxThumbnailSize)px")
 
                         let options: [CFString: Any] = [
                             kCGImageSourceCreateThumbnailFromImageAlways: true,
                             kCGImageSourceCreateThumbnailWithTransform: true,
                             kCGImageSourceThumbnailMaxPixelSize: Int(maxThumbnailSize)
                         ]
-                        result = CGImageSourceCreateThumbnailAtIndex(imageSource, targetIndex, options as CFDictionary)
+                        imageIOResult = CGImageSourceCreateThumbnailAtIndex(imageSource, targetIndex, options as CFDictionary)
                     } else {
-                        Logger.process.info("PreviewExtractor: Using original preview size (\(targetWidth)px)")
+                        Logger.process.info("JPGSonyARWExtractor: Using original preview size (\(targetWidth)px)")
 
-                        let decodeOptions: [CFString: Any] = [
-                            kCGImageSourceShouldCache: true,
-                            kCGImageSourceShouldCacheImmediately: true
-                        ]
-                        result = CGImageSourceCreateImageAtIndex(imageSource, targetIndex, decodeOptions as CFDictionary)
+                        // kCGImageSourceShouldCache: false on the decode call prevents
+                        // ImageIO from retaining the decoded pixel buffer separately from
+                        // the returned CGImage.
+                        let decodeOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+                        imageIOResult = CGImageSourceCreateImageAtIndex(imageSource, targetIndex, decodeOptions)
                     }
                 } else {
-                    Logger.process.warning("PreviewExtractor: No JPEG found via ImageIO — trying binary fallback")
+                    Logger.process.warning("JPGSonyARWExtractor: No JPEG found via ImageIO — trying binary fallback")
+                }
+
+                // Evict cache entries for ALL sub-images. Even with source-level caching
+                // disabled, calling CGImageSourceCopyPropertiesAtIndex on the RA16 RAW
+                // sub-image may have seeded residual entries in ImageIO's internal cache.
+                // This belt-and-suspenders call ensures they are freed before imageSource
+                // goes out of scope.
+                for i in 0 ..< imageCount {
+                    CGImageSourceRemoveCacheAtIndex(imageSource, i)
                 }
 
                 // Binary fallback for ARW 6.0 (RA16 decoder unsupported on this macOS version).
                 // Reads the embedded full-resolution JPEG directly from the raw file bytes,
                 // bypassing the RA16 decoder entirely.
-                if result == nil {
-                    result = Self.binaryFallbackJPEG(from: arwURL, fullSize: fullSize, maxSize: maxThumbnailSize)
-                    if result == nil {
-                        Logger.process.warning("PreviewExtractor: Binary fallback also failed for \(arwURL.lastPathComponent)")
+                let finalResult: CGImage?
+                if imageIOResult == nil {
+                    finalResult = Self.binaryFallbackJPEG(from: arwURL, fullSize: fullSize, maxSize: maxThumbnailSize)
+                    if finalResult == nil {
+                        Logger.process.warning("JPGSonyARWExtractor: Binary fallback also failed for \(arwURL.lastPathComponent)")
                     }
+                } else {
+                    finalResult = imageIOResult
                 }
 
-                continuation.resume(returning: result)
+                continuation.resume(returning: finalResult)
             }
         }
     }

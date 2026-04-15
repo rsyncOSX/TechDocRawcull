@@ -59,7 +59,7 @@ extension RawCullMainView {
         }
     }
 
-    func extractAllJPGS() {
+    func extractFilteredFilesJPGS() {
         Task {
             // Using the same property to start the progressview.
             // The text in the Progress is computed to check which
@@ -73,12 +73,11 @@ extension RawCullMainView {
                 memorypressurewarning: { _ in },
             )
 
-            let extract = ExtractAndSaveJPGs()
+            let extract = ExtractAndSaveJPGs(sortedfiles: viewModel.filteredFiles)
             await extract.setFileHandlers(handlers)
             viewModel.currentExtractAndSaveJPGsActor = extract
 
-            guard let url = viewModel.selectedSource?.url else { return }
-            await extract.extractAndSaveAlljpgs(from: url)
+            await extract.extractAndSavejpgs()
 
             viewModel.currentExtractAndSaveJPGsActor = nil // ← NEW: clean up
             viewModel.creatingthumbnails = false

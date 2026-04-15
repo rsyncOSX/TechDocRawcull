@@ -45,6 +45,10 @@ struct GridThumbnailSelectionView: View {
             HStack(spacing: 10) {
                 SharpnessControlsView(viewModel: viewModel, sharpnessThreshold: $sharpnessThreshold)
 
+                Divider().frame(height: 20)
+
+                SimilarityControlsView(viewModel: viewModel)
+
                 // Rating color filter buttons
                 RatingFilterButtons(
                     activeRating: { if case let .rating(n) = ratingFilter { return n }; return nil }(),
@@ -61,7 +65,7 @@ struct GridThumbnailSelectionView: View {
 
                 Spacer()
 
-                CullingStatsView(stats: cullingStats, ratingFilter: $ratingFilter)
+                // CullingStatsView(stats: cullingStats, ratingFilter: $ratingFilter)
             }
             .padding()
             .background(Color.gray.opacity(0.1))
@@ -79,6 +83,25 @@ struct GridThumbnailSelectionView: View {
                     ),
                     max: Double(viewModel.sharpnessModel.scoringTotal),
                     statusText: "Scoring sharpness…",
+                )
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            // Progress view — shown during similarity indexing
+            if viewModel.similarityModel.isIndexing {
+                ProgressCount(
+                    progress: Binding(
+                        get: { Double(viewModel.similarityModel.indexingProgress) },
+                        set: { _ in },
+                    ),
+                    estimatedSeconds: Binding(
+                        get: { viewModel.similarityModel.indexingEstimatedSeconds },
+                        set: { _ in },
+                    ),
+                    max: Double(viewModel.similarityModel.indexingTotal),
+                    statusText: "Indexing similarity…",
                 )
                 .padding(.horizontal)
                 .padding(.vertical, 8)
@@ -129,6 +152,7 @@ struct GridThumbnailSelectionView: View {
         }
         .frame(minWidth: 400, minHeight: 400)
         .animation(.easeInOut(duration: 0.2), value: viewModel.sharpnessModel.isScoring)
+        .animation(.easeInOut(duration: 0.2), value: viewModel.similarityModel.isIndexing)
         .animation(.easeInOut(duration: 0.15), value: ratingFilter)
         .toolbar { gridToolbar }
         .sheet(item: $activeSheet) { sheet in
@@ -180,7 +204,8 @@ struct GridThumbnailSelectionView: View {
     private func handleDoubleSelect(for file: FileItem) {
         viewModel.selectedFile = file
         viewModel.selectedFileID = file.id
-        ZoomPreviewHandler.handle(
+        viewModel.zoomExtractionTask?.cancel()
+        viewModel.zoomExtractionTask = ZoomPreviewHandler.handle(
             file: file,
             useThumbnailAsZoomPreview: viewModel.useThumbnailAsZoomPreview,
             setNSImage: { nsImage = $0 },

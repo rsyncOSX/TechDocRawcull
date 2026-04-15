@@ -90,7 +90,7 @@ struct RawCullMainView: View {
                         switch viewModel.alertType {
                         case .extractJPGs:
                             Button("Extract", role: .destructive) {
-                                extractAllJPGS()
+                                extractFilteredFilesJPGS()
                             }
                             .frame(width: 100)
 
@@ -206,7 +206,8 @@ struct RawCullMainView: View {
         .onChange(of: viewModel.selectedFile) { _, newFile in
             guard let file = newFile else { return }
             guard viewModel.zoomCGImageWindowFocused || viewModel.zoomNSImageWindowFocused else { return }
-            ZoomPreviewHandler.handle(
+            viewModel.zoomExtractionTask?.cancel()
+            viewModel.zoomExtractionTask = ZoomPreviewHandler.handle(
                 file: file,
                 useThumbnailAsZoomPreview: viewModel.useThumbnailAsZoomPreview,
                 setNSImage: { nsImage = $0 },

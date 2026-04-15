@@ -54,8 +54,6 @@ final class RawCullViewModel {
     // Zoom window state
     var zoomCGImageWindowFocused: Bool = false
     var zoomNSImageWindowFocused: Bool = false
-    var pendingCGImageUpdate: CGImage?
-    var pendingNSImageUpdate: NSImage?
 
     // Thumbnail preview zoom state
     var scale: CGFloat = 1.0
@@ -68,6 +66,9 @@ final class RawCullViewModel {
     /// Single shared instance — config changes here affect both the zoom
     /// overlay and the sharpness scoring pipeline.
     var sharpnessModel = SharpnessScoringModel()
+
+    /// Similarity scoring model — Vision feature-print embeddings and distance ranking.
+    var similarityModel = SimilarityScoringModel()
 
     /// URLs for which startAccessingSecurityScopedResource() has been called.
     /// Stopped in deinit to pair every start with a stop.
@@ -97,6 +98,9 @@ final class RawCullViewModel {
     var currentScanAndCreateThumbnailsActor: ScanAndCreateThumbnails?
     var currentExtractAndSaveJPGsActor: ExtractAndSaveJPGs?
     var preloadTask: Task<Void, Never>?
+    /// In-flight ARW→JPEG extraction or thumbnail load task for the zoom window.
+    /// Cancelled when the zoom window closes or a new file is opened for zoom.
+    var zoomExtractionTask: Task<Void, Never>?
 
     // MARK: - Computed
 

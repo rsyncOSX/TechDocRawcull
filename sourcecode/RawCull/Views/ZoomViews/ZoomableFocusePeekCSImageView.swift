@@ -105,6 +105,11 @@ struct ZoomableFocusePeekCSImageView: View {
             }
         }
         .onAppear { isImageFocused = false }
+        .onDisappear {
+            maskTask?.cancel()
+            maskTask = nil
+            focusMask = nil
+        }
         .task(id: cgImage?.hashValue) {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
@@ -129,6 +134,7 @@ struct ZoomableFocusePeekCSImageView: View {
             from: downscaled ?? cgImage,
             scale: 1.0,
         )
+        guard !Task.isCancelled else { return }
         await MainActor.run { self.focusMask = mask }
     }
 
@@ -201,7 +207,7 @@ struct ZoomableFocusePeekCSImageView: View {
                 .font(.system(size: 24))
                 .foregroundStyle(.white)
                 .frame(width: 30, height: 30)
-                .background(Material.ultraThinMaterial)
+                .background(Material.regularMaterial)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)

@@ -32,6 +32,7 @@ struct RawCullApp: App {
                 nsImage: $nsImage,
                 cgImage: $cgImage,
             )
+            .background(.windowBackground)
             .environment(gridthumbnailviewmodel)
             .environment(viewModel)
             .task {
@@ -57,9 +58,15 @@ struct RawCullApp: App {
             ZoomableFocusePeekCSImageView(
                 cgImage: cgImage, // ← pass viewModel instead
             )
+            .background(.windowBackground)
             .environment(viewModel)
             .onAppear { viewModel.zoomCGImageWindowFocused = true }
-            .onDisappear { viewModel.zoomCGImageWindowFocused = false }
+            .onDisappear {
+                viewModel.zoomCGImageWindowFocused = false
+                viewModel.zoomExtractionTask?.cancel()
+                viewModel.zoomExtractionTask = nil
+                cgImage = nil
+            }
         }
 
         .defaultPosition(.center)
@@ -70,9 +77,15 @@ struct RawCullApp: App {
             ZoomableFocusePeekNSImageView(
                 nsImage: nsImage,
             )
+            .background(.windowBackground)
             .environment(viewModel)
             .onAppear { viewModel.zoomNSImageWindowFocused = true }
-            .onDisappear { viewModel.zoomNSImageWindowFocused = false }
+            .onDisappear {
+                viewModel.zoomNSImageWindowFocused = false
+                viewModel.zoomExtractionTask?.cancel()
+                viewModel.zoomExtractionTask = nil
+                nsImage = nil
+            }
         }
         .defaultPosition(.center)
         .defaultSize(width: 800, height: 600)
@@ -86,6 +99,7 @@ struct RawCullApp: App {
                     viewModel.selectedFile = file
                 },
             )
+            .background(.windowBackground)
         }
         .defaultPosition(.center)
         .defaultSize(width: 900, height: 700)
