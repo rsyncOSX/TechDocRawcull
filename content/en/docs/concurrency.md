@@ -108,13 +108,14 @@ actor DiscoverFiles {
 
 The main thread in a macOS app is special: all UI rendering must happen there. Swift's `@MainActor` annotation is a global actor that ensures annotated code runs exclusively on the main thread. This replaces `DispatchQueue.main.async { ... }` with something the compiler can verify.
 
-RawCull has four `@Observable @MainActor` ViewModel classes:
+RawCull has five `@Observable @MainActor` ViewModel classes:
 
 | Class | File | Role |
 |---|---|---|
 | `RawCullViewModel` | `Model/ViewModels/RawCullViewModel.swift` | Primary app state; drives file list, scanning, cancellation |
 | `SharpnessScoringModel` | `Model/ViewModels/SharpnessScoringModel.swift` | Sharpness scores, saliency, aperture filters |
-| `GridThumbnailViewModel` | `Model/ViewModels/GridThumbnailViewModel.swift` | Grid-level thumbnail state |
+| `SimilarityScoringModel` | `Model/ViewModels/SimilarityScoringModel.swift` | Visual similarity embeddings, distances, burst grouping |
+| `GridThumbnailViewModel` | `Model/ViewModels/GridThumbnailViewModel.swift` | Grid window state |
 | `ExecuteCopyFiles` | `Model/ParametersRsync/ExecuteCopyFiles.swift` | rsync copy process state and progress |
 
 `RawCullViewModel` is the canonical example: the entire class lives on `@MainActor`, but its `async` methods can still suspend and let the main thread process other events while waiting for actor work to complete.
@@ -128,6 +129,11 @@ final class RawCullViewModel {
     var files: [FileItem] = []
     var filteredFiles: [FileItem] = []
     var creatingthumbnails: Bool = false
+    var focusPointMarkerSize: CGFloat = 40  // shared global; previously local state in each view
+
+    // selectedFile is now a computed property — no stored state
+    var selectedFileID: UUID?
+    var selectedFile: FileItem? { files.first { $0.id == selectedFileID } }
 
     func handleSourceChange(url: URL) async {
         scanning = true
@@ -136,8 +142,17 @@ final class RawCullViewModel {
         // Back on main thread here — safe to update UI
         scanning = false
     }
+
+    // Called by the onExtractionNeeded handler wired through CreateFileHandlers
+    func extractionNeeded() {
+        creatingthumbnails = true
+    }
 }
 ```
+
+`selectedFile` is now a **computed property** derived from `selectedFileID` via `files.first { $0.id == selectedFileID }`. No stored `selectedFile` property exists; setting `selectedFileID` is the only way to change selection. All views that previously wrote `viewModel.selectedFile = file` now set `viewModel.selectedFileID = file.id` instead, removing redundant assignments across grid, table, and inspector views.
+
+`focusPointMarkerSize` is a new shared property replacing the `@State var markerSize` that previously lived independently in `MainThumbnailImageView`, `ZoomableFocusPeekCSImageView`, and `ZoomableFocusPeekNSImageView`. All zoom views now read this single shared value.
 
 When `handleSourceChange` calls `await scan.scanFiles(...)`, the main thread suspends (it is **not** blocked — it continues to process other UI events). When the scan is done, Swift automatically resumes on the main thread before assigning to `files`.
 
@@ -414,11 +429,12 @@ Step-by-step:
 
 1. **Skip duplicates**: `processedURLs: Set<URL>` prevents re-processing a catalog URL already handled in this session.
 2. **Fetch settings**: `SettingsViewModel.shared.asyncgetsettings()` provides `thumbnailSizePreview` and `thumbnailCostPerPixel`.
-3. **Build handlers**: `CreateFileHandlers().createFileHandlers(...)` wires up four `@MainActor @Sendable` closures:
+3. **Build handlers**: `CreateFileHandlers().createFileHandlers(...)` wires up five `@MainActor @Sendable` closures:
    - `fileHandler(Int)` — progress count
    - `maxfilesHandler(Int)` — total file count
    - `estimatedTimeHandler(Int)` — ETA in seconds
    - `memorypressurewarning(Bool)` — memory pressure state for UI
+   - `onExtractionNeeded()` — fires when source extraction begins (not a cache hit); calls `RawCullViewModel.extractionNeeded()` which sets `creatingthumbnails = true`
 4. **Create actor**: `ScanAndCreateThumbnails()` is instantiated and handlers injected.
 5. **Store actor reference**: `currentScanAndCreateThumbnailsActor` is set so `abort()` can reach it.
 6. **Create outer Task** on the ViewModel:
@@ -580,13 +596,23 @@ actor ThumbnailLoader {
         }
     }
 
-    func thumbnailLoader(file: FileItem) async -> NSImage? {
+    func thumbnailLoader(file: FileItem, targetSize: Int) async -> NSImage? {
+        // Fast path: grid cache (≤200 px) does not need a slot
+        if targetSize <= 200 {
+            let nsUrl = file.url as NSURL
+            if let wrapper = SharedMemoryCache.shared.gridObject(forKey: nsUrl),
+               wrapper.beginContentAccess() {
+                defer { wrapper.endContentAccess() }
+                return wrapper.image
+            }
+        }
+
         await acquireSlot()
         defer { releaseSlot() }
 
         guard !Task.isCancelled else { return nil }
         let settings = await getSettings()   // Cached on actor; avoids repeated SettingsViewModel calls
-        let cgThumb = await RequestThumbnail().requestThumbnail(
+        let cgThumb = await RequestThumbnail.shared.requestThumbnail(
             for: file.url,
             targetSize: settings.thumbnailSizePreview
         )
@@ -1038,19 +1064,26 @@ The iterator-based approach (seed first batch, drain + replenish) is an alternat
 
 `cancelScoring()` calls `_scoringTask?.cancel()` and immediately clears all results — so if a cancelled run somehow attempted to commit `localScores`, the `guard !Task.isCancelled` check prevents partial results from appearing in the UI.
 
-**p90 normalization for star ratings:**
+**p90 normalization for star ratings — stored property with `didSet`:**
 
 ```swift
-var maxScore: Float {
-    guard scores.count >= 2 else { return scores.values.first ?? 1.0 }
+var scores: [UUID: Float] = [:] {
+    didSet { recomputeMaxScore() }
+}
+
+private(set) var maxScore: Float = 1.0
+
+private func recomputeMaxScore() {
+    guard scores.count >= 2 else { maxScore = scores.values.first ?? 1.0; return }
     var sorted = Array(scores.values)
     sorted.sort()
+    guard sorted.count >= 10 else { maxScore = max(sorted.last ?? 1e-6, 1e-6); return }
     let k = Int(Float(sorted.count - 1) * 0.90)
-    return max(sorted[k], 1e-6)
+    maxScore = max(sorted[k], 1e-6)
 }
 ```
 
-`maxScore` is the p90 of all scores — used as the "100%" anchor for badge normalization. Using p90 rather than the maximum prevents a single noise spike from making every other image render as near-zero stars.
+`maxScore` is now a **stored property** rather than a computed one. Previously the p90 sort ran on every access — O(n log n) per grid cell per render frame. Now `recomputeMaxScore()` runs once when `scores` is assigned (end of run), making every `ImageItemView` read O(1). Using p90 rather than the maximum prevents a single noise spike from making every other image render as near-zero stars.
 
 ### 9.4 MemoryViewModel — Offloading Blocking Calls from @MainActor
 
@@ -1099,6 +1132,7 @@ This pattern — `Task.detached` for blocking work, then `MainActor.run` to upda
 | Outer task (extract) | View (`extractAllJPGS`) | not stored | `Task<Void, Never>` |
 | Inner task (extract) | `ExtractAndSaveJPGs` | `extractJPEGSTask` | `Task<Int, Never>?` |
 | Scoring task | `SharpnessScoringModel` | `_scoringTask` | `Task<Void, Never>?` |
+| Burst grouping task | `SimilarityScoringModel` | `_groupingTask` | `Task<[[UUID]]?, Never>?` |
 | Slot queue (on-demand) | `ThumbnailLoader.shared` | `pendingContinuations` | `[(UUID, CheckedContinuation)]` |
 
 ---
@@ -1193,7 +1227,8 @@ CPU-bound ImageIO and disk I/O work runs off-actor to keep the main thread and a
 sequenceDiagram
     participant VM as RawCullViewModel (MainActor)
     participant A as ScanAndCreateThumbnails (actor)
-    participant MC as SharedMemoryCache
+    participant MC as SharedMemoryCache (full-res)
+    participant GC as gridThumbnailCache (200 px)
     participant DC as DiskCacheManager
     participant EX as SonyThumbnailExtractor
 
@@ -1206,16 +1241,20 @@ sequenceDiagram
         A->>MC: object(forKey:) — RAM check
         alt RAM hit
             MC-->>A: DiscardableThumbnail
+            A->>GC: storeInGridCache — downscale to 200 px
         else RAM miss
             A->>DC: load(for:) — disk check
             alt Disk hit
                 DC-->>A: NSImage
                 A->>MC: setObject(...) — promote to RAM
+                A->>GC: storeInGridCache — downscale to 200 px
             else Disk miss
+                A->>VM: onExtractionNeeded → extractionNeeded() → creatingthumbnails = true
                 A->>EX: extractSonyThumbnail(from:maxDimension:qualityCost:)
                 EX-->>A: CGImage
-                A->>A: normalize to JPEG-backed NSImage
+                A->>A: normalize NSImage
                 A->>MC: setObject(...)
+                A->>GC: storeInGridCache — downscale to 200 px
                 A->>DC: save(jpegData:for:) — detached background
             end
         end
@@ -1273,7 +1312,46 @@ sequenceDiagram
 
 ---
 
-## 16. Quick Reference
+## 16. Additional Architectural Notes
+
+### Grid Thumbnail Window
+
+The grid thumbnail view is now declared as a persistent `Window` in `RawCullApp`:
+
+```swift
+Window("Thumbnail Grid", id: "grid-thumbnails-window") {
+    GridThumbnailView()
+        .environment(viewModel)
+        .environment(gridthumbnailviewmodel)
+}
+.defaultSize(width: 1200, height: 800)
+```
+
+It is opened via `openWindow(id: "grid-thumbnails-window")` rather than as a conditional branch inside `RawCullMainView`. This gives the grid its own lifecycle and window chrome, and removes the `@State var showGridThumbnail: Bool` that previously lived in multiple views.
+
+`GridThumbnailViewModel.open()` and `close()` are simplified accordingly — the window-visibility toggle and guard are removed; the methods only manage internal view model state.
+
+### SimilarityScoringModel — Burst Grouping
+
+`SimilarityScoringModel` gains a public async method `groupBursts(files:)` for sequential frame clustering:
+
+```swift
+func groupBursts(files: [FileItem]) async
+```
+
+The algorithm:
+1. Cancels any in-flight grouping task (prevents thread-pool saturation during slider drag).
+2. Snapshots `embeddings: [UUID: Data]` — `Data` is `Sendable`, safe to pass to `Task.detached`.
+3. In a detached `userInitiated` task, unarchives all `VNFeaturePrintObservation` entries.
+4. Single O(n) sequential pass: splits frames into a new group whenever the distance to the previous frame exceeds `burstSensitivity` (default: 0.25). Checks `Task.isCancelled` every 64 iterations.
+5. Converts `[[UUID]]` cluster arrays to `[BurstGroup]` structs and a `[UUID: Int]` lookup map.
+6. Sets `burstModeActive = true` on completion.
+
+`reset()` now also cancels the in-flight grouping task and clears all burst-related state.
+
+---
+
+## 17. Quick Reference
 
 | Keyword / Pattern | What it does | Where in RawCull |
 |---|---|---|

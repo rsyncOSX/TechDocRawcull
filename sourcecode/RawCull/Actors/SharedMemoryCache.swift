@@ -8,6 +8,7 @@
 import AppKit
 import Dispatch
 import Foundation
+import os
 
 // import OSLog
 
@@ -25,7 +26,8 @@ actor SharedMemoryCache {
     // Cache statistics for monitoring (Actor specific, not shared)
     private var cacheMemory = 0
     private var cacheDisk = 0
-    // Note: cacheEvictions is now tracked by CacheDelegate and read from there
+    /// Note: cacheEvictions is now tracked by CacheDelegate and read from there
+    private nonisolated(unsafe) let _gridCost = OSAllocatedUnfairLock(initialState: 0)
     // For Cache monitor
 
     // MARK: - Memory pressure level
@@ -60,6 +62,10 @@ actor SharedMemoryCache {
     /// NSCache is thread-safe, so we bypass the actor's serialization for direct access.
     /// This allows synchronous lookups: SharedMemoryCache.shared.object(...) (no await needed)
     nonisolated(unsafe) let memoryCache = NSCache<NSURL, DiscardableThumbnail>()
+
+    /// Dedicated in-memory-only cache for grid-size (≤500px) thumbnails.
+    /// Keyed by the same NSURL as memoryCache; never persisted to disk.
+    nonisolated(unsafe) let gridThumbnailCache = NSCache<NSURL, DiscardableThumbnail>()
 
     // MARK: - Isolated State (Protected by Actor)
 
@@ -189,6 +195,9 @@ actor SharedMemoryCache {
         if let costPerPixel = config.costPerPixel {
             _costPerPixel = costPerPixel
         }
+        gridThumbnailCache.totalCostLimit = 400 * 1024 * 1024
+        gridThumbnailCache.countLimit = 2000
+        gridThumbnailCache.evictsObjectsWithDiscardedContent = false
         // let totalCostMB = config.totalCostLimit / (1024 * 1024)
 
         /*
@@ -248,9 +257,9 @@ actor SharedMemoryCache {
         case .warning:
             currentPressureLevel = .warning
             logMemoryPressure("Warning: Memory pressure detected, reducing cache to 60%")
-            // Reduce cache size to 60% of limit
             let reducedCost = Int(Double(memoryCache.totalCostLimit) * 0.6)
             memoryCache.totalCostLimit = reducedCost
+            gridThumbnailCache.totalCostLimit = Int(Double(gridThumbnailCache.totalCostLimit) * 0.6)
             Task {
                 await fileHandlers?.memorypressurewarning(true)
             }
@@ -258,10 +267,9 @@ actor SharedMemoryCache {
         case .critical:
             currentPressureLevel = .critical
             logMemoryPressure("CRITICAL: Memory pressure critical, clearing cache")
-            // Clear cache immediately
             memoryCache.removeAllObjects()
-            // Set minimal limit
             memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50MB minimum
+            gridThumbnailCache.removeAllObjects()
             Task {
                 await fileHandlers?.memorypressurewarning(true)
             }
@@ -287,6 +295,24 @@ actor SharedMemoryCache {
 
     nonisolated func removeAllObjects() {
         memoryCache.removeAllObjects()
+    }
+
+    nonisolated func gridObject(forKey key: NSURL) -> DiscardableThumbnail? {
+        gridThumbnailCache.object(forKey: key)
+    }
+
+    nonisolated func setGridObject(_ obj: DiscardableThumbnail, forKey key: NSURL, cost: Int) {
+        gridThumbnailCache.setObject(obj, forKey: key, cost: cost)
+        _gridCost.withLock { $0 = min($0 + cost, gridThumbnailCache.totalCostLimit) }
+    }
+
+    nonisolated func removeAllGridObjects() {
+        gridThumbnailCache.removeAllObjects()
+        _gridCost.withLock { $0 = 0 }
+    }
+
+    nonisolated func getGridCacheCurrentCost() -> Int {
+        _gridCost.withLock { $0 }
     }
 
     /// For Cache monitor
@@ -317,14 +343,15 @@ actor SharedMemoryCache {
         // let hitRateStr = String(format: "%.1f", hitRate)
         // Logger.process.info("Cache Statistics - Hits: \(self.cacheMemory), Misses: \(self.cacheDisk), Hit Rate: \(hitRateStr)%")
 
-        // Clear Shared Memory Cache
         SharedMemoryCache.shared.removeAllObjects()
+        SharedMemoryCache.shared.removeAllGridObjects()
 
         await diskCache.pruneCache(maxAgeInDays: 0)
 
         // Reset statistics
         cacheMemory = 0
         cacheDisk = 0
+        _gridCost.withLock { $0 = 0 }
         await CacheDelegate.shared.resetEvictionCount()
     }
 

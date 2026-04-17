@@ -138,7 +138,7 @@ All in-memory reads hit `CullingModel.savedFiles` or the derived caches — no d
 | Purpose | Location |
 |---------|----------|
 | Build rating / tagged caches | `RawCullViewModel.rebuildRatingCache()` |
-| Is file tagged? | `CullingModel.isTagged()` |
+| Is file unrated (not yet starred or rejected)? | `CullingModel.isUnrated()` |
 | Count tagged files | `CullingModel.countSelectedFiles()` |
 | Rating color in thumbnail | `TaggedPhotoItemView` |
 | Tagged-file grid display | `TaggedPhotoHorisontalGridView` |
@@ -154,5 +154,8 @@ All in-memory reads hit `CullingModel.savedFiles` or the derived caches — no d
 - **Atomic writes:** `WriteSavedFilesJSON` uses the `.atomic` write option to prevent JSON corruption on crash.
 - **Cache invalidation:** `ratingCache` and `taggedNamesCache` are always rebuilt immediately after any mutation — there is no deferred or lazy invalidation.
 - **Single load point:** `loadSavedFiles()` is called exactly once per catalog selection, in `RawCullViewModel+Catalog.swift:46`, after the file scan completes.
+- **`isUnrated` (renamed from `isTagged`):** `CullingModel.isUnrated(photo:in:)` checks whether a file is tagged but has no star rating or rejection yet (`rating == 0`). The rename more accurately reflects the semantic: the function returns `true` when a file has been picked/tagged but not yet evaluated.
+- **`isPicked` badge:** `ImageItemView` computes `isPicked = taggedNamesCache.contains(file.name) && getRating(file) == 0`. When true, a small orange **"P"** badge (`PickedBadgeView`) appears in the top-right corner of the thumbnail, alongside the blue multi-selection checkmark. The previous green tint ribbon at the bottom of thumbnails has been removed.
+- **`SavedFilesView` source of truth:** `SavedFilesView` no longer holds a local `@State var savedFiles` copy. It reads `viewModel.cullingModel.savedFiles` directly. The `.task { }` loader on appear and the manual reset assignments have been removed — `CullingModel` is the single source of truth.
 
  

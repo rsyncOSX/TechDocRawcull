@@ -36,7 +36,7 @@ extension RawCullMainView {
             selectedSource: viewModel.selectedSource,
             filteredFiles: viewModel.filteredFiles,
         )
-        showGridThumbnail = true
+        openWindow(id: "grid-thumbnails-window")
     }
 
     func handleToggleSelection(for file: FileItem) {
@@ -71,6 +71,7 @@ extension RawCullMainView {
                 maxfilesHandler: viewModel.maxfilesHandler,
                 estimatedTimeHandler: viewModel.estimatedTimeHandler,
                 memorypressurewarning: { _ in },
+                onExtractionNeeded: {},
             )
 
             let extract = ExtractAndSaveJPGs(sortedfiles: viewModel.filteredFiles)

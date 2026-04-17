@@ -18,7 +18,6 @@ struct RawCullMainView: View {
     @State private var memoryMonitorModel = MemoryViewModel(pressureThresholdFactor: 0.85)
     @State private var columnVisibility = NavigationSplitViewVisibility.doubleColumn
     @State var showhorizontalthumbnailview: Bool = false
-    @State var showGridThumbnail: Bool = false
 
     var body: some View {
         // let _ = Self._printChanges()
@@ -39,13 +38,6 @@ struct RawCullMainView: View {
                         showcopytask: $viewModel.showcopyARWFilesView,
                     )
                 }
-            } else if showGridThumbnail {
-                GridThumbnailView(
-                    viewModel: viewModel,
-                    isPresented: $showGridThumbnail,
-                    nsImage: $nsImage,
-                    cgImage: $cgImage,
-                )
             } else {
                 // Default view starts here
                 NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -99,6 +91,8 @@ struct RawCullMainView: View {
                                 if let url = viewModel.selectedSource?.url {
                                     viewModel.ratingCache = [:]
                                     viewModel.taggedNamesCache = []
+                                    viewModel.sharpnessModel.reset()
+                                    viewModel.similarityModel.reset()
                                     viewModel.cullingModel.resetSavedFiles(in: url)
                                 }
                             }
@@ -136,6 +130,7 @@ struct RawCullMainView: View {
                         maxfilesHandler: { _ in },
                         estimatedTimeHandler: { _ in },
                         memorypressurewarning: viewModel.memorypressurewarning,
+                        onExtractionNeeded: {},
                     )
                     // Set the handler for reporting memorypressurewarning
                     await SharedMemoryCache.shared.setFileHandlers(handlers)
@@ -143,7 +138,7 @@ struct RawCullMainView: View {
                 // --- RIGHT INSPECTOR ---
                 .inspector(isPresented: $viewModel.hideInspector) {
                     FileInspectorView(
-                        file: $viewModel.selectedFile,
+                        file: viewModel.selectedFile,
                     )
                 }
                 .fileImporter(isPresented: $viewModel.isShowingPicker, allowedContentTypes: [.folder]) { result in

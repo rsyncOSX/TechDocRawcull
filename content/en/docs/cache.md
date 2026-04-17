@@ -129,7 +129,7 @@ The delegate does not affect eviction behavior — it only feeds the statistics 
 
 ### SharedMemoryCache (actor)
 
-`SharedMemoryCache` is a global actor singleton that owns the `NSCache`, memory pressure monitoring, and cache statistics.
+`SharedMemoryCache` is a global actor singleton that owns two `NSCache` instances, memory pressure monitoring, and cache statistics. It uses a **dual-cache design**: a full-resolution memory cache and a dedicated grid thumbnail cache serving the 200 px grid-view fast path.
 
 ```swift
 actor SharedMemoryCache {
@@ -138,7 +138,12 @@ actor SharedMemoryCache {
     // nonisolated(unsafe) allows synchronous access from any context.
     // NSCache itself is thread-safe; this is intentional and documented.
     nonisolated(unsafe) let memoryCache = NSCache<NSURL, DiscardableThumbnail>()
-    nonisolated(unsafe) var currentPressureLevel: MemoryPressureLevel = .normal
+
+    /// Dedicated in-memory-only cache for grid-size (≤500 px) thumbnails.
+    /// Keyed by the same NSURL as memoryCache; never persisted to disk.
+    nonisolated(unsafe) let gridThumbnailCache = NSCache<NSURL, DiscardableThumbnail>()
+
+    private(set) nonisolated(unsafe) var currentPressureLevel: MemoryPressureLevel = .normal
 
     private var _costPerPixel: Int = 4
     private var diskCache: DiskCacheManager
@@ -148,16 +153,44 @@ actor SharedMemoryCache {
     // Statistics (actor-isolated)
     private var cacheMemory: Int = 0   // RAM hits
     private var cacheDisk: Int = 0     // Disk hits
+
+    // Tracks grid cache memory cost without actor isolation
+    private nonisolated(unsafe) let _gridCost = OSAllocatedUnfairLock(initialState: 0)
 }
 ```
 
-**Synchronous accessors** — `nonisolated`, callable from any context without `await`:
+**Synchronous accessors for the full-resolution cache** — `nonisolated`, callable without `await`:
 
 ```swift
 nonisolated func object(forKey key: NSURL) -> DiscardableThumbnail?
 nonisolated func setObject(_ obj: DiscardableThumbnail, forKey key: NSURL, cost: Int)
 nonisolated func removeAllObjects()
 ```
+
+**Synchronous accessors for the grid thumbnail cache** — also `nonisolated`:
+
+```swift
+nonisolated func gridObject(forKey key: NSURL) -> DiscardableThumbnail?
+nonisolated func setGridObject(_ obj: DiscardableThumbnail, forKey key: NSURL, cost: Int)
+nonisolated func removeAllGridObjects()
+nonisolated func getGridCacheCurrentCost() -> Int
+```
+
+`setGridObject` updates `_gridCost` via `OSAllocatedUnfairLock` so the running total is always consistent without requiring an actor hop. `getGridCacheCurrentCost()` reads the same lock — used by the Cache settings tab to display live grid cache usage.
+
+### Grid Thumbnail Cache
+
+The grid thumbnail cache (`gridThumbnailCache`) is separate from the full-resolution `memoryCache` because the grid view needs many small (≤200 px) thumbnails very quickly and should not compete with or evict the full-resolution images used in the zoom/preview path.
+
+**Configuration** (applied in `applyConfig`):
+
+| Property | Value | Rationale |
+|---|---|---|
+| `totalCostLimit` | 400 MB | Fits thousands of 200 px thumbnails while leaving headroom |
+| `countLimit` | 2000 | Hard cap on item count as a secondary safety net |
+| `evictsObjectsWithDiscardedContent` | `false` | Retain entries even after `NSDiscardableContent` is discarded |
+
+The grid cache is never written to disk. `ScanAndCreateThumbnails.storeInGridCache(_:for:)` downscales each image to ≤200 px before storing, so the grid cache always holds consistently-sized entries regardless of the bulk preload target size. `ThumbnailLoader.thumbnailLoader(file:targetSize:)` reads from it directly when `targetSize ≤ 200`, bypassing the full-resolution path and the 6-slot concurrency throttle entirely.
 
 **Initialization** is gated by a `setupTask` so that concurrent callers to `ensureReady()` share a single initialization pass:
 
@@ -280,11 +313,11 @@ func startMemoryPressureMonitoring() {
 
 **Response by level**:
 
-| Level | Action |
-|---|---|
-| `.normal` | Log, update `currentPressureLevel`, notify `fileHandlers.memorypressurewarning(false)` |
-| `.warning` | Reduce `totalCostLimit` to **60% of the current limit**, notify `fileHandlers.memorypressurewarning(true)` |
-| `.critical` | `removeAllObjects()`, set `totalCostLimit` to 50 MB, notify `fileHandlers.memorypressurewarning(true)` |
+| Level | Main cache action | Grid cache action |
+|---|---|---|
+| `.normal` | Log, update `currentPressureLevel`, `refreshConfig()`, notify `memorypressurewarning(false)` | — |
+| `.warning` | Reduce `totalCostLimit` to **60% of current limit**, notify `memorypressurewarning(true)` | Reduce `totalCostLimit` to **60% of current limit** |
+| `.critical` | `removeAllObjects()`, set limit to 50 MB, notify `memorypressurewarning(true)` | `removeAllObjects()` |
 
 **Important detail about warning compounding**: the warning level calculates its reduction from the *current* limit, not the original configured limit. Repeated warning events compound:
 
@@ -319,29 +352,53 @@ struct CacheStatistics {
 ```
 
 `clearCaches() async`:
-1. Reads and logs final statistics
-2. `memoryCache.removeAllObjects()`
+1. `memoryCache.removeAllObjects()`
+2. `gridThumbnailCache.removeAllObjects()`
 3. `diskCache.pruneCache(maxAgeInDays: 0)` — prunes all files
-4. Resets `cacheMemory`, `cacheDisk`, and eviction count to 0
+4. Resets `cacheMemory`, `cacheDisk`, `_gridCost`, and eviction count to 0
 
 ---
 
 ## 4. End-to-End Cache Flow
 
+### 4.1 Bulk preload path (ScanAndCreateThumbnails)
+
 ```
-Request thumbnail for URL
+Process ARW file URL
 │
-├─ Check SharedMemoryCache.object(forKey:)
-│   ├─ Hit: beginContentAccess() → use image → endContentAccess() → return
+├─ Check SharedMemoryCache.object(forKey:)    ← full-res RAM cache
+│   ├─ Hit: storeInGridCache(image, for: url) → notify progress → return
 │   └─ Miss:
 │       ├─ Check DiskCacheManager.load(for:)
-│       │   ├─ Hit: wrap as DiscardableThumbnail → store in NSCache → return
+│       │   ├─ Hit: storeInMemoryCache + storeInGridCache → notify progress → return
 │       │   └─ Miss:
+│       │       ├─ notifyExtractionNeeded() → sets creatingthumbnails = true on UI
 │       │       ├─ SonyThumbnailExtractor.extractSonyThumbnail(from:maxDimension:qualityCost:)
-│       │       ├─ Normalize CGImage → NSImage (JPEG-backed, quality 0.7)
-│       │       ├─ Create DiscardableThumbnail → store in NSCache (with cost)
-│       │       └─ Encode JPEG data → DiskCacheManager.save(_:for:) [detached, background]
-└─ Return CGImage to caller
+│       │       ├─ Normalize CGImage → NSImage
+│       │       ├─ storeInMemoryCache(_:for:) — full-res DiscardableThumbnail → NSCache
+│       │       ├─ storeInGridCache(_:for:)  — downscale to 200 px → gridThumbnailCache
+│       │       └─ Encode JPEG → DiskCacheManager.save(_:for:) [detached, background]
+└─ Notify UI of progress
+```
+
+`storeInGridCache` calls `downscale(_:to: 200)` — a private helper that uses `NSImage.draw` into a proportionally-scaled `NSImage`. The downscaled copy is wrapped in a `DiscardableThumbnail` and stored in `gridThumbnailCache` via `setGridObject`.
+
+### 4.2 On-demand path (ThumbnailLoader → RequestThumbnail)
+
+```
+thumbnailLoader(file:targetSize:)
+│
+├─ targetSize ≤ 200?
+│   └─ Yes: SharedMemoryCache.gridObject(forKey:)
+│           ├─ Hit: return wrapper.image  ← fast path, no slot acquired
+│           └─ Miss: fall through to full path below
+│
+├─ acquireSlot() — block if activeTasks ≥ 6
+│
+└─ RequestThumbnail.requestThumbnail(for:targetSize:)
+       ├─ RAM cache (object(forKey:))
+       ├─ Disk cache (DiskCacheManager.load(for:))
+       └─ SonyThumbnailExtractor extraction
 ```
 
 ---
@@ -352,12 +409,17 @@ Settings live in `SettingsViewModel` and are persisted to `~/Library/Application
 
 | Setting | Default | Effect |
 |---|---|---|
-| `memoryCacheSizeMB` | 5000 | `NSCache.totalCostLimit = memoryCacheSizeMB × 1024 × 1024` |
-| `thumbnailCostPerPixel` | 4 | Cost per pixel in `DiscardableThumbnail.cost` |
-| `thumbnailSizePreview` | 1024 | Target size for bulk preload; affects entry cost |
-| `thumbnailSizeGrid` | 100 | Grid thumbnail size |
-| `thumbnailSizeGridView` | 400 | Grid View thumbnail size |
+| `memoryCacheSizeMB` | 5000 | `NSCache.totalCostLimit = memoryCacheSizeMB × 1024 × 1024` (full-res cache only) |
+| `thumbnailCostPerPixel` | 4 | Cost per pixel in `DiscardableThumbnail.cost` for both caches |
+| `thumbnailSizePreview` | 1024 | Target size for bulk preload; affects full-res entry cost |
+| `thumbnailSizeGrid` | 100 | Grid list thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
+
+Grid view thumbnails are fixed at **200 px** (not user-configurable). The grid cache limit is hardcoded at 400 MB.
+
+The **Settings → Cache** tab shows two lines of live usage:
+- Disk cache size (from `DiskCacheManager.getDiskCacheSize()`)
+- Grid cache (200 px): current cost / 400 MB limit (from `SharedMemoryCache.shared.getGridCacheCurrentCost()`)
 
 `SettingsViewModel.validateSettings()` emits warnings if:
 - `memoryCacheSizeMB < 500`
@@ -369,19 +431,26 @@ Settings live in `SettingsViewModel` and are persisted to `~/Library/Application
 
 ```mermaid
 flowchart TD
-    A[Thumbnail Requested] --> B{Memory Cache Hit?}
+    A[Thumbnail Requested] --> Z{targetSize ≤ 200?}
+    Z -- Yes --> ZA{gridThumbnailCache Hit?}
+    ZA -- Yes --> ZB[Return NSImage — fast path]
+    ZA -- No --> B
+    Z -- No --> B
+    B{memoryCache Hit?}
     B -- Yes --> C[beginContentAccess]
     C --> D[Return NSImage]
     D --> E[endContentAccess]
     B -- No --> F{Disk Cache Hit?}
     F -- Yes --> G[Load JPEG from Disk]
     G --> H[Wrap as DiscardableThumbnail]
-    H --> I[Store in NSCache with cost]
-    I --> D
+    H --> I[Store in memoryCache with cost]
+    I --> I2[storeInGridCache — downscale to 200 px]
+    I2 --> D
     F -- No --> J[SonyThumbnailExtractor]
-    J --> K[Normalize to JPEG-backed NSImage]
-    K --> L[Create DiscardableThumbnail]
-    L --> I
+    J --> K[Normalize NSImage]
+    K --> L[storeInMemoryCache]
+    L --> L2[storeInGridCache — downscale to 200 px]
+    L2 --> D
     K --> M[Encode JPEG data]
     M --> N[DiskCacheManager.save — detached background]
 ```
@@ -394,10 +463,13 @@ flowchart TD
 flowchart TD
     A[DispatchSourceMemoryPressure event] --> B{Pressure Level?}
     B -- normal --> C[Log + update currentPressureLevel]
-    C --> D[Notify UI: no warning]
-    B -- warning --> E[Reduce limit to 60% of current]
-    E --> F[Notify UI: warning]
-    B -- critical --> G[removeAllObjects]
-    G --> H[Set limit to 50 MB]
+    C --> CC[refreshConfig]
+    CC --> D[Notify UI: no warning]
+    B -- warning --> E[memoryCache limit → 60% of current]
+    E --> E2[gridThumbnailCache limit → 60% of current]
+    E2 --> F[Notify UI: warning]
+    B -- critical --> G[memoryCache.removeAllObjects]
+    G --> G2[gridThumbnailCache.removeAllObjects]
+    G2 --> H[memoryCache limit → 50 MB]
     H --> I[Notify UI: warning]
 ```

@@ -21,16 +21,17 @@ Both paths integrate with the shared three-layer cache system: RAM → disk → 
 
 ## 1. Thumbnail Sizes and Settings
 
-All thumbnail dimensions are configurable via `SettingsViewModel` and persisted to `~/Library/Application Support/RawCull/settings.json`.
+Thumbnail dimensions are configurable via `SettingsViewModel` and persisted to `~/Library/Application Support/RawCull/settings.json`.
 
 | Setting | Default | Usage |
 |---|---|---|
 | `thumbnailSizeGrid` | 100 | Small thumbnails in grid list view |
-| `thumbnailSizeGridView` | 400 | Thumbnails in the main grid view |
 | `thumbnailSizePreview` | 1024 | Bulk preload target size |
 | `thumbnailSizeFullSize` | 8700 | Upper bound for full-size zoom path |
 | `thumbnailCostPerPixel` | 4 | RGBA bytes per pixel — drives cache cost calculation |
 | `useThumbnailAsZoomPreview` | false | Reuse cached thumbnail instead of re-extracting for zoom |
+
+**Grid view thumbnails** are fixed at **200 px** — this is hardcoded and not user-configurable. The grid view fast path always reads from `SharedMemoryCache.gridThumbnailCache` (400 MB, ≤200 px, see [Memory Cache](../cache/)).
 
 All extraction uses **max pixel size on the longest edge** (`kCGImageSourceThumbnailMaxPixelSize`). Actual width and height depend on the source aspect ratio.
 
@@ -195,9 +196,23 @@ Cancellation is checked with `Task.isCancelled` before and after every expensive
 On a successful source extraction the `costPerPixel` is fetched once from `SharedMemoryCache` (async, so the actor releases during the await), then the thumbnail is stored and the disk write is queued:
 
 1. `NSImage(cgImage:size:)` wraps the decoded pixels without re-encoding.
-2. `storeInMemoryCache(_:for:)` creates a `DiscardableThumbnail` using the cached `costPerPixel` and stores it in `SharedMemoryCache`.
-3. `DiskCacheManager.jpegData(from:)` encodes to JPEG (quality 0.7) on the actor while the `CGImage` is still in scope — `CGImage` is not `Sendable` and cannot be passed across the task boundary.
-4. `diskCache.save(_:for:)` writes the JPEG `Data` from a `Task.detached(priority: .background)` — the extraction pipeline does not wait for this write.
+2. `storeInMemoryCache(_:for:)` creates a `DiscardableThumbnail` using the cached `costPerPixel` and stores it in `SharedMemoryCache` (the full-resolution cache).
+3. `storeInGridCache(_:for:)` downscales the image to ≤200 px via `downscale(_:to: 200)` and stores the result in `gridThumbnailCache`. This runs on **all three cache-check branches** (RAM hit, disk hit, fresh extraction) so the grid cache is always populated regardless of how the full-resolution image was sourced.
+4. `DiskCacheManager.jpegData(from:)` encodes to JPEG (quality 0.7) on the actor while the `CGImage` is still in scope — `CGImage` is not `Sendable` and cannot be passed across the task boundary.
+5. `diskCache.save(_:for:)` writes the JPEG `Data` from a `Task.detached(priority: .background)` — the extraction pipeline does not wait for this write.
+
+### 4.4 Extraction notification callback
+
+When a file reaches the source-extraction branch (not a cache hit), `notifyExtractionNeeded()` fires before the expensive `SonyThumbnailExtractor` call:
+
+```swift
+private func notifyExtractionNeeded() {
+    let handler = fileHandlers?.onExtractionNeeded
+    Task { @MainActor in handler?() }
+}
+```
+
+`CreateFileHandlers` now accepts an `onExtractionNeeded: @escaping @MainActor @Sendable () -> Void` parameter. The ViewModel wires this to `RawCullViewModel.extractionNeeded()`, which sets `creatingthumbnails = true` — giving the UI a precise signal that raw file decoding has started (as opposed to cache hits, which need no indicator).
 
 ### 4.4 Progress and ETA
 
@@ -237,9 +252,27 @@ UI elements (grid view, file list, inspector) request thumbnails through the on-
 
 ### 5.1 ThumbnailLoader (rate limiting)
 
-`ThumbnailLoader.shared` is a global actor singleton that caps concurrent thumbnail loads at 6. Requests beyond this limit suspend via `CheckedContinuation` and queue in `pendingContinuations`. When a slot is released, the next waiting continuation is resumed. The target size passed to `RequestThumbnail` is `thumbnailSizePreview` (default 1024).
+`ThumbnailLoader.shared` is a global actor singleton that caps concurrent thumbnail loads at 6. The updated signature is:
 
-If a waiting task is cancelled before its slot becomes available, its continuation is removed from the queue by UUID so it is never spuriously resumed.
+```swift
+func thumbnailLoader(file: FileItem, targetSize: Int) async -> NSImage?
+```
+
+**Fast path for grid view** (new): when `targetSize ≤ 200`, `thumbnailLoader` reads directly from `SharedMemoryCache.gridThumbnailCache` without acquiring a slot. The 6-slot throttle is bypassed entirely for grid-size requests — grid views can load many thumbnails simultaneously without queuing.
+
+```swift
+if targetSize <= 200 {
+    let nsUrl = file.url as NSURL
+    if let wrapper = SharedMemoryCache.shared.gridObject(forKey: nsUrl),
+       wrapper.beginContentAccess() {
+        defer { wrapper.endContentAccess() }
+        return wrapper.image
+    }
+}
+// Fall through to acquireSlot() for larger sizes or cache misses
+```
+
+For `targetSize > 200` (or a grid cache miss), the existing `acquireSlot()` → `RequestThumbnail` path runs with `thumbnailSizePreview` (default 1024) as the target size. If a waiting task is cancelled before its slot becomes available, its continuation is removed from the queue by UUID so it is never spuriously resumed.
 
 ### 5.2 RequestThumbnail (cache pipeline)
 
@@ -333,16 +366,20 @@ flowchart TD
     E --> F[DiscoverFiles — enumerate ARW files]
     F --> G[withTaskGroup — capped at processorCount × 2]
     G --> H{RAM Cache Hit?}
-    H -- Yes --> P[Update progress / ETA]
+    H -- Yes --> HG[storeInGridCache — downscale to 200 px]
+    HG --> P[Update progress / ETA]
     H -- No --> I{Disk Cache Hit?}
     I -- Yes --> J[Load JPEG from disk]
     J --> K[Promote to RAM cache]
-    K --> P
-    I -- No --> L[SonyThumbnailExtractor — ImageIO decode]
+    K --> KG[storeInGridCache — downscale to 200 px]
+    KG --> P
+    I -- No --> L2[notifyExtractionNeeded → creatingthumbnails = true]
+    L2 --> L[SonyThumbnailExtractor — ImageIO decode]
     L --> M[Rerender with interpolation quality]
-    M --> N[Normalize to JPEG-backed NSImage]
+    M --> N[Normalize to NSImage]
     N --> O[Store in RAM cache]
-    O --> Q[Encode JPEG data]
+    O --> OG[storeInGridCache — downscale to 200 px]
+    OG --> Q[Encode JPEG data]
     Q --> R[DiskCacheManager.save — detached background]
     R --> P
     P --> S{More files?}
@@ -356,14 +393,26 @@ flowchart TD
 sequenceDiagram
     participant UI
     participant TL as ThumbnailLoader.shared
+    participant GC as gridThumbnailCache
     participant RT as RequestThumbnail
     participant MC as SharedMemoryCache
     participant DC as DiskCacheManager
     participant EX as SonyThumbnailExtractor
 
-    UI->>TL: thumbnailLoader(file:)
-    TL->>TL: acquireSlot() — suspend if activeTasks ≥ 6
-    TL->>RT: requestThumbnail(for:targetSize:)
+    UI->>TL: thumbnailLoader(file:targetSize:)
+    alt targetSize ≤ 200
+        TL->>GC: gridObject(forKey:) — no slot acquired
+        alt Grid cache hit
+            GC-->>TL: DiscardableThumbnail.image
+            TL-->>UI: NSImage (fast path)
+        else Grid cache miss
+            TL->>TL: acquireSlot()
+            TL->>RT: requestThumbnail(for:targetSize:)
+        end
+    else targetSize > 200
+        TL->>TL: acquireSlot() — suspend if activeTasks ≥ 6
+        TL->>RT: requestThumbnail(for:targetSize:)
+    end
     RT->>MC: object(forKey:) + beginContentAccess()
     alt RAM hit
         MC-->>RT: DiscardableThumbnail.image
@@ -410,10 +459,11 @@ flowchart TD
 
 | Setting | Default | Effect |
 |---|---|---|
-| `memoryCacheSizeMB` | 5000 | Sets `NSCache.totalCostLimit` |
+| `memoryCacheSizeMB` | 5000 | Sets `NSCache.totalCostLimit` for the full-resolution cache |
 | `thumbnailCostPerPixel` | 4 | Drives `DiscardableThumbnail` cost and interpolation quality |
-| `thumbnailSizePreview` | 1024 | Bulk preload target size |
+| `thumbnailSizePreview` | 1024 | Bulk preload target size and on-demand `RequestThumbnail` size |
 | `thumbnailSizeGrid` | 100 | Grid list thumbnail size |
-| `thumbnailSizeGridView` | 400 | Main grid view thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
 | `useThumbnailAsZoomPreview` | false | Skip re-extraction and use cached thumbnail for zoom |
+
+Grid view thumbnails are hardcoded at 200 px; the `thumbnailSizeGridView` setting has been removed.

@@ -9,6 +9,14 @@ import Observation
 import OSLog
 import Vision
 
+// MARK: - BurstGroup
+
+/// A burst group: a sequence of consecutive frames that are visually similar.
+struct BurstGroup: Identifiable {
+    let id: Int
+    let fileIDs: [UUID] // sequential (name-sorted) order
+}
+
 // MARK: - Constants
 
 /// Blend weight applied to the saliency-subject mismatch penalty.
@@ -46,18 +54,40 @@ final class SimilarityScoringModel {
     /// When true, applyFilters sorts the file list by ascending distance.
     var sortBySimilarity: Bool = false
 
+    // MARK: Burst grouping
+
+    /// Burst groups computed by sequential distance clustering.
+    var burstGroups: [BurstGroup] = []
+    /// Quick lookup: fileID → group id.
+    var burstGroupLookup: [UUID: Int] = [:]
+    /// Distance threshold for burst clustering. Lower = tighter groups.
+    var burstSensitivity: Float = 0.25
+    /// When true, the grid renders burst group section headers.
+    var burstModeActive: Bool = false
+    /// True while groupBursts() is running.
+    var isGrouping: Bool = false
+
     // MARK: Private
 
     @ObservationIgnored private var _indexingTask: Task<Void, Never>?
+    @ObservationIgnored private var _groupingTask: Task<[[UUID]]?, Never>?
+    @ObservationIgnored private var _groupingGeneration: Int = 0
 
     // MARK: - Public API
 
     func reset() {
         cancelIndexing()
+        _groupingTask?.cancel()
+        _groupingTask = nil
         embeddings = [:]
         distances = [:]
         anchorFileID = nil
         sortBySimilarity = false
+        burstGroups = []
+        burstGroupLookup = [:]
+        burstModeActive = false
+        isGrouping = false
+        _groupingGeneration = 0
     }
 
     func cancelIndexing() {
@@ -231,6 +261,109 @@ final class SimilarityScoringModel {
         anchorFileID = anchorID
         distances = result
         sortBySimilarity = true
+    }
+
+    // MARK: - Burst grouping
+
+    /// Cluster `files` into burst groups using a sequential O(n) distance pass.
+    /// `files` must be sorted by filename (= shot order) before calling.
+    /// Sets `burstModeActive = true` on completion.
+    ///
+    /// Cancels any in-flight grouping work at the top so a dragging slider
+    /// does not spawn multiple concurrent unarchive passes over the full
+    /// embedding snapshot — otherwise the cooperative thread pool saturates
+    /// and the UI beach-balls on large catalogs.
+    func groupBursts(files: [FileItem]) async {
+        guard !files.isEmpty else {
+            _groupingTask?.cancel()
+            _groupingTask = nil
+            burstGroups = []
+            burstGroupLookup = [:]
+            burstModeActive = true
+            return
+        }
+
+        _groupingTask?.cancel()
+        _groupingTask = nil
+
+        isGrouping = true
+        _groupingGeneration &+= 1
+        let myGeneration = _groupingGeneration
+
+        let threshold = burstSensitivity
+        let snapshot = embeddings // [UUID: Data], Sendable
+        let fileIDs = files.map(\.id)
+
+        let work = Task.detached(priority: .userInitiated) { () -> [[UUID]]? in
+            var observations: [UUID: VNFeaturePrintObservation] = [:]
+            var unarchiveCount = 0
+            for (id, data) in snapshot {
+                if let obs = try? NSKeyedUnarchiver.unarchivedObject(
+                    ofClass: VNFeaturePrintObservation.self,
+                    from: data,
+                ) {
+                    observations[id] = obs
+                }
+                unarchiveCount &+= 1
+                if unarchiveCount & 0x3F == 0, Task.isCancelled { return nil }
+            }
+
+            var groups: [[UUID]] = []
+            var current: [UUID] = []
+
+            for (i, id) in fileIDs.enumerated() {
+                if i & 0x3F == 0, Task.isCancelled { return nil }
+                if i == 0 {
+                    current.append(id)
+                    continue
+                }
+                let prevID = fileIDs[i - 1]
+
+                guard let obs = observations[id], let prevObs = observations[prevID] else {
+                    groups.append(current)
+                    current = [id]
+                    continue
+                }
+
+                var d: Float = 0
+                let computed = (try? prevObs.computeDistance(&d, to: obs)) != nil
+                let startNewGroup = !computed || d >= threshold
+
+                if startNewGroup {
+                    groups.append(current)
+                    current = [id]
+                } else {
+                    current.append(id)
+                }
+            }
+            if !current.isEmpty { groups.append(current) }
+            return groups
+        }
+        _groupingTask = work
+
+        let rawGroups = await work.value
+
+        // Drop our handle only if we're still the current job.
+        if _groupingTask == work { _groupingTask = nil }
+
+        // Only the latest generation's result is allowed to touch state, and
+        // we flip isGrouping off here (not via defer) so a cancelled run does
+        // not briefly clear the indicator while a newer run is still active.
+        guard _groupingGeneration == myGeneration else { return }
+        isGrouping = false
+
+        guard let rawGroups else { return }
+
+        var lookup: [UUID: Int] = [:]
+        burstGroups = rawGroups.enumerated().map { i, ids in
+            for id in ids {
+                lookup[id] = i
+            }
+            return BurstGroup(id: i, fileIDs: ids)
+        }
+        burstGroupLookup = lookup
+        burstModeActive = true
+        Logger.process.debugMessageOnly("SimilarityScoringModel: \(burstGroups.count) burst groups from \(files.count) files (threshold \(threshold))")
     }
 
     // MARK: - Static helpers (nonisolated, used from detached tasks)

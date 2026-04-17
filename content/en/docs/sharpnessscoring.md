@@ -73,13 +73,42 @@ flowchart TD
     J --> L
     K --> L
 
-    L --> M[7. Hard blur gate\nmicroContrast < 0.014 → ×0.12]
-    M --> N[8. Score fusion\nblend · silhouette penalty · size bonus]
+    L --> M[7. Soft blur gate\napertureHint ramp · 0.20 floor · 1.0 ceiling]
+    M --> N[8. Score fusion\n60/40 AF·saliency blend · silhouette penalty · size bonus]
     N --> O([9. Badge: score / maxScore × 100])
 
     style A fill:#2d2d2d,color:#fff
     style O fill:#2d2d2d,color:#fff
 ```
+
+---
+
+## Aperture-Aware Scoring
+
+Starting in this release, the scoring pipeline extracts the **f-number** from each file's EXIF data and derives an `ApertureHint` that dynamically tunes several scoring parameters:
+
+```swift
+enum ApertureHint: Equatable {
+    case wide       // ≤ f/5.6 — narrow depth of field
+    case mid        // f/5.6 – f/8 — neutral baseline
+    case landscape  // ≥ f/8 — deep depth of field
+
+    static func from(aperture: Double?) -> Self { ... }
+}
+```
+
+`ApertureHint` is a nested type inside `FocusDetectorConfig` and is set per-file by `SharpnessScoringModel` before calling `computeSharpnessScore`. The hint drives four properties:
+
+| Property | `.wide` | `.mid` | `.landscape` | Effect |
+|---|---|---|---|---|
+| `blurGateLow` | 0.010 | 0.008 | 0.006 | Lower end of soft ramp — floor attenuation (0.20) applied below this σ |
+| `blurGateHigh` | 0.025 | 0.022 | 0.018 | Upper end of soft ramp — no attenuation above this σ |
+| `blurDamp` | 1.0 | 1.0 | 0.8 | Multiplies the ISO × resolution pre-blur factor; damps for deep DoF |
+| `salientWeightOverride` | `nil` | `nil` | 0.55 | Overrides `config.salientWeight` to reduce Vision dominance on landscape shots |
+
+The explicit `nonisolated static func ==` on `ApertureHint` avoids `@MainActor` isolation on the synthesized `Equatable` conformance, keeping it callable from `nonisolated` scoring statics.
+
+---
 
 ### 1. Thumbnail decode
 
@@ -113,15 +142,26 @@ Pass 1 always takes priority. The first matching label is returned as the `Salie
 
 Three sub-steps build the amplified edge map:
 
-**Gaussian pre-blur.** Applied before the Laplacian to suppress noise. Without blur, noise pixels generate false Laplacian responses that inflate scores on out-of-focus images. The effective radius adapts to both ISO and image resolution:
+**Gaussian pre-blur.** Applied before the Laplacian to suppress noise. Without blur, noise pixels generate false Laplacian responses that inflate scores on out-of-focus images. The effective radius adapts to ISO, image resolution, and the per-file aperture hint:
 
 ```
-isoFactor = clamp(sqrt(ISO / 400),              1.0, 3.0)
-resFactor = clamp(sqrt(max(imageWidth, 512) / 512), 1.0, 3.0)
-effectiveRadius = min(preBlurRadius × isoFactor × resFactor, 100.0)
+isoFactor  = isoScalingFactor(iso)                              // piecewise-linear (see below)
+resFactor  = clamp(sqrt(max(imageWidth, 512) / 512), 1.0, 3.0)
+effectiveRadius = min(preBlurRadius × isoFactor × resFactor × apertureHint.blurDamp, 100.0)
 ```
 
-At ISO 400 on a 512 px thumbnail both factors are 1.0. At ISO 6400 `isoFactor ≈ 4.0` (capped at 3.0); on a 2048 px image `resFactor ≈ 2.0`, so blur scales up in proportion.
+`isoScalingFactor` is a nonisolated piecewise-linear function that replaces the old `sqrt(ISO/400)` clamped to 3.0:
+
+| ISO range | Factor |
+|---|---|
+| < 800 | 1.0 (flat) |
+| 800 → 3200 | linear ramp 1.0 → 1.6 |
+| 3200 → 9600 | shallow ramp 1.6 → 2.2 |
+| ≥ 9600 | 2.2 (cap) |
+
+This flatter curve avoids over-blurring moderate-ISO shots (800–1600) that don't need aggressive suppression.
+
+`apertureHint.blurDamp` damps the combined factor for landscape-aperture shots (f/8+) to 0.8, preventing the pre-blur from erasing real whole-frame detail in deep depth-of-field images. Wide and mid hints leave it at 1.0.
 
 **`focusLaplacian` Metal kernel.** Measures the second spatial derivative of luminance via an 8-connected discrete Laplacian (see [Metal Kernel](#metal-kernel--focuslaplacian) below). The response is high where the image is sharp and near zero where it is blurred.
 
@@ -189,7 +229,7 @@ The algorithm scores the **p90–p97 edge band** relative to the p20 noise floor
 
 Percentiles are computed by sorting the buffer with `vDSP.sort` from the Accelerate framework (O(n log n)). An earlier custom quickselect was replaced because its median-of-one pivot produced O(n²) performance on zero-biased Laplacian output — the typical case for blurry or out-of-focus images at high ISO, where nearly all values are zero.
 
-### 7. Hard blur gate
+### 7. Soft blur gate
 
 Before fusion, the subject region's **micro-contrast** (standard deviation of its Laplacian samples) is checked:
 
@@ -199,13 +239,28 @@ func microContrast(_ samples: [Float]) -> Float {
 }
 ```
 
-If `microContrast < 0.014` and the region has at least 64 samples, the score is hard-clamped:
+The old hard cliff (`microContrast < 0.014 → ×0.12`) has been replaced with an **aperture-aware soft linear ramp**:
 
 ```
-return max(0.01, effectiveSubjectScore × 0.12)
+low  = apertureHint.blurGateLow
+high = apertureHint.blurGateHigh
+
+if σ ≥ high:   attenuation = 1.0          // no penalty
+if σ ≤ low:    attenuation = 0.20         // near-floor penalty
+otherwise:     attenuation = 0.20 + 0.80 × (σ − low) / (high − low)   // linear interpolation
+
+return max(0.01, effectiveSubjectScore × attenuation)
 ```
 
-This gate catches images where the Laplacian fires on noise or film grain even though the subject has no real edge detail — a common failure mode at very high ISO or with strong defocus. The 0.12 multiplier reduces the score to roughly one-eighth rather than zeroing it, preserving relative ordering within a burst.
+Ramp thresholds by aperture hint:
+
+| `ApertureHint` | `blurGateLow` | `blurGateHigh` | Rationale |
+|---|---|---|---|
+| `.wide` (≤ f/5.6) | 0.010 | 0.025 | Narrow DoF: stricter gate; soft subjects are truly out of focus |
+| `.mid` (f/5.6–f/8) | 0.008 | 0.022 | Neutral baseline |
+| `.landscape` (≥ f/8) | 0.006 | 0.018 | Deep DoF: permissive gate; low σ can still be an acceptable shot |
+
+The soft ramp preserves relative ordering within a burst (no abrupt cliff) and adapts to shooting conditions rather than applying a single universal threshold.
 
 ### 8. Score fusion
 
@@ -235,6 +290,8 @@ flowchart TD
 
 Key decisions:
 
+- **AF / saliency blend is now explicit 60/40.** When both an AF-point region score and a Vision saliency score are available, they are blended with `AF × 0.60 + saliency × 0.40`. Previously, AF silently overrode saliency via Swift's `??` operator, meaning the Vision score was entirely ignored whenever AF was present. The 60/40 blend keeps AF dominant while still incorporating Vision's view of the subject.
+- **Landscape salient-weight override.** For `ApertureHint.landscape` shots, `config.salientWeight` is overridden to 0.55 (via `salientWeightOverride`). Landscape apertures typically have deep DoF where background detail also matters; the lower weight prevents the Vision-detected salient region from dominating scoring.
 - **Silhouette penalty.** When the subject region's `borderFraction` exceeds 0.62 the blend is reduced by up to 55%. At `frac = 1.0` (pure silhouette) the penalty is `−0.55`, i.e. the score is halved. The 0.38 denominator normalises the excess over the 0.62 trigger.
 - **Subject-size bonus.** Applied only when the subject came from Vision saliency (not an AF-point region). `blended ×= 1 + area × subjectSizeFactor`. Closer subjects fill more of the frame and receive a proportionally higher score for equivalent sharpness.
 - **Fallback with cubic penalty.** When saliency detection finds nothing, only the full-frame score is used — but it is raised to the power of `(1 − salientWeight)³`. At the default `salientWeight = 0.75`, `p = 0.25` and `p³ = 0.0156`, so the score is aggressively reduced. This discourages background-sharp / subject-soft images from ranking high.
@@ -247,7 +304,28 @@ The badge shown on each thumbnail is:
 badge = score / maxScore × 100
 ```
 
-`maxScore` is the **90th percentile** of all scores in the current catalog (`scores.values` sorted, index `0.90 × (count − 1)`). For catalogs with fewer than ten scored images the raw maximum is used instead. All comparisons are relative within a session, not absolute.
+`maxScore` is a **stored property** (not computed) on `SharpnessScoringModel`. It is recalculated by `recomputeMaxScore()` only when the `scores` dictionary mutates (via `didSet`):
+
+```swift
+var scores: [UUID: Float] = [:] {
+    didSet { recomputeMaxScore() }
+}
+
+private(set) var maxScore: Float = 1.0
+
+private func recomputeMaxScore() {
+    guard scores.count >= 2 else { maxScore = scores.values.first ?? 1.0; return }
+    var sorted = Array(scores.values)
+    sorted.sort()
+    guard sorted.count >= 10 else { maxScore = max(sorted.last ?? 1e-6, 1e-6); return }
+    let k = Int(Float(sorted.count - 1) * 0.90)
+    maxScore = max(sorted[k], 1e-6)
+}
+```
+
+This means each `ImageItemView` reads `maxScore` in O(1) instead of triggering an O(n log n) sort on every render. The sort happens once per `scores` assignment (end of scoring run), not once per cell per frame.
+
+The denominator is the **p90 value** of all scores. For catalogs with fewer than 10 scored images the raw maximum is used instead. All comparisons are relative within a session, not absolute.
 
 ---
 
@@ -380,6 +458,7 @@ All parameters are fields of the `FocusDetectorConfig` struct held by `FocusMask
 | `subjectSizeFactor` | 0.1 | 0 – 3.0 | Scoring only | Bonus multiplier for subject area: `blended ×= 1 + area × factor`. Applied only for Vision saliency, not AF-point regions. |
 | `enableSubjectClassification` | true | — | Scoring only | When true, runs `VNClassifyImageRequest` to determine the subject label. Adds a small per-image cost. |
 | `afRegionRadius` | 0.12 | — | Scoring only | Half-size of the AF-point scoring region as a fraction of image dimension. |
+| `apertureHint` | `.mid` | `.wide`/`.mid`/`.landscape` | Both | Derived per-file from EXIF f-number. Drives soft blur-gate thresholds, `blurDamp`, and landscape salient-weight override. |
 
 **Scope key:** *Both* = affects scoring and focus mask overlay. *Scoring only* = affects scores, not mask appearance. *Mask only* = affects mask overlay only.
 
