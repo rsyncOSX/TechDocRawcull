@@ -76,8 +76,8 @@ flowchart TD
     end
 
     subgraph ReadSites["Read / Display Sites"]
-        TI["TaggedPhotoItemView\nrating color + tagged bg"]
-        TG["TaggedPhotoHorisontalGridView\ntagged files ≥ rating 2"]
+        TI["RatedPhotoItemView\nrating color strip + thumbnail"]
+        TG["RatedPhotoGridView\nrated files ≥ rating 2"]
         TR["FileTableRowView\nmarked toggle"]
         TB["SharedMainToolbarContent\nenable grid window"]
         SF["SavedFilesView\ndisplay all catalogs"]
@@ -140,8 +140,8 @@ All in-memory reads hit `CullingModel.savedFiles` or the derived caches — no d
 | Build rating / tagged caches | `RawCullViewModel.rebuildRatingCache()` |
 | Is file unrated (not yet starred or rejected)? | `CullingModel.isUnrated()` |
 | Count tagged files | `CullingModel.countSelectedFiles()` |
-| Rating color in thumbnail | `TaggedPhotoItemView` |
-| Tagged-file grid display | `TaggedPhotoHorisontalGridView` |
+| Rating color strip in grid cell | `RatedPhotoItemView` |
+| Rated-file grid display (≥ ★★) | `RatedPhotoGridView` |
 | Marked toggle in file table | `FileTableRowView.marktoggle()` |
 | Enable grid window button | `SharedMainToolbarContent` |
 | Management UI | `SavedFilesView` |

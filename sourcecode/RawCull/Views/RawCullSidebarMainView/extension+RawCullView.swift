@@ -13,37 +13,12 @@ extension RawCullMainView {
     var toolbarContent: some ToolbarContent {
         SharedMainToolbarContent(
             viewModel: viewModel,
-            isHorizontal: false,
-            toggleLayout: toggleshowvertical,
             toggleInspector: toggleShowInspector,
-            openGridThumbnail: openGridThumbnailWindow,
         )
     }
 
     func toggleShowInspector() {
         viewModel.hideInspector.toggle()
-    }
-
-    func toggleshowvertical() {
-        showhorizontalthumbnailview.toggle()
-    }
-
-    func openGridThumbnailWindow() {
-        viewModel.ratingFilter = .all
-        Task(priority: .background) { await viewModel.handleSortOrderChange() }
-        gridthumbnailviewmodel.open(
-            cullingModel: viewModel.cullingModel,
-            selectedSource: viewModel.selectedSource,
-            filteredFiles: viewModel.filteredFiles,
-        )
-        openWindow(id: "grid-thumbnails-window")
-    }
-
-    func handleToggleSelection(for file: FileItem) {
-        Task {
-            viewModel.selectFile(file)
-            await viewModel.toggleTag(for: file)
-        }
     }
 
     func handlePickerResult(_ result: Result<URL, Error>) {

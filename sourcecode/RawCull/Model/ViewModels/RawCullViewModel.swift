@@ -15,6 +15,25 @@ enum RatingFilter: Hashable {
     case stars(Int) // rating == n, n in 2...5
 }
 
+enum MainViewMode: String, CaseIterable, Identifiable {
+    case loupe
+    case grid
+    case ratedGrid
+
+    var id: String {
+        rawValue
+    }
+}
+
+enum ActiveSheet: String, Identifiable {
+    case stats
+    case scoringParams
+
+    var id: String {
+        rawValue
+    }
+}
+
 @Observable @MainActor
 final class RawCullViewModel {
     /// Remember previous selected source to avoid a new rescan of
@@ -44,7 +63,6 @@ final class RawCullViewModel {
     var scanning: Bool = true
     var showingAlert: Bool = false
 
-    var focustagimage: Bool = false
     var focusaborttask: Bool = false
     var focusExtractJPGs: Bool = false
 
@@ -57,6 +75,14 @@ final class RawCullViewModel {
     // Zoom window state
     var zoomCGImageWindowFocused: Bool = false
     var zoomNSImageWindowFocused: Bool = false
+
+    /// Main content mode — drives which view fills the main window.
+    var mainViewMode: MainViewMode = .loupe
+
+    // In-window zoom overlay (replaces the old separate zoom windows).
+    var zoomOverlayVisible: Bool = false
+    var zoomOverlayCGImage: CGImage?
+    var zoomOverlayNSImage: NSImage?
 
     // Thumbnail preview zoom state
     var scale: CGFloat = 1.0
@@ -97,6 +123,10 @@ final class RawCullViewModel {
     var focusPoints: [FocusPointsModel]?
 
     var showSavedFiles: Bool = false
+
+    /// Sheet currently presented from the main window toolbar
+    /// (Scoring Parameters / Scan Statistics). Nil when no sheet is shown.
+    var activeSheet: ActiveSheet?
 
     /// Closure to count scanning files
     var countingScannedFiles: (@Sendable (Int) -> Void)?

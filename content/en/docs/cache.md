@@ -47,7 +47,7 @@ cost = (Σ rep.pixelsWide × rep.pixelsHigh × costPerPixel) × 1.1
 - Iterates every `NSImageRep` in the image
 - Falls back to logical `image.size` if no representations are present
 - The 1.1 multiplier adds a 10% overhead for wrapper and metadata
-- `costPerPixel` comes from `SettingsViewModel.thumbnailCostPerPixel` (default: 4, representing RGBA bytes per pixel)
+- `costPerPixel` comes from `SettingsViewModel.thumbnailCostPerPixel` (default: 6)
 
 **Thread safety** uses `OSAllocatedUnfairLock` on a tuple `(isDiscarded: Bool, accessCount: Int)` to keep both fields consistent under concurrent access.
 
@@ -80,23 +80,26 @@ if let wrapper = SharedMemoryCache.shared.object(forKey: url as NSURL),
 
 ```swift
 struct CacheConfig {
-    nonisolated let totalCostLimit: Int   // bytes
+    nonisolated let totalCostLimit: Int   // bytes (full-res cache)
     nonisolated let countLimit: Int
+    nonisolated let gridTotalCostLimit: Int  // bytes (200 px grid cache)
     nonisolated var costPerPixel: Int?
 
     static let production = CacheConfig(
-        totalCostLimit: 500 * 1024 * 1024,  // 500 MB default
-        countLimit: 1000
+        totalCostLimit: 500 * 1024 * 1024,       // 500 MB default (overwritten from settings)
+        countLimit: 1000,
+        gridTotalCostLimit: 400 * 1024 * 1024    // 400 MB default
     )
 
     static let testing = CacheConfig(
-        totalCostLimit: 100_000,            // intentionally tiny
-        countLimit: 5
+        totalCostLimit: 100_000,                 // intentionally tiny
+        countLimit: 5,
+        gridTotalCostLimit: 400 * 1024 * 1024
     )
 }
 ```
 
-In production, `totalCostLimit` is overwritten from `SettingsViewModel.memoryCacheSizeMB` when `applyConfig` runs. The `countLimit` of 10,000 is intentionally very high — under normal operation `totalCostLimit` is always the binding constraint.
+In production, `totalCostLimit` is overwritten from `SettingsViewModel.memoryCacheSizeMB` (default 10,000 MB) and `gridTotalCostLimit` is overwritten from `SettingsViewModel.gridCacheSizeMB` (default 400 MB) when `applyConfig` runs. The `countLimit` of 10,000 is intentionally very high — under normal operation `totalCostLimit` is always the binding constraint.
 
 ---
 
@@ -322,10 +325,10 @@ func startMemoryPressureMonitoring() {
 **Important detail about warning compounding**: the warning level calculates its reduction from the *current* limit, not the original configured limit. Repeated warning events compound:
 
 ```
-Original: 5000 MB
-After 1st warning: 3000 MB
-After 2nd warning: 1800 MB
-After 3rd warning: 1080 MB
+Original: 10000 MB
+After 1st warning: 6000 MB
+After 2nd warning: 3600 MB
+After 3rd warning: 2160 MB
 ```
 
 The limit is only restored to the configured value when `applyConfig()` runs again — for example, on app start or after a settings change.
@@ -409,10 +412,11 @@ Settings live in `SettingsViewModel` and are persisted to `~/Library/Application
 
 | Setting | Default | Effect |
 |---|---|---|
-| `memoryCacheSizeMB` | 5000 | `NSCache.totalCostLimit = memoryCacheSizeMB × 1024 × 1024` (full-res cache only) |
-| `thumbnailCostPerPixel` | 4 | Cost per pixel in `DiscardableThumbnail.cost` for both caches |
-| `thumbnailSizePreview` | 1024 | Target size for bulk preload; affects full-res entry cost |
-| `thumbnailSizeGrid` | 100 | Grid list thumbnail size |
+| `memoryCacheSizeMB` | 10000 | `NSCache.totalCostLimit = memoryCacheSizeMB × 1024 × 1024` (full-res cache only) |
+| `gridCacheSizeMB` | 400 | `gridThumbnailCache.totalCostLimit = gridCacheSizeMB × 1024 × 1024` (200 px grid cache) |
+| `thumbnailCostPerPixel` | 6 | Cost per pixel in `DiscardableThumbnail.cost` for both caches |
+| `thumbnailSizePreview` | 1616 | Target size for bulk preload; affects full-res entry cost |
+| `thumbnailSizeGrid` | 200 | Grid list thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
 
 Grid view thumbnails are fixed at **200 px** (not user-configurable). The grid cache limit is hardcoded at 400 MB.

@@ -85,26 +85,12 @@ enum GridRatingFilter: Hashable {
     case rating(Int) // -1 = rejected, 0 = keepers, 2–5 = stars
 }
 
-private enum ActiveSheet: String, Identifiable {
-    case stats, scoringParams
-    var id: String {
-        rawValue
-    }
-}
-
 struct GridThumbnailSelectionView: View {
-    private var settings: SettingsViewModel {
-        SettingsViewModel.shared
-    }
-
-    @Environment(\.openWindow) private var openWindow
-
     @Bindable var viewModel: RawCullViewModel
 
     @State private var hoveredFileID: FileItem.ID?
     @State private var ratingFilter: GridRatingFilter = .all
     @State private var sharpnessThreshold: Int = 50
-    @State private var activeSheet: ActiveSheet?
 
     // ── Burst-mode render cache ──────────────────────────────────────────
     // Recomputed only when `gridCacheKey` changes, so hover/selection
@@ -231,22 +217,18 @@ struct GridThumbnailSelectionView: View {
 
                 // Progress view — shown during burst grouping
                 if viewModel.similarityModel.isGrouping {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text("Grouping bursts…")
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 14)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.primary.opacity(0.12), lineWidth: 1),
-                    )
-                    .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
-                    .transition(.scale(scale: 0.95).combined(with: .opacity))
+                    Text("Grouping bursts…")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.primary.opacity(0.12), lineWidth: 1),
+                        )
+                        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
+                        .transition(.scale(scale: 0.95).combined(with: .opacity))
                 }
 
                 // Progress view — shown during similarity indexing
@@ -282,18 +264,6 @@ struct GridThumbnailSelectionView: View {
         .animation(.easeInOut(duration: 0.15), value: viewModel.similarityModel.burstModeActive)
         .animation(.easeInOut(duration: 0.15), value: ratingFilter)
         .toolbar { gridToolbar }
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .stats:
-                ScanStatsSheetView(viewModel: viewModel)
-
-            case .scoringParams:
-                ScoringParametersSheetView(
-                    config: Bindable(viewModel.sharpnessModel.focusMaskModel).config,
-                    thumbnailMaxPixelSize: Bindable(viewModel.sharpnessModel).thumbnailMaxPixelSize,
-                )
-            }
-        }
         .task(id: viewModel.selectedSource) {
             viewModel.selectedFileIDs = []
             await ThumbnailLoader.shared.cancelAll()
@@ -332,12 +302,10 @@ struct GridThumbnailSelectionView: View {
     private func handleDoubleSelect(for file: FileItem) {
         viewModel.selectedFileID = file.id
         viewModel.zoomExtractionTask?.cancel()
-        viewModel.zoomExtractionTask = ZoomPreviewHandler.handle(
+        viewModel.zoomExtractionTask = ZoomPreviewHandler.handleOverlay(
             file: file,
             useThumbnailAsZoomPreview: viewModel.useThumbnailAsZoomPreview,
-            setNSImage: { nsImage = $0 },
-            setCGImage: { cgImage = $0 },
-            openWindow: { id in openWindow(id: id) },
+            viewModel: viewModel,
         )
     }
 
@@ -353,13 +321,23 @@ struct GridThumbnailSelectionView: View {
     /// any of these fields invalidate `visibleBurstGroups` and
     /// `bestInGroup`; unrelated mutations (hover, selection, progress text)
     /// do not.
+    /// All stored properties are read via synthesized Hashable when the
+    /// struct drives `.onChange(of: gridCacheKey)` above; Periphery does
+    /// not see synthesized conformances as reads, hence the ignores.
     private struct GridCacheKey: Hashable {
+        // periphery:ignore
         let burstGroupsCount: Int
+        // periphery:ignore
         let burstStructureHash: Int
+        // periphery:ignore
         let filesCount: Int
+        // periphery:ignore
         let filesFirstID: UUID?
+        // periphery:ignore
         let filesLastID: UUID?
+        // periphery:ignore
         let ratingFilter: GridRatingFilter
+        // periphery:ignore
         let scoresCount: Int
     }
 
@@ -459,61 +437,6 @@ extension GridThumbnailSelectionView {
                 Text("\(viewModel.selectedFileIDs.count) selected — press a rating key to apply")
                     .font(.caption)
                     .foregroundStyle(Color.secondary)
-            }
-        }
-        ToolbarItem(placement: .status) {
-            Toggle(isOn: Binding(
-                get: { settings.showScoringBadge },
-                set: { settings.showScoringBadge = $0; Task { await settings.saveSettings() } },
-            )) {
-                Label("Score Badge", systemImage: "number.circle")
-            }
-            .toggleStyle(.button)
-            .help("Show sharpness score badge on thumbnails (disable for smoother scrolling)")
-        }
-        ToolbarItem(placement: .status) {
-            Toggle(isOn: Binding(
-                get: { settings.showSaliencyBadge },
-                set: { settings.showSaliencyBadge = $0; Task { await settings.saveSettings() } },
-            )) {
-                Label("Saliency Badge", systemImage: "eye.circle")
-            }
-            .toggleStyle(.button)
-            .help("Show saliency badge on thumbnails")
-        }
-        ToolbarItem(placement: .status) {
-            Button {
-                activeSheet = .scoringParams
-            } label: {
-                Label("Scoring Parameters", systemImage: "slider.horizontal.3")
-            }
-            .help("Configure sharpness scoring parameters")
-        }
-        ToolbarItem(placement: .status) {
-            Button {
-                activeSheet = .stats
-            } label: {
-                Label("Statistics", systemImage: "info.circle")
-            }
-            .help("Show scan statistics")
-            .disabled(viewModel.files.isEmpty)
-        }
-        ToolbarItem(placement: .status) {
-            HStack(spacing: 8) {
-                RatingFilterButtons(
-                    activeRating: { if case let .rating(n) = ratingFilter { return n }; return nil }(),
-                    onSelect: { rating in
-                        let next = GridRatingFilter.rating(rating)
-                        ratingFilter = ratingFilter == next ? .all : next
-                    },
-                    onClear: { ratingFilter = .all },
-                )
-
-                Text("P = picked, not rated")
-                    .font(.caption2)
-                    .foregroundStyle(Color.secondary)
-
-                Spacer()
             }
         }
     }

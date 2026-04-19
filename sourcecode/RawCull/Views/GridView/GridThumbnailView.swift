@@ -34,26 +34,10 @@ struct GridThumbnailView: View {
         .onDisappear {
             gridthumbnailviewmodel.close()
         }
-        // .focusedSceneValue(\.tagimage, $viewModel.focustagimage)
         .focusable()
         .focusEffectDisabled(true)
         .onKeyPress(.leftArrow) { navigateToPrevious(); return .handled }
         .onKeyPress(.rightArrow) { navigateToNext(); return .handled }
-
-        if viewModel.focustagimage == true {
-            TagImageFocusView(
-                focustagimage: $viewModel.focustagimage,
-                files: viewModel.files,
-                selectedFileID: viewModel.selectedFileID,
-                handleToggleSelection: handleToggleSelection,
-            )
-        }
-    }
-
-    private func handleToggleSelection(for file: FileItem) {
-        Task {
-            await viewModel.toggleTag(for: file)
-        }
     }
 
     private func navigateToNext() {

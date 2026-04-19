@@ -170,11 +170,11 @@ nonisolated func asyncgetsettings() async -> SavedSettings {
     await MainActor.run {               // Hop to main thread, read, return
         SavedSettings(
             memoryCacheSizeMB: self.memoryCacheSizeMB,
+            gridCacheSizeMB: self.gridCacheSizeMB,
             thumbnailSizeGrid: self.thumbnailSizeGrid,
             thumbnailSizePreview: self.thumbnailSizePreview,
             thumbnailSizeFullSize: self.thumbnailSizeFullSize,
             thumbnailCostPerPixel: self.thumbnailCostPerPixel,
-            thumbnailSizeGridView: self.thumbnailSizeGridView,
             useThumbnailAsZoomPreview: self.useThumbnailAsZoomPreview
         )
     }   // Back to the calling actor with a Sendable value type
@@ -1302,13 +1302,15 @@ sequenceDiagram
 
 | Setting | Default | Effect |
 |---|---|---|
-| `memoryCacheSizeMB` | 5000 | Sets `NSCache.totalCostLimit` |
-| `thumbnailCostPerPixel` | 4 | Cost per pixel in `DiscardableThumbnail` |
-| `thumbnailSizePreview` | 1024 | Target size for bulk preload and on-demand loading via `ThumbnailLoader` |
-| `thumbnailSizeGrid` | 100 | Grid thumbnail size |
-| `thumbnailSizeGridView` | 400 | Grid View thumbnail size |
+| `memoryCacheSizeMB` | 10000 | Sets `NSCache.totalCostLimit` for the full-resolution cache |
+| `gridCacheSizeMB` | 400 | Sets `gridThumbnailCache.totalCostLimit` for the 200 px grid cache |
+| `thumbnailCostPerPixel` | 6 | Cost per pixel in `DiscardableThumbnail` |
+| `thumbnailSizePreview` | 1616 | Target size for bulk preload and on-demand loading via `ThumbnailLoader` |
+| `thumbnailSizeGrid` | 200 | Grid thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
 | `useThumbnailAsZoomPreview` | false | Use cached thumbnail instead of re-extracting for zoom |
+| `showScoringBadge` | false | Show sharpness score badge on thumbnails |
+| `showSaliencyBadge` | false | Show cyan saliency subject badge on thumbnails |
 
 ---
 
@@ -1330,6 +1332,37 @@ Window("Thumbnail Grid", id: "grid-thumbnails-window") {
 It is opened via `openWindow(id: "grid-thumbnails-window")` rather than as a conditional branch inside `RawCullMainView`. This gives the grid its own lifecycle and window chrome, and removes the `@State var showGridThumbnail: Bool` that previously lived in multiple views.
 
 `GridThumbnailViewModel.open()` and `close()` are simplified accordingly — the window-visibility toggle and guard are removed; the methods only manage internal view model state.
+
+### ZoomOverlayView — Full-Screen Zoom
+
+`ZoomOverlayView` is displayed in a `ZStack` above `RawCullMainView` whenever `viewModel.zoomOverlayVisible` is `true`. It replaces the older approach of opening separate windows for zoom preview.
+
+**State stored on `RawCullViewModel`** (all `@MainActor`):
+- `zoomOverlayVisible: Bool` — controls whether the overlay is shown
+- `zoomOverlayCGImage: CGImage?` — high-quality ARW embedded JPEG (from `JPGSonyARWExtractor`)
+- `zoomOverlayNSImage: NSImage?` — fallback when using a cached thumbnail
+- `zoomExtractionTask: Task<Void, Never>?` — handle for the in-flight extraction; cancelled on dismiss or selection change
+
+**`ZoomPreviewHandler.handleOverlay`** decides which path to take:
+1. **Thumbnail reuse** (`useThumbnailAsZoomPreview = true`): calls `RequestThumbnail.shared.requestThumbnail` and stores the result as `NSImage` in `zoomOverlayNSImage`.
+2. **Pre-extracted JPEG** (`.jpg` companion file exists): loads it synchronously via `CGImageSourceCreateImageAtIndex` with caching disabled, stores as `CGImage`. `CGImageSourceRemoveCacheAtIndex` is called immediately to prevent ImageIO's process-level cache from retaining the ~188 MB decoded buffer beyond the overlay's lifetime.
+3. **Live extraction** (no companion file): sets `zoomOverlayVisible = true` immediately (shows a progress spinner) then calls `JPGSonyARWExtractor.jpgSonyARWExtractor` in a background task.
+
+**Async focus mask regeneration:** `ZoomOverlayView` uses `.task(id: viewModel.zoomOverlayCGImage?.hashValue)` to regenerate the focus mask whenever a new `CGImage` is assigned, and `.onChange(of: viewModel.sharpnessModel.focusMaskModel.config)` with a 400 ms debounce to regenerate when scoring parameters change. Both paths call `FocusMaskModel.generateFocusMask` which runs on a detached `userInitiated` task.
+
+**Gesture handling:** Simultaneous `MagnificationGesture` (pinch) and `DragGesture` (pan) run as a `SimultaneousGesture`. A double-tap toggles between fit (1.0×) and 2.0× zoom. Keyboard `+`/`−` increment/decrement by 0.4× per press. `Escape` dismisses.
+
+### Three Main View Modes
+
+`RawCullMainView` switches between three modes via `viewModel.mainViewMode`:
+
+| Mode | View | Purpose |
+|---|---|---|
+| `.loupe` | `NavigationSplitView` (3-column) | Standard culling — sidebar + file list + detail |
+| `.grid` | `GridThumbnailSelectionView` | Burst-aware grid view; opens in a dedicated `Window` |
+| `.ratedGrid` | `RatedPhotoGridView` | Displays saved files with rating ≥ 2 stars for the current catalog |
+
+`ZoomOverlayView` sits in a `ZStack` above all three modes — it is not mode-specific. When `selectedFile` changes while the overlay is already visible, `RawCullMainView.onChange(of: viewModel.selectedFile)` automatically cancels the previous extraction task and starts a new one for the new file.
 
 ### SimilarityScoringModel — Burst Grouping
 

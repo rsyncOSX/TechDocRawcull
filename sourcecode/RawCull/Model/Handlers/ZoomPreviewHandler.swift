@@ -11,20 +11,17 @@ import UniformTypeIdentifiers
 /// Type to handle JPG/preview extraction and window opening
 enum ZoomPreviewHandler {
     @discardableResult
-    static func handle(
+    static func handleOverlay(
         file: FileItem,
         useThumbnailAsZoomPreview: Bool = false,
         thumbnailSizePreview: Int = 1616,
-        setNSImage: @escaping (NSImage?) -> Void,
-        setCGImage: @escaping (CGImage?) -> Void,
-        openWindow: @escaping (String) -> Void,
+        viewModel: RawCullViewModel,
     ) -> Task<Void, Never> {
         if useThumbnailAsZoomPreview {
             return Task {
-                // Clear previous zoom payloads so ARC can reclaim memory promptly.
                 await MainActor.run {
-                    setCGImage(nil)
-                    setNSImage(nil)
+                    viewModel.zoomOverlayCGImage = nil
+                    viewModel.zoomOverlayNSImage = nil
                 }
 
                 let cgThumb = await RequestThumbnail.shared.requestThumbnail(
@@ -36,28 +33,25 @@ enum ZoomPreviewHandler {
 
                 await MainActor.run {
                     if let cgThumb {
-                        setNSImage(NSImage(cgImage: cgThumb, size: .zero))
+                        viewModel.zoomOverlayNSImage = NSImage(cgImage: cgThumb, size: .zero)
                     }
-                    openWindow(WindowIdentifier.zoomnsImage.rawValue)
+                    viewModel.zoomOverlayVisible = true
                 }
             }
         } else {
             let filejpg = file.url.deletingPathExtension().appendingPathExtension(SupportedFileType.jpg.rawValue)
             if let cgImage = loadCGImage(from: filejpg) {
-                // Synchronous fast path — clear stale images first, then set new one.
-                setCGImage(nil)
-                setNSImage(nil)
-                setCGImage(cgImage)
-                openWindow(WindowIdentifier.zoomcgImage.rawValue)
+                viewModel.zoomOverlayCGImage = nil
+                viewModel.zoomOverlayNSImage = nil
+                viewModel.zoomOverlayCGImage = cgImage
+                viewModel.zoomOverlayVisible = true
                 return Task {}
             } else {
                 return Task {
                     await MainActor.run {
-                        // Clear previous payloads first.
-                        setNSImage(nil)
-                        setCGImage(nil)
-                        // Open immediately to show "Extracting image…"
-                        openWindow(WindowIdentifier.zoomcgImage.rawValue)
+                        viewModel.zoomOverlayNSImage = nil
+                        viewModel.zoomOverlayCGImage = nil
+                        viewModel.zoomOverlayVisible = true
                     }
 
                     guard !Task.isCancelled else { return }
@@ -69,7 +63,7 @@ enum ZoomPreviewHandler {
 
                         if let extracted {
                             await MainActor.run {
-                                setCGImage(extracted)
+                                viewModel.zoomOverlayCGImage = extracted
                             }
                         }
                     }

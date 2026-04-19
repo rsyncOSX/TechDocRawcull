@@ -25,10 +25,10 @@ Thumbnail dimensions are configurable via `SettingsViewModel` and persisted to `
 
 | Setting | Default | Usage |
 |---|---|---|
-| `thumbnailSizeGrid` | 100 | Small thumbnails in grid list view |
-| `thumbnailSizePreview` | 1024 | Bulk preload target size |
+| `thumbnailSizeGrid` | 200 | Small thumbnails in grid list view |
+| `thumbnailSizePreview` | 1616 | Bulk preload target size |
 | `thumbnailSizeFullSize` | 8700 | Upper bound for full-size zoom path |
-| `thumbnailCostPerPixel` | 4 | RGBA bytes per pixel — drives cache cost calculation |
+| `thumbnailCostPerPixel` | 6 | Bytes per pixel — drives cache cost calculation |
 | `useThumbnailAsZoomPreview` | false | Reuse cached thumbnail instead of re-extracting for zoom |
 
 **Grid view thumbnails** are fixed at **200 px** — this is hardcoded and not user-configurable. The grid view fast path always reads from `SharedMemoryCache.gridThumbnailCache` (400 MB, ≤200 px, see [Memory Cache](../cache/)).
@@ -272,7 +272,7 @@ if targetSize <= 200 {
 // Fall through to acquireSlot() for larger sizes or cache misses
 ```
 
-For `targetSize > 200` (or a grid cache miss), the existing `acquireSlot()` → `RequestThumbnail` path runs with `thumbnailSizePreview` (default 1024) as the target size. If a waiting task is cancelled before its slot becomes available, its continuation is removed from the queue by UUID so it is never spuriously resumed.
+For `targetSize > 200` (or a grid cache miss), the existing `acquireSlot()` → `RequestThumbnail` path runs with `thumbnailSizePreview` (default 1616) as the target size. If a waiting task is cancelled before its slot becomes available, its continuation is removed from the queue by UUID so it is never spuriously resumed.
 
 ### 5.2 RequestThumbnail (cache pipeline)
 
@@ -459,11 +459,14 @@ flowchart TD
 
 | Setting | Default | Effect |
 |---|---|---|
-| `memoryCacheSizeMB` | 5000 | Sets `NSCache.totalCostLimit` for the full-resolution cache |
-| `thumbnailCostPerPixel` | 4 | Drives `DiscardableThumbnail` cost and interpolation quality |
-| `thumbnailSizePreview` | 1024 | Bulk preload target size and on-demand `RequestThumbnail` size |
-| `thumbnailSizeGrid` | 100 | Grid list thumbnail size |
+| `memoryCacheSizeMB` | 10000 | Sets `NSCache.totalCostLimit` for the full-resolution cache |
+| `gridCacheSizeMB` | 400 | Sets `gridThumbnailCache.totalCostLimit` for the 200 px grid cache |
+| `thumbnailCostPerPixel` | 6 | Drives `DiscardableThumbnail` cost and interpolation quality |
+| `thumbnailSizePreview` | 1616 | Bulk preload target size and on-demand `RequestThumbnail` size |
+| `thumbnailSizeGrid` | 200 | Grid list thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
 | `useThumbnailAsZoomPreview` | false | Skip re-extraction and use cached thumbnail for zoom |
+| `showScoringBadge` | false | Show sharpness score badge on thumbnails (off by default for scroll performance) |
+| `showSaliencyBadge` | false | Show cyan saliency subject badge on thumbnails |
 
-Grid view thumbnails are hardcoded at 200 px; the `thumbnailSizeGridView` setting has been removed.
+Grid view thumbnails are hardcoded at 200 px in the grid cache path.

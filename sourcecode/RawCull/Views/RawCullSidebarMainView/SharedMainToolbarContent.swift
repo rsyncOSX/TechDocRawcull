@@ -9,98 +9,116 @@ import SwiftUI
 
 struct SharedMainToolbarContent: ToolbarContent {
     @Bindable var viewModel: RawCullViewModel
-    /// `true` when hosted in `HorizontalMainThumbnailsListView` (shows the "back to vertical" button),
-    /// `false` when hosted in `RawCullMainView` (shows the "go to horizontal" button).
-    let isHorizontal: Bool
-    let toggleLayout: () -> Void
     let toggleInspector: () -> Void
-    let openGridThumbnail: () -> Void
 
-    @Environment(\.openWindow) private var openWindow
+    private var settings: SettingsViewModel {
+        SettingsViewModel.shared
+    }
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .status) {
-            Button(action: openCopyView) {
-                Label("Copy", systemImage: "document.on.document")
-            }
-            .disabled(viewModel.creatingthumbnails || viewModel.selectedSource == nil)
-            .help("Copy tagged images to destination...")
-        }
-
-        ToolbarItem(placement: .status) {
-            Button(action: openGridThumbnail) {
-                Label("Grid View", systemImage: "square.grid.2x2")
-            }
-            .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty)
-            .help("Open thumbnail grid view")
-        }
-
-        ToolbarItem(placement: .status) {
-            Button(action: opentaggedGridThumbnailWindow) {
-                Label("Grid Tagged Images", systemImage: "square.grid.2x2.fill")
-            }
-            .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty || !showGridtaggedThumbnailWindow())
-            .help("Open tagged thumbnail grid view")
-        }
-
-        if isHorizontal {
+        Group {
             ToolbarItem(placement: .status) {
-                Button(action: toggleLayout) {
-                    Label("Horizontal", systemImage: "arrow.up.and.down.text.horizontal")
+                Button(action: openCopyView) {
+                    Label("Copy", systemImage: "document.on.document")
                 }
-                .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty)
-                .help("Show Vertical thumbnails")
-                .labelStyle(.iconOnly)
+                .disabled(viewModel.creatingthumbnails || viewModel.selectedSource == nil)
+                .help("Copy tagged images to destination...")
             }
-        } else {
+
             ToolbarItem(placement: .status) {
-                Button(action: toggleLayout) {
-                    Label("Vertical", systemImage: "arrow.left.and.right.text.vertical")
+                Button(action: toggleshowsavedfiles) {
+                    Label("Saved Files", systemImage: "square.and.arrow.down")
                 }
-                .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty)
-                .help("Show Horizontal thumbnails")
+                .help("Show saved files")
             }
-        }
 
-        ToolbarItem(placement: .status) {
-            Button(action: toggleshowsavedfiles) {
-                Label("Saved Files", systemImage: "square.and.arrow.down")
-            }
-            .help("Show saved files")
-        }
-
-        ToolbarItem(placement: .status) {
-            Button(action: toggleInspector) {
-                Label("Inspector", systemImage: "rectangle.portrait.and.arrow.right")
-            }
-            .help("Show inspector")
-        }
-
-        ToolbarItem(placement: .status) {
-            Toggle(isOn: $viewModel.sharpnessModel.sortBySharpness) {
-                Label("Sharpness", systemImage: "arrow.up.arrow.down")
-            }
-            .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty || viewModel.sharpnessModel.scores.isEmpty)
-            .labelStyle(.iconOnly)
-            .help("Sort thumbnails sharpest-first")
-            .onChange(of: viewModel.sharpnessModel.sortBySharpness) { _, _ in
-                Task(priority: .background) {
-                    await viewModel.handleSortOrderChange()
+            ToolbarItem(placement: .status) {
+                Button(action: toggleInspector) {
+                    Label("Inspector", systemImage: "rectangle.portrait.and.arrow.right")
                 }
+                .help("Show inspector")
+            }
+
+            ToolbarItem(placement: .status) {
+                Toggle(isOn: Binding(
+                    get: { settings.showScoringBadge },
+                    set: { settings.showScoringBadge = $0; Task { await settings.saveSettings() } },
+                )) {
+                    Label("Score Badge", systemImage: "number.circle")
+                }
+                .toggleStyle(.button)
+                .help("Show sharpness score badge on thumbnails (disable for smoother scrolling)")
+            }
+
+            ToolbarItem(placement: .status) {
+                Toggle(isOn: Binding(
+                    get: { settings.showSaliencyBadge },
+                    set: { settings.showSaliencyBadge = $0; Task { await settings.saveSettings() } },
+                )) {
+                    Label("Saliency Badge", systemImage: "eye.circle")
+                }
+                .toggleStyle(.button)
+                .help("Show saliency badge on thumbnails")
+            }
+
+            ToolbarItem(placement: .status) {
+                Button {
+                    viewModel.activeSheet = .scoringParams
+                } label: {
+                    Label("Scoring Parameters", systemImage: "slider.horizontal.3")
+                }
+                .help("Configure sharpness scoring parameters")
+            }
+
+            ToolbarItem(placement: .status) {
+                Button {
+                    viewModel.activeSheet = .stats
+                } label: {
+                    Label("Statistics", systemImage: "info.circle")
+                }
+                .help("Show scan statistics")
+                .disabled(viewModel.files.isEmpty)
+            }
+
+            ToolbarItem(placement: .status) {
+                RatingFilterButtons(
+                    activeRating: activeRatingInt,
+                    onSelect: applyRatingFilter,
+                    onClear: {
+                        viewModel.ratingFilter = .all
+                        Task(priority: .background) { await viewModel.handleSortOrderChange() }
+                    },
+                )
+                .padding(.trailing, 8)
+                .disabled(viewModel.selectedSource == nil)
             }
         }
 
-        ToolbarItem(placement: .status) {
-            RatingFilterButtons(
-                activeRating: activeRatingInt,
-                onSelect: applyRatingFilter,
-                onClear: {
-                    viewModel.ratingFilter = .all
-                    Task(priority: .background) { await viewModel.handleSortOrderChange() }
-                },
-            )
-            .padding(.trailing, 8)
-            .disabled(viewModel.selectedSource == nil)
+        // Trailing mode switcher — Loupe / Grid / Rated Grid.
+        ToolbarItemGroup(placement: .status) {
+            Button {
+                viewModel.mainViewMode = .loupe
+            } label: {
+                Label("Loupe", systemImage: "rectangle.center.inset.filled")
+            }
+            .help("Loupe view")
+            .disabled(viewModel.mainViewMode == .loupe)
+
+            Button {
+                selectGridMode()
+            } label: {
+                Label("Grid", systemImage: "square.grid.2x2")
+            }
+            .help("Thumbnail grid")
+            .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty || viewModel.mainViewMode == .grid)
+
+            Button {
+                viewModel.mainViewMode = .ratedGrid
+            } label: {
+                Label("Rated", systemImage: "star.square.fill")
+            }
+            .help("Rated images grid")
+            .disabled(viewModel.selectedSource == nil || !showGridtaggedThumbnailWindow() || viewModel.mainViewMode == .ratedGrid)
         }
     }
 
@@ -122,8 +140,10 @@ struct SharedMainToolbarContent: ToolbarContent {
         viewModel.showSavedFiles.toggle()
     }
 
-    private func opentaggedGridThumbnailWindow() {
-        openWindow(id: WindowIdentifier.gridTaggedThumbnails.rawValue)
+    private func selectGridMode() {
+        viewModel.ratingFilter = .all
+        Task(priority: .background) { await viewModel.handleSortOrderChange() }
+        viewModel.mainViewMode = .grid
     }
 
     private func showGridtaggedThumbnailWindow() -> Bool {
