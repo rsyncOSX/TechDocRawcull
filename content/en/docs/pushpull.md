@@ -212,6 +212,27 @@ git push origin --delete <your-branch>
 
 ---
 
+## Pull and track a remote repository
+
+The error means your local branch <your-branch> has no upstream tracking set. Fix it with:
+
+```bash
+git branch --set-upstream-to=origin/<your-branch> <your-branch>
+git pull
+```
+
+Or do both in one step:
+
+```bash
+git pull origin <your-branch>
+```
+To avoid this in the future, whenever you create or checkout a new local branch that should track a remote, use:
+
+```bash
+git checkout --track origin/<your-branch>
+```
+---
+
 ## Verify linear history
 
 ```bash
