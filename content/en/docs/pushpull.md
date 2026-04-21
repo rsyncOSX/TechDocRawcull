@@ -48,42 +48,7 @@ git config --global tag.gpgSign true
 git config --global gpg.program gpg
 ```
 
-### 4. Configure pinentry-mac (macOS only)
-
-GitHub authentication (push/pull) uses **SSH**, not GPG. GPG is used only for **signing commits and tags**. On macOS, GPG needs a graphical pinentry helper so it can prompt for your key passphrase in Terminal rather than failing silently:
-
-```bash
-# Install pinentry-mac if not already present
-brew install pinentry-mac
-
-# Add the pinentry program to the GPG agent config
-echo "pinentry-program $(brew --prefix)/bin/pinentry-mac" >> ~/.gnupg/gpg-agent.conf
-
-# Reload the agent to pick up the change
-gpgconf --kill gpg-agent
-```
-
-Your SSH key (used for `git push`/`git pull`) is managed separately by the macOS SSH agent and Keychain — pinentry-mac does not affect it.
-
-### 5. Test the SSH connection to GitHub
-
-```bash
-ssh -T git@github.com
-```
-
-A successful response looks like:
-
-```
-Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
-```
-
-If you get a `Permission denied (publickey)` error, the most likely cause is a stale key.
-
-#### Option B — The GitHub key is stale (most likely)
-
-The key on GitHub was probably generated on a different machine or at a different time and no longer matches what's on your Mac now.
-
-**Simplest fix — replace it:**
+### 4. SSH connection
 
 1. Go to [github.com/settings/keys](https://github.com/settings/keys) and delete the old key.
 2. Copy your current public key to the clipboard:
@@ -98,6 +63,20 @@ pbcopy < ~/.ssh/id_ed25519.pub
 ```bash
 ssh -T git@github.com
 ```
+
+### 5. Test the SSH connection to GitHub
+
+```bash
+ssh -T git@github.com
+```
+
+A successful response looks like:
+
+```
+Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+If you get a `Permission denied (publickey)` error, the most likely cause is a stale key.
 
 ### 6. Enforce linear history (no merge commits)
 
@@ -209,6 +188,87 @@ git branch -d <your-branch>
 ```bash
 git push origin --delete <your-branch>
 ```
+
+---
+
+## Using git fetch and git diff
+
+The git fetch command is used to update your local repository with the latest changes from the remote repository without merging them. You can then use git diff to compare the branches.
+
+### Step 1: Fetch the Latest Changes
+
+Fetch the latest changes from the remote repository to ensure you have the most up-to-date information.
+
+```bash
+git fetch origin
+```
+
+### Step 2: Compare the Branches
+
+Use the git diff command to compare your local branch with the remote branch.
+
+```bash
+git diff <local-branch> origin/<remote-branch>
+```
+
+For example, if you want to compare your local main branch with the remote main branch:
+
+```bash
+git diff main origin/main
+```
+
+## Using git log
+
+The git log command can be used to compare commit histories between your local and remote branches. This is useful for seeing which commits are present in one branch but not the other.
+
+### Fetch the Latest Changes:
+
+Ensure your local repository is updated with the latest changes from the remote repository.
+
+```bash
+git fetch origin
+```
+
+### Compare Commit Histories:
+
+Use the git log to see the differences in commit histories.
+
+```bash
+git log <local-branch>..origin/<remote-branch>
+```
+
+For example, to compare your local main branch with the remote main branch:
+
+```bash
+git log main..origin/main
+```
+
+You can also reverse the comparison to see commits in the remote branch that are not in the local branch:
+
+```bash
+git log origin/main..main
+```
+
+## Using git status
+
+The git status command provides a quick summary of the differences between your local branch and the remote branch.
+
+Fetch the Latest Changes:
+
+Update your local repository with the latest changes from the remote repository.
+
+```bash
+git fetch origin
+```
+Check the Status:
+
+### Use git status to see the differences between your local branch and the remote branch.
+
+```bash
+git status
+```
+
+The output will show messages like "Your branch is ahead of 'origin/<branch>' by X commits" or "Your branch is behind 'origin/<branch>' by X commits", indicating the differences.
 
 ---
 
