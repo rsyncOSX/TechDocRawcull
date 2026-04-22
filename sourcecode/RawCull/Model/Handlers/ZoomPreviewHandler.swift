@@ -56,8 +56,8 @@ enum ZoomPreviewHandler {
 
                     guard !Task.isCancelled else { return }
 
-                    if file.url.pathExtension.lowercased() == SupportedFileType.arw.rawValue {
-                        let extracted = await JPGSonyARWExtractor.jpgSonyARWExtractor(from: file.url)
+                    if let format = RawFormatRegistry.format(for: file.url) {
+                        let extracted = await format.extractFullJPEG(from: file.url, fullSize: false)
 
                         guard !Task.isCancelled else { return }
 

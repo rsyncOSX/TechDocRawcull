@@ -224,7 +224,7 @@ struct ImageItemView: View {
     }
 
     private var isSelected: Bool {
-        viewModel.selectedFile?.id == file.id
+        viewModel.selectedFileID == file.id
     }
 
     private var ratingColor: Color? {

@@ -129,7 +129,7 @@ struct ThumbnailSizesTab: View {
                                     ),
                                 )
 
-                                Text("When disabled, extracts the JPG from ARW file for zoom.")
+                                Text("When disabled, extracts the embedded JPG from the RAW file for zoom.")
                                     .font(.system(size: 11, weight: .regular))
                                     .foregroundStyle(.secondary)
 

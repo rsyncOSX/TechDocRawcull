@@ -35,7 +35,7 @@ struct ScanStatsSheetView: View {
                     if let catalog = viewModel.selectedSource {
                         LabeledContent("Name", value: catalog.name)
                     }
-                    LabeledContent("Files scanned", value: "\(viewModel.files.count) ARW")
+                    LabeledContent("Files scanned", value: "\(viewModel.files.count) RAW")
                     LabeledContent("Total size", value: totalSize)
                     if let range = dateRange {
                         LabeledContent("Date range", value: range)

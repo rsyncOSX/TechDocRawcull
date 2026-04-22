@@ -7,7 +7,6 @@
 
 import AppKit
 import Foundation
-import OSLog
 
 /// Delegate to track NSCache evictions for monitoring memory pressure
 final class CacheDelegate: NSObject, NSCacheDelegate, @unchecked Sendable {
@@ -20,18 +19,12 @@ final class CacheDelegate: NSObject, NSCacheDelegate, @unchecked Sendable {
         super.init()
     }
 
-    nonisolated func cache(_: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
-        // Check if the evicted object is a DiscardableThumbnail
-        if obj is DiscardableThumbnail {
-            Task {
-                let count = await evictionCounter.increment()
-                Logger.process.debugMessageOnly(
-                    "CacheDelegate: Evicted DiscardableThumbnail, total evictions: \(count)",
-                )
-            }
+    nonisolated func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
+        guard let thumb = obj as? DiscardableThumbnail else { return }
+        if cache === SharedMemoryCache.shared.gridThumbnailCache {
+            SharedMemoryCache.shared.gridEntryEvicted(cost: thumb.cost)
         }
     }
-
     /// Get current eviction count (thread-safe)
     func getEvictionCount() async -> Int {
         await evictionCounter.getCount()
@@ -47,11 +40,12 @@ final class CacheDelegate: NSObject, NSCacheDelegate, @unchecked Sendable {
 private actor EvictionCounter {
     private var count = 0
 
-    func increment() -> Int {
-        count += 1
-        return count
-    }
-
+    /**
+     func increment() -> Int {
+         count += 1
+         return count
+     }
+     */
     func getCount() -> Int {
         count
     }

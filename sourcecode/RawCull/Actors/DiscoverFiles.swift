@@ -12,7 +12,7 @@ import OSLog
 struct DiscoverFiles {
     nonisolated func discoverFiles(at catalogURL: URL, recursive: Bool) async -> [URL] {
         await Task.detached(priority: .utility) {
-            let supported: Set<String> = [SupportedFileType.arw.rawValue]
+            let supported: Set<String> = RawFormatRegistry.allExtensions
             let fileManager = FileManager.default
             var urls: [URL] = []
 

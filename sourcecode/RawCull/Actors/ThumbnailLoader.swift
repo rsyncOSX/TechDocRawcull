@@ -62,6 +62,11 @@ actor ThumbnailLoader {
 
     func thumbnailLoader(file: FileItem, targetSize: Int) async -> NSImage? {
         // Fast path: return from dedicated 200px grid cache without acquiring a slot
+        // TODO: must fix that 200px thumbnails are not requested when scanning and
+        // creating thumbnails in progress. This will compete with the creating of
+        // thumbnails and happens if the grid view is open when scanning and creating
+        // thumbnails in progress. Easy wa to fix this is to disable GridView and
+        // rated GRide View when scamnning in progress.
         if targetSize <= 200 {
             let nsUrl = file.url as NSURL
             if let wrapper = SharedMemoryCache.shared.gridObject(forKey: nsUrl),

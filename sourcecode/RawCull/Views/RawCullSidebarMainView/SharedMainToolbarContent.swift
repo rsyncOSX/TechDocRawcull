@@ -110,7 +110,10 @@ struct SharedMainToolbarContent: ToolbarContent {
                 Label("Grid", systemImage: "square.grid.2x2")
             }
             .help("Thumbnail grid")
-            .disabled(viewModel.selectedSource == nil || viewModel.filteredFiles.isEmpty || viewModel.mainViewMode == .grid)
+            .disabled(viewModel.selectedSource == nil ||
+                viewModel.filteredFiles.isEmpty ||
+                viewModel.mainViewMode == .grid ||
+                viewModel.creatingthumbnails)
 
             Button {
                 viewModel.mainViewMode = .ratedGrid
@@ -118,7 +121,10 @@ struct SharedMainToolbarContent: ToolbarContent {
                 Label("Rated", systemImage: "star.square.fill")
             }
             .help("Rated images grid")
-            .disabled(viewModel.selectedSource == nil || !showGridtaggedThumbnailWindow() || viewModel.mainViewMode == .ratedGrid)
+            .disabled(viewModel.selectedSource == nil ||
+                !showGridtaggedThumbnailWindow() ||
+                viewModel.mainViewMode == .ratedGrid ||
+                viewModel.creatingthumbnails)
         }
     }
 

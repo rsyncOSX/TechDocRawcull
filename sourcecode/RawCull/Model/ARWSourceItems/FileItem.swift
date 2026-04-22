@@ -2,13 +2,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /*
- FileItem is the ARW-file.
- id = 9A332346-142B-4C13-926C-E333961BFDBD: Fr
- url = "file:///Users/thomas/Pictures_raw/2025/1_apr_2025/_DSC5925.ARW": NSURL
- name = "_DSC5925.ARW": String
- size = 53755904: Int64
- type = "Sony ARW raw image": String
- dateModified = 2025-04-01 06:09:43 UTC: Foundatio
+ FileItem is a RAW file (Sony ARW, Nikon NEF, …).
+ id = 9A332346-142B-4C13-926C-E333961BFDBD
+ url = "file:///Users/thomas/Pictures_raw/2025/1_apr_2025/_DSC5925.ARW"
+ name = "_DSC5925.ARW"
+ size = 53755904
+ dateModified = 2025-04-01 06:09:43 UTC
  */
 
 struct FileItem: Identifiable, Hashable {

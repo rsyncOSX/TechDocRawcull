@@ -35,12 +35,12 @@ struct SidebarARWCatalogFileView: View {
                     Button("+ Add Catalog") { isShowingPicker = true }
                 }
             } else if scanning {
-                ProgressView("Scanning for ARW images: \(counterScannedFiles)")
+                ProgressView("Scanning for RAW images: \(counterScannedFiles)")
             } else if files.isEmpty, !scanning {
                 ContentUnavailableView {
                     Label("No Files Found", systemImage: "folder.badge.plus")
                 } description: {
-                    Text("This folder has no ARW images. Try a different folder.")
+                    Text("This folder has no RAW images. Try a different folder.")
                 }
             } else {
                 ZStack {
@@ -59,7 +59,7 @@ struct SidebarARWCatalogFileView: View {
                                 ConditionalGlassButton(
                                     systemImage: "arrow.counterclockwise",
                                     text: "Clear",
-                                    helpText: "Clear rated ARW-files",
+                                    helpText: "Clear rated files",
                                     style: .softCapsule,
                                 ) {
                                     viewModel.alertType = .clearRatedFiles

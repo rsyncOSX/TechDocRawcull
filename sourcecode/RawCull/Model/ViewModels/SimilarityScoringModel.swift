@@ -411,7 +411,10 @@ final class SimilarityScoringModel {
     }
 
     /// Binary fallback for ARW files where CGImageSourceCreateThumbnailAtIndex returns nil.
+    /// Sony-only: parses the Sony MakerNote directly. Other RAW formats have their own
+    /// embedded-JPEG extraction paths that ImageIO handles correctly without a fallback.
     private nonisolated static func decodeBinaryFallback(at url: URL, maxPixelSize: Int) -> CGImage? {
+        guard RawFormatRegistry.format(for: url) is SonyRawFormat.Type else { return nil }
         guard let locations = SonyMakerNoteParser.embeddedJPEGLocations(from: url),
               let loc = locations.preview ?? locations.thumbnail ?? locations.fullJPEG,
               let data = SonyMakerNoteParser.readEmbeddedJPEGData(at: loc, from: url),

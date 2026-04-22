@@ -52,7 +52,7 @@ struct FileInspectorView: View {
 
                 Section("Quick Actions") {
                     Button("Open in Finder") { NSWorkspace.shared.activateFileViewerSelecting([file.url]) }
-                    Button("Open ARW File") { NSWorkspace.shared.open(file.url) }
+                    Button("Open RAW File") { NSWorkspace.shared.open(file.url) }
                 }
             }
             .formStyle(.grouped)

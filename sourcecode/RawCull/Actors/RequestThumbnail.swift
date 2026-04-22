@@ -17,7 +17,6 @@ actor RequestThumbnail {
     private let diskCache: DiskCacheManager
 
     init(
-        config _: CacheConfig? = nil,
         diskCache: DiskCacheManager? = nil,
     ) {
         self.diskCache = diskCache ?? DiskCacheManager()
@@ -52,6 +51,7 @@ actor RequestThumbnail {
         // A. Check RAM
         if let wrapper = SharedMemoryCache.shared.object(forKey: nsUrl), wrapper.beginContentAccess() {
             defer { wrapper.endContentAccess() }
+            // Logger.process.debugThreadOnly("SharedMemoryCache: updateCacheMemory() - found in RAM Cache (hits: \(cacheMemory))")
             await SharedMemoryCache.shared.updateCacheMemory()
             let nsImage = wrapper.image
             return try await nsImageToCGImage(nsImage)
@@ -60,6 +60,7 @@ actor RequestThumbnail {
         // B. Check Disk
         if let diskImage = await diskCache.load(for: url) {
             await storeInMemory(diskImage, for: url)
+            // Logger.process.debugThreadOnly("SharedMemoryCache: updateCacheDisk() - found in Disk Cache (hits: \(cacheDisk))")
             await SharedMemoryCache.shared.updateCacheDisk()
             return try await nsImageToCGImage(diskImage)
         }
@@ -69,7 +70,10 @@ actor RequestThumbnail {
 
         let costPerPixel = await SharedMemoryCache.shared.costPerPixel
 
-        let cgImage = try await SonyThumbnailExtractor.extractSonyThumbnail(
+        guard let format = RawFormatRegistry.format(for: url) else {
+            throw ThumbnailError.invalidSource
+        }
+        let cgImage = try await format.extractThumbnail(
             from: url,
             maxDimension: CGFloat(targetSize),
             qualityCost: costPerPixel,

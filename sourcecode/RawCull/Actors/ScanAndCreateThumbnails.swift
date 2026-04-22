@@ -168,7 +168,8 @@ actor ScanAndCreateThumbnails {
 
             let costPerPixel = await SharedMemoryCache.shared.costPerPixel
 
-            let cgImage = try await SonyThumbnailExtractor.extractSonyThumbnail(
+            guard let format = RawFormatRegistry.format(for: url) else { return }
+            let cgImage = try await format.extractThumbnail(
                 from: url,
                 maxDimension: CGFloat(targetSize),
                 qualityCost: costPerPixel,

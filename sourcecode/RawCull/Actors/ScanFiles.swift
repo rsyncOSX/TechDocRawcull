@@ -66,15 +66,15 @@ actor ScanFiles {
                 of: (FileItem, DecodeFocusPoints?).self,
             ) { group in
                 for fileURL in contents {
-                    guard fileURL.pathExtension.lowercased() == SupportedFileType.arw.rawValue else { continue }
+                    guard let format = RawFormatRegistry.format(for: fileURL) else { continue }
                     discoveredCount += 1
                     let progress = onProgress
                     let count = discoveredCount
                     Task { @MainActor in progress?(count) }
                     group.addTask {
                         let res = try? fileURL.resourceValues(forKeys: Set(keys))
-                        let exifData = self.extractExifData(from: fileURL)
-                        let focusStr = SonyMakerNoteParser.focusLocation(from: fileURL)
+                        let exifData = self.extractExifData(from: fileURL, format: format)
+                        let focusStr = format.focusLocation(from: fileURL)
                         let fileItem = FileItem(
                             url: fileURL,
                             name: res?.name ?? fileURL.lastPathComponent,
@@ -151,7 +151,7 @@ actor ScanFiles {
 
     // MARK: - EXIF Extraction
 
-    private nonisolated func extractExifData(from url: URL) -> ExifMetadata? {
+    private nonisolated func extractExifData(from url: URL, format: any RawFormat.Type) -> ExifMetadata? {
         guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any],
               let exifDict = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
@@ -168,7 +168,7 @@ actor ScanFiles {
         let compressionValue = tiffDict[kCGImagePropertyTIFFCompression] as? Int
         let cameraModel = tiffDict[kCGImagePropertyTIFFModel] as? String
         let rawSizeClass: String? = if let pixelWidth, let pixelHeight {
-            sizeClass(width: pixelWidth, height: pixelHeight, camera: cameraModel ?? "")
+            sizeClass(width: pixelWidth, height: pixelHeight, camera: cameraModel ?? "", format: format)
         } else {
             nil
         }
@@ -181,7 +181,7 @@ actor ScanFiles {
             isoValue: rawISO,
             camera: cameraModel,
             lensModel: exifDict[kCGImagePropertyExifLensModel] as? String,
-            rawFileType: compressionValue.map { rawFileTypeString(from: $0) },
+            rawFileType: compressionValue.map { format.rawFileTypeString(compressionCode: $0) },
             rawSizeClass: rawSizeClass,
             pixelWidth: pixelWidth,
             pixelHeight: pixelHeight,
@@ -213,34 +213,17 @@ actor ScanFiles {
         return "ISO \(iso)"
     }
 
-    /// Maps the TIFF compression tag to a human-readable Sony RAW type label.
-    /// Newer bodies (A1, A7R V, A9 III…) write 6/7; older bodies write 32767/32770.
-    /// Both generations use the same semantic meaning: lossy compressed vs lossless compressed.
-    private nonisolated func rawFileTypeString(from value: Int) -> String {
-        switch value {
-        case 1: "Uncompressed"
-        case 6: "Compressed" // newer Sony bodies (A1, A7R V…)
-        case 7: "Lossless Compressed" // newer Sony bodies (A1, A7R V…)
-        case 32767: "Compressed" // older Sony bodies
-        case 32770: "Lossless Compressed" // older Sony bodies
-        default: "Unknown (\(value))"
-        }
-    }
-
-    /// Classifies pixel dimensions as L / M / S using per-body MP thresholds.
-    /// Thresholds are derived from each camera's known resolution steps — e.g. the A1
-    /// shoots L at ~50 MP, M at ~21 MP, and S at ~12 MP, so the M boundary sits at 18 MP.
-    /// The fallback (25/10) covers unknown bodies generically.
-    private nonisolated func sizeClass(width: Int, height: Int, camera: String) -> String {
+    /// Classifies pixel dimensions as L / M / S using per-body MP thresholds
+    /// looked up from the resolved `RawFormat`. Each conformer owns its own
+    /// table of body-specific thresholds.
+    private nonisolated func sizeClass(
+        width: Int,
+        height: Int,
+        camera: String,
+        format: any RawFormat.Type,
+    ) -> String {
         let mp = Double(width * height) / 1_000_000
-        let upper = camera.uppercased()
-        // (L threshold MP, M threshold MP) — classified as L if ≥ lThresh, M if ≥ mThresh, else S
-        let (lThresh, mThresh): (Double, Double)
-        if upper.contains("ILCE-7RM") { (lThresh, mThresh) = (50, 22) } // A7R IV/V: 61/26/15 MP
-        else if upper.contains("ILCE-1") { (lThresh, mThresh) = (40, 18) } // A1/A1 II: 50/21/12 MP
-        else if upper.contains("ILCE-9") { (lThresh, mThresh) = (20, 10) } // A9 III: 24/12/6 MP
-        else if upper.contains("ILCE-7") { (lThresh, mThresh) = (28, 14) } // A7M5: 33/17/9 MP
-        else { (lThresh, mThresh) = (25, 10) } // generic fallback
+        let (lThresh, mThresh) = format.sizeClassThresholds(camera: camera)
         if mp >= lThresh { return "L" }
         if mp >= mThresh { return "M" }
         return "S"

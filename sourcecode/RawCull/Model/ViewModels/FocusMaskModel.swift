@@ -269,8 +269,11 @@ final class FocusMaskModel: @unchecked Sendable {
 
     /// Binary fallback for ARW 6.0 (RA16) files where CGImageSourceCreateThumbnailAtIndex
     /// returns nil. Reads the embedded JPEG directly from the file bytes via
-    /// SonyMakerNoteParser, bypassing the RA16 decoder entirely.
+    /// SonyMakerNoteParser, bypassing the RA16 decoder entirely. Sony-only:
+    /// other vendors (e.g. Nikon NEF) don't need this path and would hit a
+    /// TIFF structure the Sony parser doesn't understand.
     private nonisolated static func decodeBinaryFallback(at url: URL, maxPixelSize: Int) -> CGImage? {
+        guard RawFormatRegistry.format(for: url) is SonyRawFormat.Type else { return nil }
         guard let locations = SonyMakerNoteParser.embeddedJPEGLocations(from: url),
               let loc = locations.preview ?? locations.thumbnail ?? locations.fullJPEG,
               let data = SonyMakerNoteParser.readEmbeddedJPEGData(at: loc, from: url),

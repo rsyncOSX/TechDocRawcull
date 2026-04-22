@@ -82,9 +82,8 @@ actor ExtractAndSaveJPGs {
     private func processSingleExtraction(_ url: URL) async {
         if Task.isCancelled { return } // ← NEW
 
-        if let cgImage = await JPGSonyARWExtractor.jpgSonyARWExtractor(
-            from: url,
-        ) {
+        guard let format = RawFormatRegistry.format(for: url) else { return }
+        if let cgImage = await format.extractFullJPEG(from: url, fullSize: false) {
             if Task.isCancelled { return } // ← NEW: critical one
 
             await SaveJPGImage().save(image: cgImage, originalURL: url)
