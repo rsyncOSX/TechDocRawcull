@@ -194,10 +194,10 @@ So the default grid cache cap is:
 
 RawCull intentionally makes item count a secondary guardrail:
 
-| Cache | Count limit |
-|---|---|
-| Main cache | `10000` |
-| Grid cache | `3000` |
+| Cache | Count limit | Applied in |
+|---|---|---|
+| Main cache | `10000` | `calculateConfig(from:)` |
+| Grid cache | `3000` | `applyConfig(_:)` (hard-coded alongside `gridTotalCostLimit`) |
 
 The design intent is that **byte cost** should trigger eviction first, not the number of items.
 

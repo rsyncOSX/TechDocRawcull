@@ -23,13 +23,20 @@ SavedFiles
 ├── dateStart: String?     — timestamp of when cataloging started
 └── filerecords: [FileRecord]?
          ├── id: UUID
-         ├── fileName: String?    — ARW file name
-         ├── dateTagged: String?  — when the file was tagged
-         ├── dateCopied: String?  — when the file was copied (unused)
-         └── rating: Int?         — 1-5 star, -1 rejected, 0 keeper
+         ├── fileName: String?         — RAW file name (.arw or .nef)
+         ├── dateTagged: String?       — when the file was tagged
+         ├── dateCopied: String?       — when the file was copied (unused)
+         ├── rating: Int?              — 1–5 star, −1 rejected, 0 keeper
+         ├── sharpnessScore: Float?    — raw sharpness score (pre-normalisation)
+         └── saliencySubject: String?  — Vision subject label, e.g. "bird"
 ```
 
 **Disk location:** `~/Documents/savedfiles.json`
+
+`sharpnessScore` and `saliencySubject` are persisted so that scores and
+subject labels survive a restart without re-running the scoring pipeline.
+They are populated after `SharpnessScoringModel.scoreFiles(_:)` completes
+and restored on catalog open by `applyPreloadedScores(_:preloadedScores:preloadedSaliency:)`.
 
 ---
 
@@ -118,16 +125,17 @@ flowchart TD
 
 ## Write Operations
 
-Every write passes the full `cullingModel.savedFiles` array to `WriteSavedFilesJSON` (actor, atomic write).
+Every write passes the full `cullingModel.savedFiles` array to the static `WriteSavedFilesJSON.write(_:)` (actor, atomic write). The actor encodes on its executor via `DecodeEncodeGeneric` and writes with `.atomic` options so a crash mid-write never corrupts the JSON.
 
 | Trigger | Location | What changes |
 |---------|----------|--------------|
-| User tags / untags a file | `CullingModel.toggleSelectionSavedFiles()` | Adds or removes a `FileRecord` |
-| User rates a file (1-5 / reject) | `RawCullViewModel+Culling.updateRating()` | Updates `FileRecord.rating` |
-| User applies sharpness threshold | `RawCullViewModel+Culling.applySharpnessThreshold()` | Bulk-updates ratings below threshold |
-| User resets current catalog | `CullingModel.resetSavedFiles()` | Clears `filerecords` for the catalog |
-| User confirms reset alert (main view) | `RawCullMainView` (alert) | Calls `resetSavedFiles()` |
-| User confirms reset (SavedFilesView) | `SavedFilesView` | Calls `resetSavedFiles()` |
+| User rates a file (1–5 / reject) | `RawCullViewModel+Culling.updateRating()` | Updates or appends a `FileRecord` with the new `rating` |
+| User rates a selection | `RawCullViewModel+Culling.updateRating(for:rating:)` overload | Bulk-updates / appends across a `[FileItem]` selection |
+| User applies sharpness threshold | `RawCullViewModel+Culling.applySharpnessThreshold()` | Walks `filteredFiles`, sets `rating = 0` (above threshold) or `−1` (below) using `score / maxScore × 100` |
+| Scoring pass completes | `RawCullViewModel+Sharpness` | Writes `sharpnessScore` and `saliencySubject` into each `FileRecord` |
+| User resets current catalog | `CullingModel.resetSavedFiles(in:)` | Clears `filerecords` for the catalog (async write inside the method) |
+| User confirms reset alert (main view) | `RawCullMainView` (alert) | Calls `resetSavedFiles(in:)` |
+| User confirms reset (SavedFilesView) | `SavedFilesView` | Calls `resetSavedFiles(in:)` |
 
 ---
 
@@ -137,12 +145,12 @@ All in-memory reads hit `CullingModel.savedFiles` or the derived caches — no d
 
 | Purpose | Location |
 |---------|----------|
-| Build rating / tagged caches | `RawCullViewModel.rebuildRatingCache()` |
-| Is file unrated (not yet starred or rejected)? | `CullingModel.isUnrated()` |
-| Count tagged files | `CullingModel.countSelectedFiles()` |
+| Build rating / tagged caches | `RawCullViewModel+Culling.rebuildRatingCache()` |
+| Is file unrated (not yet starred or rejected)? | `CullingModel.isUnrated(photo:in:)` |
+| Count tagged files | `CullingModel.countSelectedFiles(in:)` |
 | Rating color strip in grid cell | `RatedPhotoItemView` |
 | Rated-file grid display (≥ ★★) | `RatedPhotoGridView` |
-| Marked toggle in file table | `FileTableRowView.marktoggle()` |
+| Rating filter (`.all` / `.rejected` / `.keepers` / `.stars(n)`) | `RawCullViewModel+Culling.passesRatingFilter()` |
 | Enable grid window button | `SharedMainToolbarContent` |
 | Management UI | `SavedFilesView` |
 

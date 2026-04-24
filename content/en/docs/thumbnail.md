@@ -10,10 +10,16 @@ mermaid = true
 
 # Thumbnails and Previews — RawCull
 
-RawCull handles Sony ARW files through two distinct image paths:
+RawCull handles Sony ARW and Nikon NEF files through two distinct image paths:
 
 1. **Generated thumbnails** — fast, sized-down previews for browsing and culling, extracted with ImageIO and cached in RAM and on disk
-2. **Embedded JPEG previews** — full-resolution embedded JPEGs extracted from the ARW binary for high-quality inspection and export
+2. **Embedded JPEG previews** — full-resolution embedded JPEGs extracted from the RAW binary for high-quality inspection and export
+
+Both paths run through the `RawFormat` abstraction. `RawFormatRegistry.format(for: url)`
+returns the matching conformer (`SonyRawFormat` or `NikonRawFormat`), which forwards
+to the per-vendor extractor (`SonyThumbnailExtractor` / `NikonThumbnailExtractor` for
+thumbnails, `JPGSonyARWExtractor` / `JPGNikonNEFExtractor` for the full JPEG). The
+caller code never references a specific brand.
 
 Both paths integrate with the shared three-layer cache system: RAM → disk → source decode.
 
@@ -37,9 +43,25 @@ All extraction uses **max pixel size on the longest edge** (`kCGImageSourceThumb
 
 ---
 
-## 2. Generated Thumbnail Pipeline — `SonyThumbnailExtractor`
+## 2. Generated Thumbnail Pipeline — `SonyThumbnailExtractor` and `NikonThumbnailExtractor`
 
-`SonyThumbnailExtractor` is a `nonisolated` static enum. Its `extractSonyThumbnail` method is the primary entry point for generating thumbnails from ARW files.
+Each brand has a dedicated `nonisolated` static enum exposed through the `RawFormat`
+protocol's `extractThumbnail(from:maxDimension:qualityCost:)` method. The registry
+dispatches by extension; the caller in the pipeline only ever sees `format.extractThumbnail`.
+
+```swift
+// Pipeline call site (vendor-agnostic):
+guard let format = RawFormatRegistry.format(for: url) else { return }
+let cgImage = try await format.extractThumbnail(
+    from: url,
+    maxDimension: CGFloat(targetSize),
+    qualityCost: costPerPixel,
+)
+```
+
+The Sony path resolves to `SonyThumbnailExtractor.extractSonyThumbnail`; the
+Nikon path to `NikonThumbnailExtractor.extractNikonThumbnail`. Both use the
+same core ImageIO strategy described below.
 
 ### 2.1 Async dispatch
 
@@ -75,19 +97,24 @@ guard let source = CGImageSourceCreateWithURL(url as CFURL, sourceOptions as CFD
 }
 
 let thumbOptions: [CFString: Any] = [
-    kCGImageSourceCreateThumbnailFromImageAlways: true,
-    kCGImageSourceCreateThumbnailWithTransform:   true,
-    kCGImageSourceThumbnailMaxPixelSize:          maxDimension,
-    kCGImageSourceShouldCacheImmediately:         true
+    kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
+    kCGImageSourceCreateThumbnailWithTransform:    true,
+    kCGImageSourceThumbnailMaxPixelSize:           maxDimension,
+    kCGImageSourceShouldCacheImmediately:          true,
 ]
 
-guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary) else {
-    throw ThumbnailError.generationFailed
-}
-return try rerender(cgImage, qualityCost: qualityCost)
+let rawThumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbOptions as CFDictionary)
+    ?? Self.binaryFallbackThumbnail(from: url, maxDimension: maxDimension)
+
+guard let rawThumbnail else { throw ThumbnailError.generationFailed }
+return try rerender(rawThumbnail, qualityCost: qualityCost)
 ```
 
 `kCGImageSourceShouldCache: false` on the source prevents ImageIO from caching the raw input; `kCGImageSourceShouldCacheImmediately: true` on the thumbnail options ensures the decoded output pixels are available immediately.
+
+`kCGImageSourceCreateThumbnailFromImageIfAbsent: true` (rather than `…FromImageAlways`) tells ImageIO to use the embedded JPEG preview when present — which it always is for both ARW and NEF — and only synthesise a thumbnail from the full RAW if no preview exists. `…FromImageAlways` would force ImageIO to decode the RA16 sensor data, which fails with `err=-50` on ARW 6.0 from the A7 V.
+
+The `binaryFallbackThumbnail` step (Sony only) engages when ImageIO returns `nil` for an ARW 6.0 (RA16) file. It reads the embedded JPEG bytes directly via `SonyMakerNoteParser.embeddedJPEGLocations` and hands them back to ImageIO as plain JPEG data, bypassing the RA16 decoder. The Nikon extractor has no equivalent fallback — modern NEF files are handled by ImageIO directly.
 
 ### 2.3 Re-rendering with interpolation quality (`rerender`)
 
@@ -289,15 +316,15 @@ For `targetSize > 200` (or a grid cache miss), the existing `acquireSlot()` → 
 
 ---
 
-## 6. Embedded JPEG Preview Extraction — `JPGSonyARWExtractor`
+## 6. Embedded JPEG Preview Extraction — `JPGSonyARWExtractor` and `JPGNikonNEFExtractor`
 
-Embedded JPEG previews are distinct from generated thumbnails. They are the full-resolution previews baked into the ARW file by the camera, and are used for high-quality inspection and export.
+Embedded JPEG previews are distinct from generated thumbnails. They are the full-resolution previews baked into the RAW file by the camera, and are used for high-quality inspection and export.
 
-`JPGSonyARWExtractor` is a `nonisolated` static enum dispatched to `DispatchQueue.global(qos: .utility)`.
+Both extractors are `nonisolated` static enums dispatched to `DispatchQueue.global(qos: .utility)` and are reached through `format.extractFullJPEG(from:fullSize:)` on the `RawFormat` protocol. `JPGSonyARWExtractor` handles `.arw`; `JPGNikonNEFExtractor` handles `.nef`. Their public shapes are identical (`(URL, fullSize: Bool) async -> CGImage?`) so the caller is again vendor-agnostic.
 
 ### 6.1 JPEG detection algorithm
 
-ARW files contain multiple image sub-images. The extractor iterates all of them and identifies JPEG candidates by:
+Both ARW and NEF containers hold multiple image sub-images. The extractor iterates all of them and identifies JPEG candidates by:
 
 1. Presence of `kCGImagePropertyJFIFDictionary` in image properties, **or**
 2. Compression value `6` (JPEG) in the `kCGImagePropertyTIFFDictionary`.
@@ -310,7 +337,7 @@ Among all JPEG candidates, the **widest image** is selected. Width is read from 
 let maxThumbnailSize: CGFloat = fullSize ? 8640 : 4320
 ```
 
-If the selected JPEG's width exceeds `maxThumbnailSize`, it is downsampled using ImageIO:
+If the selected JPEG's width exceeds `maxThumbnailSize`, it is downsampled using ImageIO. For Nikon NEF the equivalent path additionally walks the TIFF IFD chain via `NikonMakerNoteParser` when ImageIO does not surface a preview as a top-level image index — NEF commonly stores the full-resolution preview inside a SubIFD (tag `0x014A`) that is not enumerated by `CGImageSourceGetCount`:
 
 ```swift
 let thumbOptions: [CFString: Any] = [
@@ -327,13 +354,13 @@ If the JPEG is already smaller than `maxThumbnailSize`, it is decoded at its ori
 
 ## 7. JPEG Export — `SaveJPGImage`
 
-`SaveJPGImage.save(image:originalURL:)` writes an extracted `CGImage` alongside the original ARW:
+`SaveJPGImage.save(image:originalURL:)` writes an extracted `CGImage` alongside the original RAW:
 
-- **Output path**: `originalURL` with `.arw` extension replaced by `.jpg`
+- **Output path**: `originalURL.deletingPathExtension().appendingPathExtension("jpg")` — strips the RAW extension (`.arw` or `.nef`) and appends `.jpg`
 - **Compression quality**: `1.0` (maximum, no lossy compression)
 - **Format**: JPEG via `CGImageDestinationCreateWithURL` + `CGImageDestinationFinalize`
 
-The method is `nonisolated` and runs on the global queue via `async`, keeping actor queues clear of blocking I/O.
+`SaveJPGImage` is declared `actor`, but its single public method is `@concurrent nonisolated func save(...)`. The `@concurrent nonisolated` pair dispatches the work onto the cooperative thread pool rather than serialising it on the actor's executor — the method touches no actor state, so running it off-actor maximises parallelism during bulk extraction.
 
 ---
 

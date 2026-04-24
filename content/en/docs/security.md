@@ -171,32 +171,33 @@ The returned URL has `startAccessingSecurityScopedResource()` already called. Th
 
 #### Layer 3 — Scoped Access During File Operations (`ScanFiles`)
 
-When scanning a directory for ARW files, the `ScanFiles` actor activates and deactivates security-scoped access for the duration of the scan only.
+When scanning a directory for supported RAW files (`.arw`, `.nef`), the `ScanFiles` actor activates and deactivates security-scoped access for the duration of the scan only.
 
 **File:** `RawCull/Actors/ScanFiles.swift`
 
 ```swift
 actor ScanFiles {
-    func scanFiles(url: URL, onProgress: @escaping (Double) -> Void) async -> [FileItem] {
+    func scanFiles(
+        url: URL,
+        onProgress: (@MainActor @Sendable (_ count: Int) -> Void)? = nil,
+    ) async -> [FileItem] {
         // Activate access for this URL
-        guard url.startAccessingSecurityScopedResource() else {
-            return []
-        }
+        guard url.startAccessingSecurityScopedResource() else { return [] }
         // defer guarantees deactivation even if the function throws or returns early
         defer { url.stopAccessingSecurityScopedResource() }
 
-        let manager = FileManager.default
-        guard let contents = try? manager.contentsOfDirectory(
+        let keys: [URLResourceKey] = [
+            .nameKey, .fileSizeKey, .contentTypeKey, .contentModificationDateKey
+        ]
+        guard let contents = try? FileManager.default.contentsOfDirectory(
             at: url,
-            includingPropertiesForKeys: [
-                .fileSizeKey,
-                .contentModificationDateKey,
-                .typeIdentifierKey
-            ],
-            options: [.skipsHiddenFiles]
+            includingPropertiesForKeys: keys,
+            options: [.skipsHiddenFiles],
         ) else { return [] }
 
-        return await processContents(contents, onProgress: onProgress)
+        // RawFormatRegistry.format(for:) picks SonyRawFormat / NikonRawFormat
+        // based on extension; the scan loop itself stays vendor-agnostic.
+        return await scanAllSupportedFormats(contents, keys: keys, onProgress: onProgress)
     }
 }
 ```

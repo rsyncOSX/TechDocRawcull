@@ -16,14 +16,16 @@ mermaid = true
 > `Actors/ActorCreateOutputforView.swift` · `Model/ViewModels/RawCullViewModel.swift`
 > `Model/ViewModels/SharpnessScoringModel.swift` · `Model/ViewModels/SettingsViewModel.swift`
 > `Model/ParametersRsync/ExecuteCopyFiles.swift` · `Model/Cache/CacheDelegate.swift`
-> `Enum/SonyThumbnailExtractor.swift` · `Enum/JPGSonyARWExtractor.swift`
+> `Enum/RawFormat.swift` · `Enum/RawFormatRegistry.swift` · `Enum/SonyRawFormat.swift` · `Enum/NikonRawFormat.swift`
+> `Enum/SonyThumbnailExtractor.swift` · `Enum/NikonThumbnailExtractor.swift`
+> `Enum/JPGSonyARWExtractor.swift` · `Enum/JPGNikonNEFExtractor.swift`
 > `Views/RawCullSidebarMainView/extension+RawCullView.swift`
 
 ---
 
 ## 1. Why Concurrency Matters
 
-RawCull works with Sony A1 ARW raw files. A single RAW file from the A1 can be 50–80 MB. When you open a folder with hundreds of shots, the app must scan metadata, extract embedded JPEG previews, decode thumbnails, and manage a multi-gigabyte in-memory cache — all while keeping the UI fluid and responsive. Without concurrency that would be impossible.
+RawCull works with Sony ARW and Nikon NEF RAW files. A single RAW file from a current body can be 50–80 MB. When you open a folder with hundreds of shots, the app must scan metadata, extract embedded JPEG previews, decode thumbnails, and manage a multi-gigabyte in-memory cache — all while keeping the UI fluid and responsive. Without concurrency that would be impossible.
 
 RawCull is written in Swift 6 with strict concurrency checking enabled. The compiler verifies thread safety at compile time: every type that crosses a concurrency boundary must be `Sendable`, and every mutable shared state must be isolated to an actor. The project makes heavy use of Swift's structured concurrency model: actors, async/await, task groups, and the MainActor.
 
@@ -60,38 +62,33 @@ RawCull defines ten actors:
 
 | Actor | File | Responsibility |
 |---|---|---|
-| `ScanFiles` | `Actors/ScanFiles.swift` | Scans a folder for ARW files, reads EXIF, extracts focus points |
+| `ScanFiles` | `Actors/ScanFiles.swift` | Scans a folder for RAW files, reads EXIF, extracts focus points |
 | `ScanAndCreateThumbnails` | `Actors/ScanAndCreateThumbnails.swift` | Bulk thumbnail creation with bounded concurrent task group |
 | `RequestThumbnail` | `Actors/RequestThumbnail.swift` | On-demand thumbnail resolver (RAM → disk → extract) |
 | `ThumbnailLoader` | `Actors/ThumbnailLoader.swift` | Rate-limits concurrent thumbnail requests using continuations |
 | `DiskCacheManager` | `Actors/DiskCacheManager.swift` | Reads and writes JPEG thumbnails to/from the on-disk cache |
 | `SharedMemoryCache` | `Actors/SharedMemoryCache.swift` | Singleton wrapping NSCache; manages memory pressure and config |
-| `ExtractAndSaveJPGs` | `Actors/ExtractAndSaveJPGs.swift` | Extracts full-resolution JPEGs from ARW files in parallel |
+| `ExtractAndSaveJPGs` | `Actors/ExtractAndSaveJPGs.swift` | Extracts full-resolution JPEGs from RAW files in parallel |
 | `SaveJPGImage` | `Actors/SaveJPGImage.swift` | Encodes and writes a single JPEG to disk |
-| `DiscoverFiles` | `Actors/DiscoverFiles.swift` | Enumerates `.arw` files in a directory (optionally recursive) |
+| `WriteSavedFilesJSON` | `Model/JSON/WriteSavedFilesJSON.swift` | Atomic writer for `savedfiles.json` persistence |
 | `EvictionCounter` | `Model/Cache/CacheDelegate.swift` | Private actor that safely tracks NSCache eviction counts |
 
-> **Note:** `ActorCreateOutputforView` in `Actors/ActorCreateOutputforView.swift` is named like an actor but is a plain `struct`. Its method is `@concurrent nonisolated` — see §2.5.
+> **Note:** `DiscoverFiles` in `Actors/DiscoverFiles.swift` is a `struct`, not an actor — its single `nonisolated func discoverFiles(at:recursive:)` runs its directory walk inside a `Task.detached(priority: .utility)`. Likewise `ActorCreateOutputforView` in `Actors/ActorCreateOutputforView.swift` is named like an actor but is also a plain `struct`; its method is `@concurrent nonisolated` — see §2.5.
 
-`DiscoverFiles` shows the minimal actor pattern with `@concurrent nonisolated`:
+`DiscoverFiles` shows the simplest off-actor pattern — a nonisolated struct method that hops to a detached task:
 
 ```swift
 // From Actors/DiscoverFiles.swift
-actor DiscoverFiles {
-
-    // @concurrent tells Swift: run this method on the cooperative thread pool,
-    // not on the actor's serial queue. Safe because the method only uses
-    // local variables — no actor state is touched.
-    @concurrent
+struct DiscoverFiles {
     nonisolated func discoverFiles(at catalogURL: URL, recursive: Bool) async -> [URL] {
-        await Task {
-            let supported: Set<String> = [SupportedFileType.arw.rawValue]
+        await Task.detached(priority: .utility) {
+            let supported: Set<String> = RawFormatRegistry.allExtensions   // {"arw", "nef"}
             let fileManager = FileManager.default
             var urls: [URL] = []
             guard let enumerator = fileManager.enumerator(
                 at: catalogURL,
                 includingPropertiesForKeys: [.isRegularFileKey],
-                options: recursive ? [] : [.skipsSubdirectoryDescendants]
+                options: recursive ? [] : [.skipsSubdirectoryDescendants],
             ) else { return urls }
             while let fileURL = enumerator.nextObject() as? URL {
                 if supported.contains(fileURL.pathExtension.lowercased()) {
@@ -103,6 +100,8 @@ actor DiscoverFiles {
     }
 }
 ```
+
+The enumerator filters by the union of every registered RAW extension so both `.arw` and `.nef` are discovered in the same pass — no vendor branching needed at the discovery layer.
 
 ### 2.3 @MainActor — Protecting the UI Thread
 
@@ -337,7 +336,10 @@ private func processSingleFile(_ url: URL, targetSize: Int, itemIndex: Int) asyn
     if Task.isCancelled { return }                    // Before disk lookup
     if let diskImage = await diskCache.load(for: url) { ... }
     if Task.isCancelled { return }                    // Before expensive extraction
-    let cgImage = try await SonyThumbnailExtractor.extractSonyThumbnail(...)
+    guard let format = RawFormatRegistry.format(for: url) else { return }
+    let cgImage = try await format.extractThumbnail(
+        from: url, maxDimension: CGFloat(targetSize), qualityCost: costPerPixel,
+    )
 }
 ```
 
@@ -349,7 +351,7 @@ Each guard cuts work short at a logical checkpoint. The more expensive the upcom
 
 | Flow | Entry point | Core actor(s) | Purpose |
 |---|---|---|---|
-| Catalog scan | `RawCullViewModel.handleSourceChange(url:)` | `ScanFiles` | Scan ARW files, extract metadata, load focus points |
+| Catalog scan | `RawCullViewModel.handleSourceChange(url:)` | `ScanFiles` | Scan supported RAW files (ARW / NEF), extract metadata, load focus points |
 | Thumbnail preload | `RawCullViewModel.handleSourceChange(url:)` | `ScanAndCreateThumbnails` | Bulk-populate the thumbnail cache for a selected catalog |
 | JPG extraction | `extension+RawCullView.extractAllJPGS()` | `ExtractAndSaveJPGs` | Extract embedded JPEG previews and save to disk |
 | On-demand thumbnails | UI grid + detail views | `ThumbnailLoader`, `RequestThumbnail` | Rate-limited, cached per-file thumbnail retrieval |
@@ -374,11 +376,9 @@ This split keeps UI responsive: `handleSourceChange` is `@MainActor` but `async`
 `ScanFiles.scanFiles(url:onProgress:)` runs on the `ScanFiles` actor:
 
 1. Opens the directory with security-scoped resource access.
-2. Uses `withTaskGroup` to process all ARW files in parallel.
-3. For each file, a task reads `URLResourceValues` (name, size, content type, modification date) and calls `extractExifData(from:)`.
-4. After the group finishes, resolves focus points via a two-stage fallback:
-   - **Native extraction first**: `extractNativeFocusPoints(from:)` runs a `withTaskGroup` over all `FileItem`s, calling `SonyMakerNoteParser.focusLocation(from:)` on each ARW file.
-   - **JSON fallback**: if native extraction yields no results, `decodeFocusPointsJSON(from:)` reads `focuspoints.json` from the same directory via `Task.detached(priority: .utility)`.
+2. Uses `withTaskGroup` to process all discovered RAW files in parallel. Each iteration resolves the file's `RawFormat` conformer via `RawFormatRegistry.format(for:)`; files with no matching format are skipped.
+3. For each file, a task reads `URLResourceValues` (name, size, content type, modification date) and calls `extractExifData(from:format:)`. The same task also calls `format.focusLocation(from:)` — resolving to `SonyMakerNoteParser.focusLocation` for `.arw` or `NikonMakerNoteParser.focusLocation` for `.nef` — and parses the result to a normalised AF point stored on `FileItem.afFocusNormalized`.
+4. After the group finishes, focus points resolved inline are collected. If none were produced (e.g. older Nikon DSLRs or files whose MakerNote lacks the focus tag), `decodeFocusPointsJSON(from:)` reads `focuspoints.json` from the same directory via `Task.detached(priority: .utility)` as a fallback.
 5. Returns `[FileItem]`.
 
 `extractExifData(from:)` reads EXIF data via `CGImageSourceCopyPropertiesAtIndex` and formats:
@@ -457,7 +457,7 @@ The `await` suspends `handleSourceChange` (freeing the main actor while the prel
 
 1. **One-time setup**: `ensureReady()` calls `SharedMemoryCache.shared.ensureReady()` and fetches settings via a `setupTask` gate (preventing duplicate initialization from concurrent callers).
 2. **Cancel prior work**: `cancelPreload()` cancels and nils any existing inner task.
-3. **Discover files**: Enumerate ARW files non-recursively via `DiscoverFiles`.
+3. **Discover files**: Enumerate supported RAW files (`.arw`, `.nef`) non-recursively via `DiscoverFiles`, which filters by `RawFormatRegistry.allExtensions`.
 4. **Notify max**: `fileHandlers?.maxfilesHandler(files.count)` updates the progress bar maximum.
 5. **Create inner `Task<Int, Never>`**: stored as `preloadTask` on the actor.
 6. **Bounded `withTaskGroup`**: caps parallelism at `ProcessInfo.processInfo.activeProcessorCount * 2` using index-based back-pressure and per-iteration cancellation checks.
@@ -503,7 +503,7 @@ This prevents duplicate extraction work when multiple UI elements request the sa
 
 ### 6.1 How the task starts
 
-`extension+RawCullView.extractAllJPGS()` creates an unstructured outer task from the View layer:
+`extension+RawCullView.extractFilteredFilesJPGS()` creates an unstructured outer task from the View layer. The URL list is snapshotted into the actor via its initializer rather than being passed per-method:
 
 ```swift
 Task {
@@ -514,36 +514,36 @@ Task {
         maxfilesHandler: viewModel.maxfilesHandler,
         estimatedTimeHandler: viewModel.estimatedTimeHandler,
         memorypressurewarning: { _ in },
+        onExtractionNeeded: {},
     )
 
-    let extract = ExtractAndSaveJPGs()
+    let extract = ExtractAndSaveJPGs(sortedfiles: viewModel.filteredFiles)
     await extract.setFileHandlers(handlers)
     viewModel.currentExtractAndSaveJPGsActor = extract
 
-    guard let url = viewModel.selectedSource?.url else { return }
-    await extract.extractAndSaveAlljpgs(from: url)
+    await extract.extractAndSavejpgs()
 
     viewModel.currentExtractAndSaveJPGsActor = nil
     viewModel.creatingthumbnails = false
 }
 ```
 
-Unlike the preload flow, the outer task is not stored on the ViewModel. Cancellation is driven entirely through the actor reference via `viewModel.abort()`.
+Unlike the preload flow, the outer task is not stored on the ViewModel. Cancellation is driven entirely through the actor reference via `viewModel.abort()`. Passing the sorted file list into the init means the extraction honours the current rating/aperture/sharpness filters rather than re-scanning the catalog.
 
 ### 6.2 Inside the actor
 
-`extractAndSaveAlljpgs(from:)` mirrors the preload pattern exactly:
+`extractAndSavejpgs()` mirrors the preload pattern exactly:
 
 1. Cancel any previous inner task via `cancelExtractJPGSTask()`.
-2. Discover all ARW files (non-recursive via `DiscoverFiles`).
+2. Use the URL list captured at construction (`filteredFilesURLs`) — no second disk scan.
 3. Create a `Task<Int, Never>` stored as `extractJPEGSTask`.
-4. Use `withThrowingTaskGroup` with `activeProcessorCount * 2` concurrency cap and the same index-based back-pressure pattern as `ScanAndCreateThumbnails` (cancellation check + `group.cancelAll()`, index guard before `group.next()`, `group.waitForAll()` to drain).
-5. Call `processSingleExtraction(_:itemIndex:)` per file.
+4. Use `withTaskGroup` with `activeProcessorCount * 2` concurrency cap and the same index-based back-pressure pattern as `ScanAndCreateThumbnails` (cancellation check + `group.cancelAll()`, index guard before `group.next()`, `group.waitForAll()` to drain).
+5. Call `processSingleExtraction(_:)` per file.
 
-`processSingleExtraction` checks cancellation before and after `JPGSonyARWExtractor.jpgSonyARWExtractor(from:fullSize:)`, then writes the result via `SaveJPGImage().save(image:originalURL:)`.
+`processSingleExtraction` resolves the `RawFormat` for the URL and calls `format.extractFullJPEG(from:fullSize:)` — which resolves to `JPGSonyARWExtractor` for `.arw` and `JPGNikonNEFExtractor` for `.nef`. It checks cancellation before and after extraction, then writes the result via `SaveJPGImage().save(image:originalURL:)`.
 
 `SaveJPGImage.save` is an `actor` with a single `@concurrent nonisolated` method. It runs on the cooperative thread pool (not on the actor's serial queue) and:
-- Replaces the `.arw` extension with `.jpg`
+- Replaces the RAW extension (`.arw` or `.nef`) with `.jpg` via `deletingPathExtension().appendingPathExtension("jpg")`
 - Uses `CGImageDestinationCreateWithURL` with JPEG quality `1.0`
 - Logs success/failure with image dimensions and file paths
 
@@ -634,7 +634,7 @@ actor ThumbnailLoader {
 1. `ensureReady()` — same `setupTask` gate pattern as `ScanAndCreateThumbnails`.
 2. RAM cache lookup via `SharedMemoryCache.object(forKey:)`; on hit, calls `SharedMemoryCache.updateCacheMemory()` for statistics.
 3. Disk cache lookup via `DiskCacheManager.load(for:)`; on hit, calls `SharedMemoryCache.updateCacheDisk()` for statistics.
-4. Extraction fallback: `SonyThumbnailExtractor.extractSonyThumbnail(from:maxDimension:qualityCost:)`.
+4. Extraction fallback: `format.extractThumbnail(from:maxDimension:qualityCost:)` where `format = RawFormatRegistry.format(for: url)`.
 5. Store in RAM cache via `storeInMemory(_:for:)`.
 6. Schedule disk save via a detached background task (CGImage → Data encoding happens inside the actor before detaching).
 
@@ -778,7 +778,7 @@ private actor EvictionCounter {
 
 ### 9.1 Bridging GCD to Prevent Thread Pool Starvation
 
-Both `JPGSonyARWExtractor` and `SonyThumbnailExtractor` are caseless enums — pure namespaces with no instance state — that perform CPU-intensive ImageIO work. They use a pattern that bridges GCD and Swift concurrency via `withCheckedContinuation`.
+`SonyThumbnailExtractor`, `NikonThumbnailExtractor`, `JPGSonyARWExtractor`, and `JPGNikonNEFExtractor` are caseless enums — pure namespaces with no instance state — that perform CPU-intensive ImageIO work. They use a pattern that bridges GCD and Swift concurrency via `withCheckedContinuation`.
 
 #### The problem: thread pool starvation
 
@@ -939,8 +939,8 @@ enum SonyThumbnailExtractor {
 
 #### QoS choices
 
-- `JPGSonyARWExtractor` uses `.utility` — extracting full-resolution previews for JPG export is a background batch job that can yield to foreground work.
-- `SonyThumbnailExtractor` uses `.userInitiated` — thumbnail extraction is driven directly by user scrolling, so results need to appear quickly.
+- `JPGSonyARWExtractor` and `JPGNikonNEFExtractor` use `.utility` — extracting full-resolution previews for JPG export is a background batch job that can yield to foreground work.
+- `SonyThumbnailExtractor` and `NikonThumbnailExtractor` use `.userInitiated` — thumbnail extraction is driven directly by user scrolling, so results need to appear quickly.
 
 #### @preconcurrency import
 
@@ -1212,7 +1212,9 @@ remaining = (totalFiles - itemsProcessed) * avgTime
 | `CacheDelegate` | `@unchecked Sendable` — `willEvictObject` is called synchronously by `NSCache`; increments are dispatched to the isolated `EvictionCounter` actor |
 | `RawCullViewModel`, `SharpnessScoringModel`, `GridThumbnailViewModel`, `ExecuteCopyFiles` | `@Observable @MainActor` — all UI state updates serialized on the main thread |
 | `SettingsViewModel` | `@Observable` without `@MainActor` on the class; has `@MainActor static let shared`; exposes `nonisolated func asyncgetsettings()` + `MainActor.run` for background access |
-| `SonyThumbnailExtractor`, `JPGSonyARWExtractor` | Caseless enums; `nonisolated static` methods dispatched to GCD global queues to prevent actor starvation and serialization |
+| `SonyThumbnailExtractor`, `NikonThumbnailExtractor`, `JPGSonyARWExtractor`, `JPGNikonNEFExtractor` | Caseless enums; `nonisolated static` methods dispatched to GCD global queues to prevent actor starvation and serialization |
+| `DiscoverFiles` | Struct (not actor); `nonisolated func` hops to `Task.detached(priority: .utility)` for the directory walk |
+| `RawFormat` conformers (`SonyRawFormat`, `NikonRawFormat`) | Caseless enums; all protocol methods are `nonisolated static` — pure dispatch layer, no state |
 | `ActorCreateOutputforView` | Struct (not actor) with `@concurrent nonisolated func` — runs on cooperative thread pool |
 
 CPU-bound ImageIO and disk I/O work runs off-actor to keep the main thread and actor queues responsive.
@@ -1339,14 +1341,14 @@ It is opened via `openWindow(id: "grid-thumbnails-window")` rather than as a con
 
 **State stored on `RawCullViewModel`** (all `@MainActor`):
 - `zoomOverlayVisible: Bool` — controls whether the overlay is shown
-- `zoomOverlayCGImage: CGImage?` — high-quality ARW embedded JPEG (from `JPGSonyARWExtractor`)
+- `zoomOverlayCGImage: CGImage?` — high-quality embedded JPEG (from `format.extractFullJPEG(from:fullSize:)` — `JPGSonyARWExtractor` for `.arw` or `JPGNikonNEFExtractor` for `.nef`)
 - `zoomOverlayNSImage: NSImage?` — fallback when using a cached thumbnail
 - `zoomExtractionTask: Task<Void, Never>?` — handle for the in-flight extraction; cancelled on dismiss or selection change
 
 **`ZoomPreviewHandler.handleOverlay`** decides which path to take:
 1. **Thumbnail reuse** (`useThumbnailAsZoomPreview = true`): calls `RequestThumbnail.shared.requestThumbnail` and stores the result as `NSImage` in `zoomOverlayNSImage`.
 2. **Pre-extracted JPEG** (`.jpg` companion file exists): loads it synchronously via `CGImageSourceCreateImageAtIndex` with caching disabled, stores as `CGImage`. `CGImageSourceRemoveCacheAtIndex` is called immediately to prevent ImageIO's process-level cache from retaining the ~188 MB decoded buffer beyond the overlay's lifetime.
-3. **Live extraction** (no companion file): sets `zoomOverlayVisible = true` immediately (shows a progress spinner) then calls `JPGSonyARWExtractor.jpgSonyARWExtractor` in a background task.
+3. **Live extraction** (no companion file): sets `zoomOverlayVisible = true` immediately (shows a progress spinner) then calls `format.extractFullJPEG(from: url, fullSize: false)` in a background task.
 
 **Async focus mask regeneration:** `ZoomOverlayView` uses `.task(id: viewModel.zoomOverlayCGImage?.hashValue)` to regenerate the focus mask whenever a new `CGImage` is assigned, and `.onChange(of: viewModel.sharpnessModel.focusMaskModel.config)` with a 400 ms debounce to regenerate when scoring parameters change. Both paths call `FocusMaskModel.generateFocusMask` which runs on a detached `userInitiated` task.
 
@@ -1366,7 +1368,7 @@ It is opened via `openWindow(id: "grid-thumbnails-window")` rather than as a con
 
 ### SimilarityScoringModel — Burst Grouping
 
-`SimilarityScoringModel` gains a public async method `groupBursts(files:)` for sequential frame clustering:
+`SimilarityScoringModel` exposes a public async method `groupBursts(files:)` for sequential frame clustering:
 
 ```swift
 func groupBursts(files: [FileItem]) async

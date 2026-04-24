@@ -189,8 +189,8 @@ The grid thumbnail cache (`gridThumbnailCache`) is separate from the full-resolu
 
 | Property | Value | Rationale |
 |---|---|---|
-| `totalCostLimit` | 400 MB | Fits thousands of 200 px thumbnails while leaving headroom |
-| `countLimit` | 2000 | Hard cap on item count as a secondary safety net |
+| `totalCostLimit` | 400 MB (from `gridCacheSizeMB`) | Fits thousands of 200 px thumbnails while leaving headroom |
+| `countLimit` | 3000 | Hard cap on item count as a secondary safety net |
 | `evictsObjectsWithDiscardedContent` | `false` | Retain entries even after `NSDiscardableContent` is discarded |
 
 The grid cache is never written to disk. `ScanAndCreateThumbnails.storeInGridCache(_:for:)` downscales each image to ≤200 px before storing, so the grid cache always holds consistently-sized entries regardless of the bulk preload target size. `ThumbnailLoader.thumbnailLoader(file:targetSize:)` reads from it directly when `targetSize ≤ 200`, bypassing the full-resolution path and the 6-slot concurrency throttle entirely.
@@ -203,10 +203,20 @@ func ensureReady(config: CacheConfig? = nil) async {
         await existing.value
         return
     }
-    let task = Task { await self.setCacheCostsFromSavedSettings() }
+    let capturedConfig = config
+    let task = Task {
+        self.startMemoryPressureMonitoring()
+        let finalConfig: CacheConfig
+        if let cfg = capturedConfig {
+            finalConfig = cfg
+        } else {
+            let settings = await SettingsViewModel.shared.asyncgetsettings()
+            finalConfig = self.calculateConfig(from: settings)
+        }
+        self.applyConfig(finalConfig)
+    }
     setupTask = task
     await task.value
-    startMemoryPressureMonitoring()
 }
 ```
 
@@ -214,21 +224,27 @@ func ensureReady(config: CacheConfig? = nil) async {
 
 ```
 ensureReady()
-  -> setCacheCostsFromSavedSettings()
-      -> SettingsViewModel.shared.asyncgetsettings()
-          -> calculateConfig(from:)
-              -> applyConfig(_:)
+  -> startMemoryPressureMonitoring()
+  -> SettingsViewModel.shared.asyncgetsettings()
+      -> calculateConfig(from:)
+          -> applyConfig(_:)
 ```
 
 `calculateConfig` converts settings to a `CacheConfig`:
 - `totalCostLimit = memoryCacheSizeMB × 1024 × 1024`
 - `countLimit = 10,000` (intentionally very high — memory cost, not item count, is the real constraint)
+- `gridTotalCostLimit = gridCacheSizeMB × 1024 × 1024`
 - `costPerPixel = thumbnailCostPerPixel`
 
-`applyConfig` applies the config to `NSCache`:
+`applyConfig` applies the config to both `NSCache` instances:
 - `memoryCache.totalCostLimit = config.totalCostLimit`
 - `memoryCache.countLimit = config.countLimit`
+- `memoryCache.evictsObjectsWithDiscardedContent = false`
 - `memoryCache.delegate = CacheDelegate.shared`
+- `gridThumbnailCache.totalCostLimit = config.gridTotalCostLimit`
+- `gridThumbnailCache.countLimit = 3000`
+- `gridThumbnailCache.evictsObjectsWithDiscardedContent = false`
+- `gridThumbnailCache.delegate = CacheDelegate.shared`
 
 ---
 
@@ -243,15 +259,19 @@ actor DiskCacheManager {
 }
 ```
 
-**Cache key generation** — deterministic MD5 hash of the standardized source path:
+**Cache key generation** — deterministic `CryptoKit.Insecure.MD5` hash of the standardized source path:
 
 ```swift
-func cacheURL(for sourceURL: URL) -> URL {
-    let standardized = sourceURL.standardizedFileURL.path
-    let hash = MD5(string: standardized)   // hex string
-    return cacheDirectory.appendingPathComponent(hash + ".jpg")
+private func cacheURL(for sourceURL: URL) -> URL {
+    let standardizedPath = sourceURL.standardized.path
+    let data = Data(standardizedPath.utf8)
+    let digest = Insecure.MD5.hash(data: data)
+    let hash = digest.map { String(format: "%02x", $0) }.joined()
+    return cacheDirectory.appendingPathComponent(hash).appendingPathExtension("jpg")
 }
 ```
+
+MD5 is used as a non-cryptographic filename hash — a fixed-width, filesystem-safe string with a vanishingly small collision rate across one user's catalog. `Insecure.MD5` makes the "not-for-security" intent explicit, and `.standardized` resolves `..`/`.` components so two URLs pointing at the same file always hash identically.
 
 **Load** — detached `userInitiated` priority task:
 
@@ -269,21 +289,24 @@ func load(for sourceURL: URL) async -> NSImage? {
 
 ```swift
 func save(_ jpegData: Data, for sourceURL: URL) async {
-    let url = cacheURL(for: sourceURL)
-    Task.detached(priority: .background) {
+    let fileURL = cacheURL(for: sourceURL)
+    // `Data` is Sendable — safe to hand off to a detached task.
+    await Task.detached(priority: .background) {
         do {
-            try jpegData.write(to: url)
+            try jpegData.write(to: fileURL, options: .atomic)
         } catch {
             // Log error
         }
-    }
+    }.value
 }
 
 // Called inside the actor that owns the CGImage, before crossing actor boundaries
-static nonisolated func jpegData(from cgImage: CGImage) -> Data? {
+nonisolated static func jpegData(from cgImage: CGImage) -> Data? {
     // CGImageDestination → JPEG quality 0.7
 }
 ```
+
+Note that the callers of `save` invoke it from their own `Task.detached` so the encoded-and-write sequence is itself fully off-actor; the `await Task.detached(...).value` inside `save` means the disk-cache actor does not serialise multiple concurrent writes on its executor.
 
 **Cache maintenance**:
 

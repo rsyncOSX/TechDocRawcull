@@ -12,8 +12,15 @@ mermaid = true
 This document describes the complete execution flow from the moment a user opens
 a catalog folder to the point where all thumbnails are visible in the grid.
 It covers the actors involved, the data flow between them, the concurrency
-model, five performance bugs that were found and fixed, and the measured results
-on a real catalog of 809 Sony A1 ARW files stored on an external 800 MB/s SSD.
+model, and the measured results on a real catalog of 809 Sony A1 ARW files
+stored on an external 800 MB/s SSD.
+
+Per-vendor RAW knowledge (file extensions, embedded-thumbnail extraction,
+MakerNote focus parsing, compression labels, size-class thresholds) is hidden
+behind the `RawFormat` protocol. `RawFormatRegistry.format(for: URL)` returns
+the matching conformer — `SonyRawFormat` for `.arw`, `NikonRawFormat` for
+`.nef` — so every code path below is vendor-agnostic; only the two
+`RawFormat` conformers reach into vendor-specific binary parsers.
 
 ---
 
@@ -57,28 +64,36 @@ metadata (name, size, type, modification date) is prefetched via
 
 ### 2.2 Single-pass concurrent extraction (`withTaskGroup`)
 
-EXIF metadata and Sony MakerNote focus points are extracted in a **single
-combined task group pass**. Each task opens the file once and returns a pair:
+EXIF metadata and MakerNote focus points are extracted in a **single
+combined task group pass**. Each task dispatches through `RawFormatRegistry`
+so the same loop handles both Sony ARW and Nikon NEF files in one go:
 
 ```swift
 let pairs: [(FileItem, DecodeFocusPoints?)] = await withTaskGroup(
     of: (FileItem, DecodeFocusPoints?).self
 ) { group in
     for fileURL in contents {
-        guard fileURL.pathExtension.lowercased() == "arw" else { continue }
+        guard let format = RawFormatRegistry.format(for: fileURL) else { continue }
+        discoveredCount += 1
         let progress = onProgress
         let count = discoveredCount
         Task { @MainActor in progress?(count) }   // fire-and-forget UI update
         group.addTask {
             let res      = try? fileURL.resourceValues(forKeys: Set(keys))
-            let exifData = self.extractExifData(from: fileURL)   // nonisolated
-            let fileItem = FileItem(url: fileURL, name: res?.name ?? …,
-                                    exifData: exifData)
-            let focusPoint: DecodeFocusPoints? =
-                SonyMakerNoteParser.focusLocation(from: fileURL).map {
-                    DecodeFocusPoints(sourceFile: fileURL.lastPathComponent,
-                                      focusLocation: $0)
-                }
+            let exifData = self.extractExifData(from: fileURL, format: format)   // nonisolated
+            let focusStr = format.focusLocation(from: fileURL)
+            let fileItem = FileItem(
+                url: fileURL,
+                name: res?.name ?? fileURL.lastPathComponent,
+                size: Int64(res?.fileSize ?? 0),
+                dateModified: res?.contentModificationDate ?? Date(),
+                exifData: exifData,
+                afFocusNormalized: focusStr.flatMap { Self.parseFocusNormalized($0) },
+            )
+            let focusPoint: DecodeFocusPoints? = focusStr.map {
+                DecodeFocusPoints(sourceFile: fileURL.lastPathComponent,
+                                  focusLocation: $0)
+            }
             return (fileItem, focusPoint)
         }
     }
@@ -87,61 +102,80 @@ let pairs: [(FileItem, DecodeFocusPoints?)] = await withTaskGroup(
     return collected
 }
 
-let result      = pairs.map(\.0)
+let result       = pairs.map(\.0)
 let nativePoints = pairs.compactMap(\.1)
 ```
 
-For each ARW file a task is added to the group. The loop itself is non-blocking:
-progress callbacks are fired to the main actor without `await`, so the loop
-completes almost instantly and the task group fills up immediately.
+For each supported RAW file a task is added to the group. The loop itself is
+non-blocking: progress callbacks are fired to the main actor without `await`,
+so the loop completes almost instantly and the task group fills up immediately.
 
-Each task calls both `extractExifData` and `SonyMakerNoteParser.focusLocation`
-**without hopping back to the actor** — both methods are `nonisolated`, so they
-run directly on the global cooperative thread pool. This eliminates the separate
+Each task calls `extractExifData(from:format:)` and `format.focusLocation(from:)`
+**without hopping back to the actor** — both are `nonisolated`, so they run
+directly on the global cooperative thread pool. `format.focusLocation` resolves
+statically to `SonyMakerNoteParser.focusLocation` for `.arw` or
+`NikonMakerNoteParser.focusLocation` for `.nef`. This eliminates the separate
 second file-open pass that a dedicated `extractNativeFocusPoints` function
-previously required.
+previously required, and keeps the dispatch loop vendor-agnostic.
 
-`extractExifData` uses Apple's ImageIO framework:
+The scan also parses the normalised AF-point `CGPoint` (origin top-left, range
+0–1) inline via `parseFocusNormalized`, caching it on `FileItem.afFocusNormalized`
+for the sharpness pipeline to consume without re-reading the file.
+
+`extractExifData(from:format:)` uses Apple's ImageIO framework:
 
 ```swift
-private nonisolated func extractExifData(from url: URL) -> ExifMetadata? {
+private nonisolated func extractExifData(from url: URL, format: any RawFormat.Type) -> ExifMetadata? {
     guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
           let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) …
 ```
 
 `CGImageSourceCopyPropertiesAtIndex` reads the TIFF/EXIF header from the file.
-For a Sony ARW this is the first few kilobytes — not the full ~50 MB RAW image.
+For a Sony ARW or Nikon NEF this is the first few kilobytes — not the full
+RAW image. The resolved `format` is passed through so the per-vendor
+`rawFileTypeString(compressionCode:)` and `sizeClassThresholds(camera:)`
+helpers render body-appropriate labels (e.g. compression code `6` means
+"Compressed" on Sony but Nikon uses `34713` for `NEF Compressed`).
 
 **Measured throughput:** ~2–3 ms per file. 809 files concurrently ≈ **3–4 seconds**.
 
 ### 2.3 Focus point extraction and JSON fallback
 
-Focus points are now extracted inline in the same task group as EXIF (see 2.2).
+Focus points are extracted inline in the same task group as EXIF (see 2.2).
 After the group completes, the results are resolved:
 
 ```swift
 decodedFocusPoints = nativePoints.isEmpty
-    ? decodeFocusPointsJSON(from: url)
+    ? await decodeFocusPointsJSON(from: url)
     : nativePoints
 ```
 
 If native MakerNote extraction yielded no results — for example, files captured
-before the feature was available, or non-A1 bodies — `ScanFiles` falls back to
-reading a `focuspoints.json` file from the catalog folder. That JSON is decoded
-synchronously with a plain `JSONDecoder`; no actor-isolated types are touched:
+before the feature was available, older Nikon DSLRs whose `AFInfo2` layout is
+not yet parsed, or Sony bodies other than the supported list — `ScanFiles`
+falls back to reading a `focuspoints.json` sidecar file from the catalog
+folder. The fallback file read runs on a detached utility-priority task to
+avoid blocking the scan actor:
 
 ```swift
-private func decodeFocusPointsJSON(from url: URL) -> [DecodeFocusPoints]? {
+private func decodeFocusPointsJSON(from url: URL) async -> [DecodeFocusPoints]? {
     let fileURL = url.appendingPathComponent("focuspoints.json")
     guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-    let data = try Data(contentsOf: fileURL)
+    let data = try await Task.detached(priority: .utility) {
+        try Data(contentsOf: fileURL)
+    }.value
     return try JSONDecoder().decode([DecodeFocusPoints].self, from: data)
 }
 ```
 
-#### What `SonyMakerNoteParser` does
+#### What the MakerNote parsers do
 
-Sony ARW is TIFF-based. Focus location lives at:
+Both Sony ARW and Nikon NEF are TIFF-based. `SonyMakerNoteParser` and
+`NikonMakerNoteParser` are caseless enums with a shared `focusLocation(from:)`
+output shape — `"width height x y"` in full-sensor pixel space, origin top-left
+— so the downstream `parseFocusNormalized` helper accepts both identically.
+
+Sony ARW focus location lives at:
 
 ```
 TIFF IFD0  →  ExifIFD (tag 0x8769)  →  MakerNote (tag 0x927C)
@@ -164,6 +198,11 @@ Sony ARW MakerNote metadata sits well within the first 1–2 MB of the file.
 Reading 4 MB is a conservative safe limit. The full RAW image data follows
 later in the file and is never touched.
 
+`NikonMakerNoteParser` follows the same idea but targets the Nikon Type-3
+MakerNote layout (`"Nikon\0"` signature + inner TIFF header + `AFInfo2` tag
+`0x00B7`), and uses AFInfoVersion `0300`+ offsets for AFImageWidth/Height and
+AFAreaX/Y — the layout used by Z9, Z8, Z7, and Z6 class bodies.
+
 **Measured throughput:** ~0.3–0.4 ms per file. 809 files concurrently ≈ **< 1 second**.
 
 ---
@@ -175,12 +214,17 @@ later in the file and is never touched.
 ### 3.1 File discovery and sliding-window task group
 
 `preloadCatalog` delegates directory scanning to a dedicated `DiscoverFiles`
-actor before building the task group:
+struct before building the task group. `DiscoverFiles.discoverFiles(at:recursive:)`
+is `nonisolated` and runs its directory walk inside a detached utility-priority
+task, filtering by the union of all registered extensions:
 
 ```swift
 let urls = await DiscoverFiles().discoverFiles(at: catalogURL, recursive: false)
 totalFilesToProcess = urls.count
 await fileHandlers?.maxfilesHandler(urls.count)
+
+// Inside DiscoverFiles:
+let supported: Set<String> = RawFormatRegistry.allExtensions   // {"arw", "nef"}
 ```
 
 The task group then processes the discovered URLs with a sliding window:
@@ -232,15 +276,18 @@ After a first full scan, the disk cache is ~400 MB for 809 files.
 #### C. RAW extraction
 
 ```swift
-let cgImage = try await SonyThumbnailExtractor.extractSonyThumbnail(
+guard let format = RawFormatRegistry.format(for: url) else { return }
+let cgImage = try await format.extractThumbnail(
     from: url,
     maxDimension: CGFloat(targetSize),
-    qualityCost: costPerPixel
+    qualityCost: costPerPixel,
 )
 ```
 
-`SonyThumbnailExtractor` hops immediately to `DispatchQueue.global()` so the
-actor is not blocked during the ~180–200 ms decode:
+`format.extractThumbnail` resolves to `SonyThumbnailExtractor.extractSonyThumbnail`
+for `.arw` and `NikonThumbnailExtractor.extractNikonThumbnail` for `.nef`. Both
+extractors hop immediately to `DispatchQueue.global()` so the actor is not
+blocked during the ~180–200 ms decode:
 
 ```swift
 try await withCheckedThrowingContinuation { continuation in
@@ -251,9 +298,12 @@ try await withCheckedThrowingContinuation { continuation in
 }
 ```
 
-Internally this calls `CGImageSourceCreateThumbnailAtIndex` which uses the
-embedded JPEG preview inside the ARW where available, avoiding a full RAW
-decode.
+Internally each extractor calls `CGImageSourceCreateThumbnailAtIndex` which
+uses the embedded JPEG preview inside the RAW where available, avoiding a
+full RAW decode. For ARW 6.0 (RA16) files the Sony path falls back to
+reading the embedded JPEG directly via `SonyMakerNoteParser.embeddedJPEGLocations`;
+the Nikon path defers to ImageIO with `kCGImageSourceCreateThumbnailFromImageIfAbsent`
+so the embedded preview is used when present.
 
 After extraction the thumbnail is:
 1. Stored in the RAM cache (`NSCache`) immediately.

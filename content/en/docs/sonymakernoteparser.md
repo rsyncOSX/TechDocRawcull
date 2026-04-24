@@ -31,6 +31,16 @@ locate and decode this data. It also exposes helpers for locating and reading
 the three JPEG images embedded in every ARW file, and a verbose diagnostic
 walk used by the body-compatibility test suite.
 
+> **Nikon parallel:** A companion `NikonMakerNoteParser` (in
+> `Enum/NikonMakerNoteParser.swift`) does the equivalent job for NEF files,
+> parsing the Nikon Type-3 MakerNote layout and the `AFInfo2` tag (`0x00B7`)
+> used by Z9, Z8, Z7, and Z6 class bodies. Both parsers expose
+> `focusLocation(from:) -> String?` returning `"width height x y"`, so the
+> downstream `ScanFiles.parseFocusNormalized` consumes them identically. The
+> rest of this document focuses on the Sony implementation; the Nikon parser
+> uses the same design with minor differences (relative offsets within the
+> MakerNote inner TIFF header, `AFInfoVersion` gating of the AFInfo2 layout).
+
 ---
 
 ## ARW File Structure

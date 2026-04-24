@@ -129,7 +129,22 @@ By wrapping the work in `DispatchQueue.global().async` and `withCheckedThrowingC
 
 This leaves the precious Swift Concurrency threads completely free to continue juggling all the other `await` tasks in your app.
 
-### Two functions in RawCull use DispatchQueue.global
+### Four functions in RawCull use DispatchQueue.global
+
+All four live in caseless enums that conform to (or are called by) a `RawFormat`
+conformer. Sony and Nikon have matching pairs: a thumbnail extractor
+(`userInitiated` QoS — the user is waiting) and a full-resolution JPEG
+extractor (`utility` QoS — batch export job).
+
+- `SonyThumbnailExtractor.extractSonyThumbnail(…)` — `userInitiated`
+- `NikonThumbnailExtractor.extractNikonThumbnail(…)` — `userInitiated`
+- `JPGSonyARWExtractor.jpgSonyARWExtractor(…)` — `utility`
+- `JPGNikonNEFExtractor.jpgNikonNEFExtractor(…)` — `utility`
+
+The Sony path shown below is representative — the other three use the same
+pattern with vendor-specific fallbacks (binary TIFF walk via
+`SonyMakerNoteParser` for ARW 6.0; SubIFD chain walk via
+`NikonMakerNoteParser` for NEF previews not surfaced by ImageIO).
 
 extract JPGs from ARW files
 
@@ -282,4 +297,4 @@ If you can do this, you don't need `DispatchQueue`! But if you are using black-b
 
 ## Summary
 
-Heavy synchronous code — especially CPU-bound ImageIO work — must never run directly on Swift's cooperative thread pool. The GCD escape hatch (`DispatchQueue.global` + `withCheckedContinuation`) moves that work onto GCD's flexible thread pool, leaving Swift Concurrency threads free. RawCull uses this pattern for both thumbnail extraction (`userInitiated` priority) and JPEG preview extraction (`utility` priority).
+Heavy synchronous code — especially CPU-bound ImageIO work — must never run directly on Swift's cooperative thread pool. The GCD escape hatch (`DispatchQueue.global` + `withCheckedContinuation`) moves that work onto GCD's flexible thread pool, leaving Swift Concurrency threads free. RawCull uses this pattern for thumbnail extraction (`userInitiated`) and embedded-JPEG preview extraction (`utility`), in both the Sony and Nikon extractors.

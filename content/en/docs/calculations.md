@@ -91,24 +91,28 @@ app_percentage = (app_memory / used_memory) × 100
 Total Cost Limit (bytes) = memory_cache_size_MB × 1024 × 1024
 ```
 
-**Production Default:**
+**Settings Default (what production actually uses):**
 ```
-Total Cost Limit = 500 MB = 500 × 1024 × 1024 bytes = 524,288,000 bytes
+memoryCacheSizeMB   = 10,000   (from SettingsViewModel)
+Total Cost Limit    = 10,000 × 1024 × 1024 bytes ≈ 10.5 GB
 ```
 
-**Typical Capacity:**
+The `CacheConfig.production` constant (`totalCostLimit = 500 MB`, `countLimit = 1000`) is a fallback default only — `ensureReady()` overwrites it by calling `SettingsViewModel.shared.asyncgetsettings()` and feeding the result through `calculateConfig(from:)`.
+
+**Typical Capacity (at the 10 GB default):**
 ```
 Max Images = Total Cost Limit / average_image_cost
-          = 500 MB / ~4.5 MB per 1024×1024 image
-          ≈ 112 images (1024×1024 px @ 4 bytes/pixel × 1.1 overhead)
+          ≈ 10 GB / ~18 MB per 1616-px thumbnail
+          ≈ 500+ images (full-resolution thumbnails, not including the 200 px grid cache)
 ```
 
 #### Grid Cache Cost Limit
-**Purpose:** Dedicated in-memory cache for grid-view (small, ≤500px) thumbnails.
+**Purpose:** Dedicated in-memory cache for grid-view thumbnails. All grid entries are downscaled to **≤200 px** on the longest edge before insertion (`ScanAndCreateThumbnails.storeInGridCache` calls `downscale(_:to: 200)`), so the grid cache holds consistently small images regardless of the preload target size.
 
 **Default:**
 ```
 Grid Cache Limit = 400 MB = 400 × 1024 × 1024 bytes
+Grid Count Limit = 3000  (secondary safety net; cost is the binding constraint)
 ```
 
 ### Thumbnail Cost Calculation
@@ -121,20 +125,23 @@ Grid Cache Limit = 400 MB = 400 × 1024 × 1024 bytes
 
 **Formula:**
 ```
-Cost = Σ(pixelCost_per_representation) + overhead_buffer
+Cost = Σ(pixelCost_per_representation) × 1.1
 
 Where:
-  pixelCost = width_pixels × height_pixels × costPerPixel
-  costPerPixel = 4 (default: RGBA 8-bit channels)
-  overhead_buffer = totalCost × 1.1 (10% for NSImage metadata)
+  pixelCost = rep.pixelsWide × rep.pixelsHigh × costPerPixel
 ```
 
-**Example Calculation:**
+**`costPerPixel` defaults**:
+- `DiscardableThumbnail.init` accepts `costPerPixel: Int = 4` as the struct-level fallback.
+- `SettingsViewModel.thumbnailCostPerPixel` defaults to **6**, and this is the value actually used by the production cache pipeline (`ScanAndCreateThumbnails` reads it via `SharedMemoryCache.costPerPixel`).
+- Setting this value higher than the true byte cost is intentional: it reserves headroom for `NSImage`'s internal bitmap retention and any Metal / Core Image caches that live outside the `NSCache` accounting.
+
+**Example Calculation (costPerPixel = 6):**
 ```
-Image: 1024×1024 pixels, 4 bytes/pixel (RGBA)
-  pixelCost = 1024 × 1024 × 4 = 4,194,304 bytes ≈ 4 MB
-  overhead = 4,194,304 × 1.1 = 4,613,734 bytes ≈ 4.4 MB
-  Final Cost = 4,613,734 bytes
+Image: 1024×1024 pixels
+  pixelCost = 1024 × 1024 × 6 = 6,291,456 bytes ≈ 6 MB
+  overhead  = 6,291,456 × 1.1 = 6,920,602 bytes ≈ 6.6 MB
+  Final Cost = 6,920,602 bytes
 ```
 
 **Details:**
@@ -515,7 +522,7 @@ Default burstSensitivity = 0.25
 **Details:**
 - O(n) sequential pass (preserves shot order)
 - Typical burst threshold: 0.25 (camera captures every ~0.1–0.2 sec in burst mode)
-- Can be adjusted by user slider (0.05–0.95)
+- Adjustable via the Sensitivity slider in `SimilarityControlsView`, range **0.05–0.60**, debounced 200 ms
 
 ## Processing Progress & Estimation Calculations
 
@@ -590,10 +597,11 @@ All: no filter
 | Constant | Value | Location | Purpose |
 |----------|-------|----------|---------|
 | Memory Pressure Factor | 0.85 | MemoryViewModel | Threshold to trigger cache reduction |
-| Default Cost Per Pixel | 4 bytes/px | CacheConfig, DiscardableThumbnail | RGBA 8-bit channels |
+| `SettingsViewModel.thumbnailCostPerPixel` default | 6 bytes/px | SettingsViewModel | Production bookkeeping value used by the cache pipeline |
+| `DiscardableThumbnail.init` fallback | 4 bytes/px | DiscardableThumbnail | Struct-level default when no settings value is supplied |
 | Cache Overhead Buffer | 1.10× | DiscardableThumbnail | 10% for NSImage metadata |
-| Production Cache Limit | 500 MB | CacheConfig | Primary memory constraint |
-| Grid Cache Limit | 400 MB | CacheConfig | Small grid thumbnails (≤500px) |
+| `memoryCacheSizeMB` default (settings) | 10,000 MB | SettingsViewModel | Real production cache ceiling (`CacheConfig.production` 500 MB is only a fallback constant) |
+| Grid Cache Limit | 400 MB (from `gridCacheSizeMB`) | SettingsViewModel / CacheConfig | Dedicated 200 px grid thumbnail cache |
 | Memory Pressure Warning Reduction | 0.60× | SharedMemoryCache | Reduce cache to 60% on warning |
 | Memory Pressure Critical Limit | 50 MB | SharedMemoryCache | Minimum cache size on critical |
 | Default Sharpness Saliency Weight | 0.75 | FocusDetectorConfig | Favor subject region (75%) over full-frame (25%) |
