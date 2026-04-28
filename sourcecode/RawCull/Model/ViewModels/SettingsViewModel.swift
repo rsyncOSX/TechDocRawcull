@@ -36,8 +36,8 @@ final class SettingsViewModel {
 
     // MARK: - Memory Cache Settings
 
-    /// Maximum memory cache size in MB (default: 10000)
-    var memoryCacheSizeMB: Int = 10000
+    /// Maximum memory cache size in MB (default: 4000)
+    var memoryCacheSizeMB: Int = 4000
 
     /// Maximum grid (200px) memory cache size in MB (default: 400)
     var gridCacheSizeMB: Int = 400
@@ -50,10 +50,20 @@ final class SettingsViewModel {
     var thumbnailSizePreview: Int = 1616
     /// Full size thumbnail in pixels (default: 8700)
     var thumbnailSizeFullSize: Int = 8700
-    /// Estimated cost per pixel for thumbnail (in bytes, default: 4 for RGBA)
-    var thumbnailCostPerPixel: Int = 6
+    /// Estimated cost per pixel for thumbnail (in bytes, default: 4 for RGBA).
+    /// `CachedThumbnail` already adds a 10% overhead buffer on top of this,
+    /// so 4 = decoded RGBA without double-counting wrapper overhead.
+    var thumbnailCostPerPixel: Int = 4
     /// Use thumbnail as zoom preview (default: true)
     var useThumbnailAsZoomPreview: Bool = false
+
+    /// When enabled, bypasses the cached embedded-JPEG thumbnail and runs the zoom preview
+    /// through a CIRAWFilter pipeline (demosaiced raw → noise reduction → small-radius
+    /// unsharp + sharpenLuminance). See `ThumbnailSharpener.sharpenedPreview`. Default: false.
+    var enableThumbnailSharpening: Bool = false
+    /// Sharpening amount for the CIRAWFilter preview pipeline, 0.0–2.0 (default: 1.0).
+    /// Drives `unsharpMask.intensity = amount * 0.4` and `sharpenLuminance.sharpness = amount * 0.3`.
+    var thumbnailSharpenAmount: Float = 1.0
 
     /// Show sharpness score badge on thumbnails (default: false = hidden, for scroll performance)
     var showScoringBadge: Bool = false
@@ -134,6 +144,8 @@ final class SettingsViewModel {
                 self.thumbnailSizeFullSize = savedSettings.thumbnailSizeFullSize
                 self.thumbnailCostPerPixel = savedSettings.thumbnailCostPerPixel
                 self.useThumbnailAsZoomPreview = savedSettings.useThumbnailAsZoomPreview
+                self.enableThumbnailSharpening = savedSettings.enableThumbnailSharpening
+                self.thumbnailSharpenAmount = savedSettings.thumbnailSharpenAmount
                 self.showScoringBadge = savedSettings.showScoringBadge
                 self.showSaliencyBadge = savedSettings.showSaliencyBadge
                 self.scoringBorderInsetFraction = savedSettings.scoringBorderInsetFraction
@@ -171,6 +183,8 @@ final class SettingsViewModel {
                 thumbnailSizeFullSize: thumbnailSizeFullSize,
                 thumbnailCostPerPixel: thumbnailCostPerPixel,
                 useThumbnailAsZoomPreview: useThumbnailAsZoomPreview,
+                enableThumbnailSharpening: enableThumbnailSharpening,
+                thumbnailSharpenAmount: thumbnailSharpenAmount,
                 showScoringBadge: showScoringBadge,
                 showSaliencyBadge: showSaliencyBadge,
                 scoringBorderInsetFraction: scoringBorderInsetFraction,
@@ -234,7 +248,7 @@ final class SettingsViewModel {
     /// Reset settings to defaults
     func resetToDefaultsMemoryCache() async {
         await MainActor.run {
-            self.memoryCacheSizeMB = 10000
+            self.memoryCacheSizeMB = 20000
             self.gridCacheSizeMB = 400
         }
         await saveSettings()
@@ -245,11 +259,40 @@ final class SettingsViewModel {
             self.thumbnailSizeGrid = 200
             self.thumbnailSizePreview = 1616
             self.thumbnailSizeFullSize = 8700
-            self.thumbnailCostPerPixel = 6
+            self.thumbnailCostPerPixel = 4
         }
         await saveSettings()
     }
+    
+/*
+    // MARK: - Memory Projection
 
+    /// Empirically-calibrated projection of RawCull's RAM payload from the two
+    /// cache-size sliders. App baseline (no caches populated) is ~100 MB.
+    /// Interpolates between baseline and a per-slider payload ceiling using
+    /// each slider's fraction of its own range, weighted by the slider's
+    /// range share of the combined payload. Calibration anchor: with
+    /// `thumbnailCostPerPixel=4`, mem=8000 MB / grid=2000 MB, real process
+    /// RSS measured ~9330 MB peak; `maxPayloadMB = 9300` makes the formula
+    /// reproduce that ceiling. Used by both the Cache settings tab and the
+    /// Memory Diagnostics console (the console logs this side-by-side with
+    /// the real process RSS so the calibration can be tuned against real usage).
+    func projectedRawCullMemoryBytes() -> UInt64 {
+        let memMin = 1000.0, memMax = 8000.0
+        let gridMin = 400.0, gridMax = 2000.0
+        let memFrac = (Double(memoryCacheSizeMB) - memMin) / (memMax - memMin)
+        let gridFrac = (Double(gridCacheSizeMB) - gridMin) / (gridMax - gridMin)
+        let memRange = memMax - memMin
+        let gridRange = gridMax - gridMin
+        let totalRange = memRange + gridRange
+        let combined = memFrac * (memRange / totalRange) + gridFrac * (gridRange / totalRange)
+        let baselineMB = 100.0
+        let maxPayloadMB = 9300.0
+        let clamped = min(1.0, max(0.0, combined))
+        let projectedMB = baselineMB + clamped * maxPayloadMB
+        return UInt64(projectedMB * 1024.0 * 1024.0)
+    }
+*/
     /// Get a snapshot of current settings (safe to call from any context)
     nonisolated func asyncgetsettings() async -> SavedSettings {
         await MainActor.run {
@@ -261,6 +304,8 @@ final class SettingsViewModel {
                 thumbnailSizeFullSize: self.thumbnailSizeFullSize,
                 thumbnailCostPerPixel: self.thumbnailCostPerPixel,
                 useThumbnailAsZoomPreview: self.useThumbnailAsZoomPreview,
+                enableThumbnailSharpening: self.enableThumbnailSharpening,
+                thumbnailSharpenAmount: self.thumbnailSharpenAmount,
                 showScoringBadge: self.showScoringBadge,
                 showSaliencyBadge: self.showSaliencyBadge,
                 scoringBorderInsetFraction: self.scoringBorderInsetFraction,
@@ -290,6 +335,8 @@ struct SavedSettings: Codable {
     let thumbnailSizeFullSize: Int
     let thumbnailCostPerPixel: Int
     let useThumbnailAsZoomPreview: Bool
+    let enableThumbnailSharpening: Bool
+    let thumbnailSharpenAmount: Float
     let showScoringBadge: Bool
     let showSaliencyBadge: Bool
 
@@ -314,6 +361,8 @@ struct SavedSettings: Codable {
         thumbnailSizeFullSize: Int,
         thumbnailCostPerPixel: Int,
         useThumbnailAsZoomPreview: Bool,
+        enableThumbnailSharpening: Bool = false,
+        thumbnailSharpenAmount: Float = 1.0,
         showScoringBadge: Bool = false,
         showSaliencyBadge: Bool = false,
         scoringBorderInsetFraction: Float = 0.04,
@@ -335,6 +384,8 @@ struct SavedSettings: Codable {
         self.thumbnailSizeFullSize = thumbnailSizeFullSize
         self.thumbnailCostPerPixel = thumbnailCostPerPixel
         self.useThumbnailAsZoomPreview = useThumbnailAsZoomPreview
+        self.enableThumbnailSharpening = enableThumbnailSharpening
+        self.thumbnailSharpenAmount = thumbnailSharpenAmount
         self.showScoringBadge = showScoringBadge
         self.showSaliencyBadge = showSaliencyBadge
         self.scoringBorderInsetFraction = scoringBorderInsetFraction
@@ -359,6 +410,8 @@ struct SavedSettings: Codable {
         thumbnailSizeFullSize = try c.decode(Int.self, forKey: .thumbnailSizeFullSize)
         thumbnailCostPerPixel = try c.decode(Int.self, forKey: .thumbnailCostPerPixel)
         useThumbnailAsZoomPreview = try c.decode(Bool.self, forKey: .useThumbnailAsZoomPreview)
+        enableThumbnailSharpening = (try? c.decode(Bool.self, forKey: .enableThumbnailSharpening)) ?? false
+        thumbnailSharpenAmount = (try? c.decode(Float.self, forKey: .thumbnailSharpenAmount)) ?? 1.0
         showScoringBadge = (try? c.decode(Bool.self, forKey: .showScoringBadge)) ?? false
         showSaliencyBadge = (try? c.decode(Bool.self, forKey: .showSaliencyBadge)) ?? false
         scoringBorderInsetFraction = (try? c.decode(Float.self, forKey: .scoringBorderInsetFraction)) ?? 0.04

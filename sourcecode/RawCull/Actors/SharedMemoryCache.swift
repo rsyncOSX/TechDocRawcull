@@ -29,6 +29,50 @@ actor SharedMemoryCache {
     /// Note: cacheEvictions is now tracked by CacheDelegate and read from there
     private let _gridCost = OSAllocatedUnfairLock(initialState: 0)
     private let _gridCount = OSAllocatedUnfairLock(initialState: 0)
+    /// Manual count/cost tracking for the main `memoryCache`, mirroring the
+    /// grid-cache counters above. NSCache does not expose item count or current
+    /// total cost via its public API, so we maintain these alongside every
+    /// `setObject` / `removeAllObjects` / eviction-delegate call. Surfaced via
+    /// `getMemoryCacheCount()` / `getMemoryCacheCurrentCost()` for the Memory
+    /// Diagnostics console (and any future cache-monitor UI).
+    private let _memCost = OSAllocatedUnfairLock(initialState: 0)
+    private let _memCount = OSAllocatedUnfairLock(initialState: 0)
+
+    // MARK: - Boomerang-miss diagnostics
+    //
+    // Three demand-traffic counters and a bounded FIFO of recently-evicted
+    // URLs from `memoryCache`, used by the Memory Diagnostics view to compute
+    // a true RAM hit rate (denominator = all demand requests, including cold
+    // extractions) and detect scan-vs-UI cache pollution.
+    //
+    //   _cacheCold:        successful branch C extractions in RequestThumbnail
+    //                      (not in RAM, not on disk → extracted from ARW source)
+    //   _demandRequests:   total calls into RequestThumbnail.resolveImage
+    //   _boomerangMisses:  branch B disk hits whose URL was just evicted from
+    //                      RAM (a re-request the cache was supposed to serve)
+    //
+    // The ring is capacity-bounded (~2000 keys, ≈2× current peak _memCount) so
+    // the boomerang signal reflects recent evictions only. Cleared on
+    // `clearCaches()` and on `.critical` memory pressure to avoid spurious
+    // hits after a wholesale flush.
+    private let _cacheCold = OSAllocatedUnfairLock(initialState: 0)
+    private let _demandRequests = OSAllocatedUnfairLock(initialState: 0)
+    private let _boomerangMisses = OSAllocatedUnfairLock(initialState: 0)
+    private let _evictedRing = OSAllocatedUnfairLock(initialState: EvictedRing())
+
+    // MARK: - Pressure event counters
+    //
+    // Cumulative counts of memory-pressure transitions handled by
+    // `handleMemoryPressureEvent`. The 5-second diagnostics sampler can miss
+    // a `.warning → .normal` flicker — these counters can't, so a delta
+    // between TSV samples reveals events even when `pressure` reads "Normal"
+    // at both endpoints. `getLiveTotalCostLimit()` reads the NSCache's live
+    // cost cap so transient shrinks (the warning case multiplies the cap by
+    // 0.6 and waits for a `.normal` to restore it) become visible too.
+    private let _pressureWarnings = OSAllocatedUnfairLock(initialState: 0)
+    private let _pressureCriticals = OSAllocatedUnfairLock(initialState: 0)
+    private let _pressureNormals = OSAllocatedUnfairLock(initialState: 0)
+
     // For Cache monitor
 
     // MARK: - Memory pressure level
@@ -62,11 +106,11 @@ actor SharedMemoryCache {
 
     /// NSCache is thread-safe, so we bypass the actor's serialization for direct access.
     /// This allows synchronous lookups: SharedMemoryCache.shared.object(...) (no await needed)
-    nonisolated(unsafe) let memoryCache = NSCache<NSURL, DiscardableThumbnail>()
+    nonisolated(unsafe) let memoryCache = NSCache<NSURL, CachedThumbnail>()
 
     /// Dedicated in-memory-only cache for grid-size (≤500px) thumbnails.
     /// Keyed by the same NSURL as memoryCache; never persisted to disk.
-    nonisolated(unsafe) let gridThumbnailCache = NSCache<NSURL, DiscardableThumbnail>()
+    nonisolated(unsafe) let gridThumbnailCache = NSCache<NSURL, CachedThumbnail>()
 
     // MARK: - Isolated State (Protected by Actor)
 
@@ -204,14 +248,16 @@ actor SharedMemoryCache {
     private func applyConfig(_ config: CacheConfig) {
         memoryCache.totalCostLimit = config.totalCostLimit
         memoryCache.countLimit = config.countLimit
-        memoryCache.evictsObjectsWithDiscardedContent = false
+        // `evictsObjectsWithDiscardedContent` only applies to NSDiscardableContent
+        // values; CachedThumbnail no longer adopts that protocol, so the setting
+        // would be a no-op. Eviction is driven by totalCostLimit / countLimit and
+        // the explicit `handleMemoryPressureEvent` handler.
         memoryCache.delegate = CacheDelegate.shared
         if let costPerPixel = config.costPerPixel {
             _costPerPixel = costPerPixel
         }
         gridThumbnailCache.totalCostLimit = config.gridTotalCostLimit
         gridThumbnailCache.countLimit = 3000
-        gridThumbnailCache.evictsObjectsWithDiscardedContent = false
         gridThumbnailCache.delegate = CacheDelegate.shared
         // let totalCostMB = config.totalCostLimit / (1024 * 1024)
 
@@ -270,6 +316,7 @@ actor SharedMemoryCache {
         switch pressureLevel {
         case .normal:
             currentPressureLevel = .normal
+            _pressureNormals.withLock { $0 += 1 }
             logMemoryPressure("Normal memory pressure")
             Task {
                 await self.refreshConfig()
@@ -278,6 +325,7 @@ actor SharedMemoryCache {
 
         case .warning:
             currentPressureLevel = .warning
+            _pressureWarnings.withLock { $0 += 1 }
             logMemoryPressure("Warning: Memory pressure detected, reducing cache to 60%")
             let reducedCost = Int(Double(memoryCache.totalCostLimit) * 0.6)
             memoryCache.totalCostLimit = reducedCost
@@ -288,12 +336,19 @@ actor SharedMemoryCache {
 
         case .critical:
             currentPressureLevel = .critical
+            _pressureCriticals.withLock { $0 += 1 }
             logMemoryPressure("CRITICAL: Memory pressure critical, clearing cache")
             memoryCache.removeAllObjects()
             memoryCache.totalCostLimit = 50 * 1024 * 1024 // 50MB minimum
+            _memCost.withLock { $0 = 0 }
+            _memCount.withLock { $0 = 0 }
             gridThumbnailCache.removeAllObjects()
             _gridCost.withLock { $0 = 0 }
             _gridCount.withLock { $0 = 0 }
+            // Wholesale flush invalidates per-URL eviction tracking; otherwise
+            // every subsequent disk-fallback would falsely register as a
+            // boomerang. Demand counters intentionally NOT reset.
+            _evictedRing.withLock { $0.clear() }
             Task {
                 await fileHandlers?.memorypressurewarning(true)
             }
@@ -309,23 +364,40 @@ actor SharedMemoryCache {
 
     // MARK: - Synchronous Accessors (Non-isolated)
 
-    nonisolated func object(forKey key: NSURL) -> DiscardableThumbnail? {
+    nonisolated func object(forKey key: NSURL) -> CachedThumbnail? {
         memoryCache.object(forKey: key)
     }
 
-    nonisolated func setObject(_ obj: DiscardableThumbnail, forKey key: NSURL, cost: Int) {
+    nonisolated func setObject(_ obj: CachedThumbnail, forKey key: NSURL, cost: Int) {
         memoryCache.setObject(obj, forKey: key, cost: cost)
+        _memCost.withLock { $0 += cost }
+        _memCount.withLock { $0 += 1 }
     }
 
     nonisolated func removeAllObjects() {
         memoryCache.removeAllObjects()
+        _memCost.withLock { $0 = 0 }
+        _memCount.withLock { $0 = 0 }
     }
 
-    nonisolated func gridObject(forKey key: NSURL) -> DiscardableThumbnail? {
+    nonisolated func getMemoryCacheCurrentCost() -> Int {
+        _memCost.withLock { $0 }
+    }
+
+    nonisolated func getMemoryCacheCount() -> Int {
+        _memCount.withLock { $0 }
+    }
+
+    nonisolated func memEntryEvicted(cost: Int) {
+        _memCost.withLock { $0 = max(0, $0 - cost) }
+        _memCount.withLock { $0 = max(0, $0 - 1) }
+    }
+
+    nonisolated func gridObject(forKey key: NSURL) -> CachedThumbnail? {
         gridThumbnailCache.object(forKey: key)
     }
 
-    nonisolated func setGridObject(_ obj: DiscardableThumbnail, forKey key: NSURL, cost: Int) {
+    nonisolated func setGridObject(_ obj: CachedThumbnail, forKey key: NSURL, cost: Int) {
         gridThumbnailCache.setObject(obj, forKey: key, cost: cost)
         _gridCost.withLock { $0 += cost }
         _gridCount.withLock { $0 += 1 }
@@ -350,13 +422,68 @@ actor SharedMemoryCache {
         _gridCount.withLock { $0 = max(0, $0 - 1) }
     }
 
+    // MARK: - Boomerang-miss helpers
+
+    nonisolated func noteEviction(url: NSURL) {
+        _evictedRing.withLock { $0.note(url) }
+    }
+
+    nonisolated func wasRecentlyEvicted(url: NSURL) -> Bool {
+        _evictedRing.withLock { $0.contains(url) }
+    }
+
+    nonisolated func incrementColdExtract() {
+        _cacheCold.withLock { $0 += 1 }
+    }
+
+    nonisolated func incrementDemandRequest() {
+        _demandRequests.withLock { $0 += 1 }
+    }
+
+    nonisolated func incrementBoomerangMiss() {
+        _boomerangMisses.withLock { $0 += 1 }
+    }
+
+    nonisolated func getColdExtractCount() -> Int {
+        _cacheCold.withLock { $0 }
+    }
+
+    nonisolated func getDemandRequestCount() -> Int {
+        _demandRequests.withLock { $0 }
+    }
+
+    nonisolated func getBoomerangMissCount() -> Int {
+        _boomerangMisses.withLock { $0 }
+    }
+
+    // MARK: - Pressure event getters
+
+    nonisolated func getPressureWarningCount() -> Int {
+        _pressureWarnings.withLock { $0 }
+    }
+
+    nonisolated func getPressureCriticalCount() -> Int {
+        _pressureCriticals.withLock { $0 }
+    }
+
+    nonisolated func getPressureNormalCount() -> Int {
+        _pressureNormals.withLock { $0 }
+    }
+
+    /// Live total-cost cap on `memoryCache`. Reads NSCache directly (the
+    /// property is thread-safe), so it reflects in-flight pressure-handler
+    /// shrinks before `.normal` has fired to restore the configured value.
+    nonisolated func getLiveTotalCostLimit() -> Int {
+        memoryCache.totalCostLimit
+    }
+
     /// For Cache monitor
     /// Get current cache statistics for monitoring
     func getCacheStatistics() async -> CacheStatistics {
         await ensureReady()
         let total = cacheMemory + cacheDisk
         let hitRate = total > 0 ? Double(cacheMemory) / Double(total) * 100 : 0
-        let evictions = await CacheDelegate.shared.getEvictionCount()
+        let evictions = CacheDelegate.shared.getEvictionCount()
         return CacheStatistics(
             hits: cacheMemory,
             misses: cacheDisk,
@@ -386,9 +513,18 @@ actor SharedMemoryCache {
         // Reset statistics
         cacheMemory = 0
         cacheDisk = 0
+        _memCost.withLock { $0 = 0 }
+        _memCount.withLock { $0 = 0 }
         _gridCost.withLock { $0 = 0 }
         _gridCount.withLock { $0 = 0 }
-        await CacheDelegate.shared.resetEvictionCount()
+        _cacheCold.withLock { $0 = 0 }
+        _demandRequests.withLock { $0 = 0 }
+        _boomerangMisses.withLock { $0 = 0 }
+        _evictedRing.withLock { $0.clear() }
+        _pressureWarnings.withLock { $0 = 0 }
+        _pressureCriticals.withLock { $0 = 0 }
+        _pressureNormals.withLock { $0 = 0 }
+        CacheDelegate.shared.resetEvictionCount()
     }
 
     func updateCacheMemory() async {
@@ -399,5 +535,48 @@ actor SharedMemoryCache {
     func updateCacheDisk() async {
         cacheDisk += 1
         // Logger.process.debugThreadOnly("SharedMemoryCache: updateCacheDisk() - found in Disk Cache (hits: \(cacheDisk))")
+    }
+}
+
+/// Bounded FIFO of recently-evicted NSURLs from the main `memoryCache`.
+/// Backing storage is a fixed-size array used as a ring (O(1) insert) plus a
+/// `Set` mirror for O(1) membership tests. Always accessed under
+/// `SharedMemoryCache._evictedRing`'s unfair lock — the struct itself
+/// performs no synchronization.
+///
+/// All members are `nonisolated` because the project sets
+/// `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; this struct is constructed
+/// and mutated from the actor's own isolation domain (and from
+/// `CacheDelegate`'s nonisolated callback), neither of which is MainActor.
+fileprivate struct EvictedRing: Sendable {
+    nonisolated static let capacity = 2000
+
+    private var buffer: [NSURL?]
+    private var set: Set<NSURL>
+    private var cursor: Int
+
+    nonisolated init() {
+        buffer = Array(repeating: nil, count: Self.capacity)
+        set = Set(minimumCapacity: Self.capacity)
+        cursor = 0
+    }
+
+    nonisolated mutating func note(_ url: NSURL) {
+        if let old = buffer[cursor] {
+            set.remove(old)
+        }
+        buffer[cursor] = url
+        set.insert(url)
+        cursor = (cursor + 1) % Self.capacity
+    }
+
+    nonisolated func contains(_ url: NSURL) -> Bool {
+        set.contains(url)
+    }
+
+    nonisolated mutating func clear() {
+        for i in 0..<buffer.count { buffer[i] = nil }
+        set.removeAll(keepingCapacity: true)
+        cursor = 0
     }
 }

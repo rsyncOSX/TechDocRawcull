@@ -54,6 +54,7 @@ struct ThumbnailSizesTab: View {
                             step: 128,
                         )
 
+/*
                         // Cost Per Pixel
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
@@ -111,7 +112,7 @@ struct ThumbnailSizesTab: View {
                                 }
                             }
                         }
-
+*/
                         // Use Thumbnail as Zoom Preview Toggle
                         VStack(alignment: .leading, spacing: 6) {
                             Label("Use Thumbnail for Zoom", systemImage: "magnifyingglass")
@@ -138,6 +139,47 @@ struct ThumbnailSizesTab: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
+
+                        // Sharpen Zoom Preview Toggle + Amount slider
+                        // Only meaningful when useThumbnailAsZoomPreview is on — the
+                        // extracted-JPG path is already at full embedded resolution.
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label("Sharpen Zoom Preview", systemImage: "wand.and.stars")
+                                .font(.system(size: 12, weight: .medium))
+
+                            HStack {
+                                ToggleViewDefault(
+                                    text: "",
+                                    binding: Binding<Bool>(
+                                        get: { settingsManager.enableThumbnailSharpening },
+                                        set: { newValue in
+                                            settingsManager.enableThumbnailSharpening = newValue
+                                            Task { await settingsManager.saveSettings() }
+                                        },
+                                    ),
+                                )
+
+                                Text("Renders the zoom preview from demosaiced raw via CIRAWFilter, then applies micro-detail sharpening.")
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            SettingsSliderRow(
+                                title: "Sharpening Amount",
+                                systemImage: "slider.horizontal.3",
+                                valueText: String(format: "%.2f", settingsManager.thumbnailSharpenAmount),
+                                description: "0–1: subtle. 1–2: pronounced. Operates on demosaiced raw, not the embedded JPEG.",
+                                value: Binding<Double>(
+                                    get: { Double(settingsManager.thumbnailSharpenAmount) },
+                                    set: { settingsManager.thumbnailSharpenAmount = Float($0) },
+                                ),
+                                range: 0.0 ... 2.0,
+                                step: 0.05,
+                            )
+                            .disabled(!settingsManager.enableThumbnailSharpening)
+                        }
+                        .disabled(!settingsManager.useThumbnailAsZoomPreview)
+                        .opacity(settingsManager.useThumbnailAsZoomPreview ? 1.0 : 0.5)
                     }
                 }
             }

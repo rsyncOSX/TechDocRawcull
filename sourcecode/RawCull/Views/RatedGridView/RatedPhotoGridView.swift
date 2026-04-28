@@ -82,8 +82,7 @@ struct RatedPhotoGridView: View {
         } else if flags.contains(.shift), let anchorID = viewModel.selectedFileID {
             let ids = ratedFiles.map(\.id)
             if let from = ids.firstIndex(of: anchorID),
-               let to = ids.firstIndex(of: file.id)
-            {
+               let to = ids.firstIndex(of: file.id) {
                 let range = from <= to ? from ... to : to ... from
                 viewModel.selectedFileIDs = Set(ids[range])
             }
@@ -96,11 +95,6 @@ struct RatedPhotoGridView: View {
 
     private func handleDoubleSelect(for file: FileItem) {
         viewModel.selectedFileID = file.id
-        viewModel.zoomExtractionTask?.cancel()
-        viewModel.zoomExtractionTask = ZoomPreviewHandler.handleOverlay(
-            file: file,
-            useThumbnailAsZoomPreview: viewModel.useThumbnailAsZoomPreview,
-            viewModel: viewModel,
-        )
+        viewModel.zoomOverlayVisible = true
     }
 }
