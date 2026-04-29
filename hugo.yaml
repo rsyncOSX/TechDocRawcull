@@ -74,14 +74,6 @@ markup:
 
 # Everything below this are Site Params
 
-security:
-  http:
-    urls:
-      - '(?i)^https?://[a-z]'
-      - '(?i)^https://cdn\.jsdelivr\.net/'
-      - '!(?i)localhost'
-      - '!@'
-    
 # Comment out if you don't want the "print entire section" link enabled.
 outputs:
   section: [HTML, print, RSS]
