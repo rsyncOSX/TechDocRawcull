@@ -1,7 +1,7 @@
 +++
 author = "Thomas Evensen"
 title = "Scan and Thumbnail Pipeline"
-date = "2026-03-25"
+date = "2026-04-29"
 tags = ["focus points", "sony", "arw", "parser","scan"]
 categories = ["technical details"]
 mermaid = true
@@ -253,23 +253,39 @@ Each task follows a three-tier lookup:
 ```
 A. RAM cache (NSCache)   →  microseconds, no I/O
 B. Disk cache (JPEG)     →  ~1–5 ms, reads ~494 KB from internal SSD
-C. RAW extraction        →  ~180–200 ms, decodes full ARW via ImageIO
+C. RAW extraction        →  ~180–200 ms, decodes embedded JPEG via ImageIO
 ```
 
-#### A. RAM cache
+A uniform invariant runs across all three branches: **the bulk preload never
+admits to the full-resolution `memoryCache`**. Every branch only mirrors the
+image into the dedicated 200 px grid cache via `storeInGridCache`, then
+returns. `RequestThumbnail` is the only admitter to `memoryCache`, so its
+LRU ordering tracks UI traffic instead of scan order. On an over-cap
+catalogue this prevents scan-side admission from self-evicting and forcing
+the user to pay near-100 % boomerang cost on first browse — see the
+[cache document]({{< ref "cache.md" >}}) for the supporting numbers.
 
-`SharedMemoryCache` is a global actor wrapping `NSCache`. A cache hit is a
-synchronous dictionary lookup — effectively free.
+#### A. RAM cache hit
 
-#### B. Disk cache
+`SharedMemoryCache.object(forKey:)` is a synchronous dictionary lookup —
+effectively free. `processSingleFile` calls `storeInGridCache` to mirror the
+image into the grid cache and returns. It does **not** re-admit to
+`memoryCache`: `object(forKey:)` already touched LRU, and a second
+`setObject` would compete with UI-driven LRU ordering.
+
+#### B. Disk cache hit
 
 Thumbnails are stored as JPEG files at
-`~/Library/Caches/no.blogspot.RawCull/Thumbnails/`. The filename is an MD5
-hash of the source file's absolute path. Each cached thumbnail is ~494 KB
-(512 px longest edge, JPEG quality 0.7).
+`~/Library/Caches/no.blogspot.RawCull/Thumbnails/`. The filename is the
+MD5 hash of `sourceURL.standardized.path` (a non-cryptographic filename
+hash via `CryptoKit.Insecure.MD5`). Each cached thumbnail is ~494 KB at the
+default `thumbnailSizePreview` of 1616 px and JPEG quality 0.7.
 
-`DiskCacheManager.load(for:)` spawns a `Task.detached` for the file read,
-releasing the actor during I/O.
+`DiskCacheManager.load(for:)` runs the file-system read on a detached
+`userInitiated` task so the actor's executor is never blocked on I/O. On a
+hit, `processSingleFile` only mirrors into the grid cache and returns —
+admission to `memoryCache` is left to `RequestThumbnail`'s branch B (the
+on-demand path), which promotes user-driven hits.
 
 After a first full scan, the disk cache is ~400 MB for 809 files.
 
@@ -280,7 +296,7 @@ guard let format = RawFormatRegistry.format(for: url) else { return }
 let cgImage = try await format.extractThumbnail(
     from: url,
     maxDimension: CGFloat(targetSize),
-    qualityCost: costPerPixel,
+    qualityCost: SharedMemoryCache.shared.costPerPixel,   // fixed at 4 (RGBA)
 )
 ```
 
@@ -306,9 +322,17 @@ the Nikon path defers to ImageIO with `kCGImageSourceCreateThumbnailFromImageIfA
 so the embedded preview is used when present.
 
 After extraction the thumbnail is:
-1. Stored in the RAM cache (`NSCache`) immediately.
-2. Encoded to JPEG data and written to the disk cache via a background
-   `Task.detached` — this write does not block the thumbnail pipeline.
+1. Mirrored into the grid cache (`storeInGridCache` downscales to 200 px and
+   stores in `gridThumbnailCache`) — but **not** admitted to `memoryCache`.
+2. Encoded to JPEG `Data` synchronously inside the actor via
+   `DiskCacheManager.jpegData(from:)` (CGImage is not Sendable; Data is).
+3. Written to the disk cache via a background-priority `Task.detached` that
+   captures only the disk-cache actor reference and the URL — no implicit
+   `self` capture. This write does not block the thumbnail pipeline.
+
+The disk JPEG saved here is what lets `RequestThumbnail`'s branch B serve
+subsequent UI requests at the smaller disk-decoded size, so a catalogue that
+would not fit at full-extracted size in `memoryCache` still fits.
 
 ### 3.3 Progress notification and ETA (fire-and-forget)
 
@@ -331,17 +355,19 @@ time** — the elapsed time between consecutive completions — and averages the
 last 10 samples:
 
 ```swift
-private func updateEstimatedTime(for _: Date, itemsProcessed: Int) {
+private func updateEstimatedTime(itemsProcessed: Int) {
     let now = Date()
+
     if let lastTime = lastItemTime {
         processingTimes.append(now.timeIntervalSince(lastTime))
     }
     lastItemTime = now
 
-    if itemsProcessed >= Self.minimumSamplesBeforeEstimation {
+    if itemsProcessed >= Self.minimumSamplesBeforeEstimation, !processingTimes.isEmpty {
         let recentTimes = processingTimes.suffix(min(10, processingTimes.count))
         let avgTimePerItem = recentTimes.reduce(0, +) / Double(recentTimes.count)
-        let estimatedSeconds = Int(avgTimePerItem * Double(totalFilesToProcess - itemsProcessed))
+        let remainingItems = totalFilesToProcess - itemsProcessed
+        let estimatedSeconds = Int(avgTimePerItem * Double(remainingItems))
         let handler = fileHandlers?.estimatedTimeHandler
         Task { @MainActor in handler?(estimatedSeconds) }
     }
@@ -351,3 +377,9 @@ private func updateEstimatedTime(for _: Date, itemsProcessed: Int) {
 Estimation begins only after `minimumSamplesBeforeEstimation` (10) items have
 completed, avoiding noisy early estimates when the first few tasks may be
 subject to cold-start I/O latency.
+
+A separate fire-and-forget `notifyExtractionNeeded()` is invoked **only when
+branch C runs** — that is, only when both the RAM and disk caches missed and
+RawCull is about to decode from the source file. The `FileHandlers.onExtractionNeeded`
+callback is what raises the `creatingthumbnails` flag in the UI; cache-served
+files do not trigger it.

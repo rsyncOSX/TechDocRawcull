@@ -1,7 +1,7 @@
 +++
 author = "Thomas Evensen"
 title = "Memory Pressure"
-date = "2026-04-24"
+date = "2026-04-29"
 tags = ["memory", "pressure", "cache"]
 categories = ["technical details"]
 +++
@@ -145,18 +145,20 @@ The actor maps the kernel event to:
 
 RawCull's memory pressure behavior is tightly coupled to its two in-memory caches:
 
-1. **Main memory cache**
-2. **Grid thumbnail cache**
+1. **Main memory cache** (full-resolution preview, `NSCache<NSURL, CachedThumbnail>`)
+2. **Grid thumbnail cache** (200 px downscaled, `NSCache<NSURL, CachedThumbnail>`)
 
-The limits come from `SettingsViewModel` and are applied by `SharedMemoryCache.calculateConfig(from:)`.
+The limits come from `SettingsViewModel` and are applied by `SharedMemoryCache.calculateConfig(from:)`, which produces a `CacheConfig` snapshot consumed by `applyConfig(_:)`.
 
 ### 3.1 Main cache limit
 
-Default setting:
+Settings default (loaded from `~/Library/Application Support/RawCull/settings.json`, falls back to the in-memory default if no file exists):
 
 ```swift
-memoryCacheSizeMB = 10000
+memoryCacheSizeMB = 4000
 ```
+
+Slider range in `CacheSettingsTab`: **1000 – 8000 MB**, step 250.
 
 Applied to `NSCache` as:
 
@@ -164,30 +166,22 @@ Applied to `NSCache` as:
 totalCostLimit = memoryCacheSizeMB * 1024 * 1024
 ```
 
-So the default main cache cap is:
-
-```text
-10,000 MiB
-```
+`SettingsViewModel.resetToDefaultsMemoryCache()` resets the value to **5000**, which differs from the on-load default of 4000.
 
 ### 3.2 Grid cache limit
 
-Default setting:
+Settings default:
 
 ```swift
 gridCacheSizeMB = 400
 ```
 
+Slider range: **400 – 2000 MB**, step 50.
+
 Applied as:
 
 ```text
 gridTotalCostLimit = gridCacheSizeMB * 1024 * 1024
-```
-
-So the default grid cache cap is:
-
-```text
-400 MiB
 ```
 
 ### 3.3 Why `countLimit` is not the primary limiter
@@ -199,97 +193,91 @@ RawCull intentionally makes item count a secondary guardrail:
 | Main cache | `10000` | `calculateConfig(from:)` |
 | Grid cache | `3000` | `applyConfig(_:)` (hard-coded alongside `gridTotalCostLimit`) |
 
-The design intent is that **byte cost** should trigger eviction first, not the number of items.
+The design intent is that **byte cost** should trigger eviction first, not the number of items. `NSCache` applies `min(countLimit, totalCostLimit)`, so setting the count limit far above what the byte budget could ever hold makes byte cost the binding constraint.
 
 ### 3.4 Cost-per-pixel and cache cost
 
-Settings default:
+`costPerPixel` is **not a setting** — it lives on `SharedMemoryCache` itself as a fixed constant:
 
 ```swift
-thumbnailCostPerPixel = 6
+nonisolated let costPerPixel: Int = 4
 ```
 
-That value is used for **NSCache bookkeeping**, not as a claim that each image literally uses 6 bytes per pixel in RAM.
+The earlier `thumbnailCostPerPixel` setting was removed: representations in this app are always sRGB RGBA (4 bytes/pixel), so the value never needed to vary at runtime. `CachedThumbnail.init` reads this constant once when computing its NSCache cost:
+
+```text
+cost = (Σ rep.pixelsWide * rep.pixelsHigh * 4) * 1.1   // +10% wrapper overhead
+```
 
 For preview-capacity estimates in `CacheSettingsTab`:
 
 ```text
-costPerImage = thumbnailSizePreview * thumbnailSizePreview * thumbnailCostPerPixel
-estimatedImages = cacheBytes / costPerImage
+costPerImage     = thumbnailSizePreview * thumbnailSizePreview * 4
+estimatedImages  = (memoryCacheSizeMB * 1024 * 1024) / costPerImage
 ```
 
-For "real RAM" projections, the code instead uses **4 bytes/pixel** for RGBA image data, because that better represents actual image memory:
-
-```text
-realPreviewBytes = thumbnailSizePreview * thumbnailSizePreview * 4
-```
-
-For grid thumbnails, the UI also adds a 10% safety overhead:
-
-```text
-gridBytes = (size * size * 4) * 1.1
-```
-
-That distinction is important:
-
-- **6 bytes/pixel** -> conservative cache-cost accounting
-- **4 bytes/pixel** -> approximate real image RAM
+For grid thumbnails, the estimator uses the **running average grid-entry cost**
+when the cache has any contents (so the estimate tracks real, downscaled entry
+sizes), and falls back to `(thumbnailSizeGrid * 2)² * 4 * 1.1` when the cache
+is still empty.
 
 ---
 
 ## 4. Limits and guardrails shown in Settings
 
-`CacheSettingsTab` exposes several different limits.
-
 ### 4.1 Save-time validation
 
-When settings are saved, `SettingsViewModel.validateSettings()` warns if:
+When settings are saved, `SettingsViewModel.validateSettings()` checks two
+conditions and logs a warning to the system log if either is true:
 
 1. `memoryCacheSizeMB < 500`
 2. `memoryCacheSizeMB > 80%` of physical memory
 
-This does **not** block saving. It logs that the chosen value may hurt performance or cause memory pressure.
+The check is non-blocking — the value still saves. It only records that the
+chosen size may hurt performance or contribute to system memory pressure.
 
-### 4.2 Safe-limit estimator in the cache settings UI
+### 4.2 Estimator panel in the cache settings UI
 
-The settings UI also uses its own "safe memory" estimate based on the same 85% threshold seen in `MemoryViewModel`:
+`CacheSettingsTab` shows an "Estimate for RAW files" card with a separate
+file-count slider (**500 – 5000**, step 100). It is **display-only** — the
+slider value is not persisted and does not affect cache behaviour.
 
-```text
-safeLimit = physicalMemory * 0.85
-```
-
-It estimates total RawCull memory as:
-
-```text
-estimatedTotalBytes =
-    previewCacheBytes
-  + gridCacheBytes
-  + 100 MB app overhead
-```
-
-The file-count slider turns red when:
+The card shows two derived counts based on the current `memoryCacheSizeMB`
+and `gridCacheSizeMB` sliders:
 
 ```text
-estimatedTotalBytes >= (physicalMemory * 0.85) - 1 GB
+estimatedMemCacheImages  = min(numFiles,
+                               memoryCacheSizeMB * 1024 * 1024 /
+                               (thumbnailSizePreview² * 4))
+
+estimatedGridCacheImages = min(numFiles,
+                               gridCacheSizeMB * 1024 * 1024 /
+                               avgGridEntryCost)
 ```
 
-So the estimator leaves about **1 GB of headroom** below the 85% line.
+`avgGridEntryCost` is the running average of `getGridCacheCurrentCost() /
+getGridCacheCount()` when the grid cache has entries; otherwise the fallback
+`(thumbnailSizeGrid * 2)² * 4 * 1.1` is used.
 
-### 4.3 Projected RawCull RAM
+The earlier "safe limit" / "1 GB headroom" red-warning state and the
+"projected RawCull RAM" empirical-interpolation panel are no longer wired up
+in the live UI (the corresponding code paths in `SettingsViewModel` and
+`CacheSettingsTab` are commented out). The 85 % heuristic survives only in
+`MemoryViewModel.pressureThresholdFactor` and the `RawCullMainView` poll
+described in §5.1.
 
-`CacheSettingsTab` also shows a projected total app RAM figure using an empirical interpolation:
+### 4.3 Live cache usage panel
 
-- baseline app overhead: **100 MB**
-- maximum payload used by the model: **5400 MB**
-- combined projected ceiling: about **5.5 GB**
+Below the estimator, a second card shows real, live state:
 
-That projected value is compared against:
+| Field | Source |
+|---|---|
+| Disk cache size | `SharedMemoryCache.shared.getDiskCacheSize()` (refreshed on appear and after pruning) |
+| Grid cache cost | `getGridCacheCurrentCost()` / `gridThumbnailCache.totalCostLimit` |
+| Grid thumbnails | `getGridCacheCount()` (refreshed every 5 s) |
 
-```text
-physicalMemory * 0.85
-```
-
-and shown in red if it crosses the heuristic threshold.
+A **Prune Disk Cache** button calls `pruneDiskCache(maxAgeInDays: 0)`, which
+wipes every JPEG under `~/Library/Caches/no.blogspot.RawCull/Thumbnails/`.
 
 ---
 
@@ -320,48 +308,66 @@ This produces a non-kernel soft warning in the main UI.
 
 ### 5.2 Real kernel pressure: the cache actor reacts immediately
 
-`SharedMemoryCache` owns the real response to macOS pressure events.
+`SharedMemoryCache.handleMemoryPressureEvent()` owns the real response to
+macOS pressure events. Every event also bumps a cumulative counter
+(`_pressureNormals`, `_pressureWarnings`, `_pressureCriticals`) so a 5-second
+diagnostics sampler that misses a `.warning → .normal` flicker can still
+detect the transition by comparing counter deltas.
 
 #### `.normal`
 
 When pressure returns to normal:
 
 1. `currentPressureLevel` becomes `.normal`
-2. the full saved cache configuration is restored with `refreshConfig()`
-3. the UI callback receives `memorypressurewarning(false)`
+2. `_pressureNormals` is incremented
+3. the full saved cache configuration is restored with `refreshConfig()`
+   (re-reads settings, builds a fresh `CacheConfig`, applies it)
+4. the UI callback receives `memorypressurewarning(false)`
 
-Effect: any pressure warning can clear, and the cache limits return to the values from Settings.
+Effect: any pressure warning clears, and the cache limits return to the values
+configured in Settings.
 
 #### `.warning`
 
 When macOS reports warning pressure:
 
-```text
-newMainCap = currentMainCap * 0.6
-newGridCap = currentGridCap * 0.6
-```
+1. `currentPressureLevel` becomes `.warning`
+2. `_pressureWarnings` is incremented
+3. both NSCache caps are reduced **in place**:
 
-RawCull does **not** flush the caches immediately. It lowers both `NSCache.totalCostLimit` values in place and lets `NSCache` evict as needed under the smaller caps.
+   ```text
+   memoryCache.totalCostLimit       *= 0.6
+   gridThumbnailCache.totalCostLimit *= 0.6
+   ```
 
-It also sends:
+4. `memorypressurewarning(true)` is sent through `FileHandlers`
 
-```swift
-memorypressurewarning(true)
-```
-
-through `FileHandlers`, which sets `RawCullViewModel.memorypressurewarning = true`.
+RawCull does **not** flush either cache. `NSCache` evicts incrementally as
+later inserts push the running total above the new lower cap, so the response
+is gradual instead of a stall. The reduction compounds across repeated
+warnings until a `.normal` event runs `refreshConfig()`.
 
 #### `.critical`
 
 When macOS reports critical pressure:
 
-1. `memoryCache.removeAllObjects()`
-2. `memoryCache.totalCostLimit = 50 * 1024 * 1024`
-3. `gridThumbnailCache.removeAllObjects()`
-4. tracked grid cost/count are reset to zero
-5. `memorypressurewarning(true)` is sent to the UI
+1. `currentPressureLevel` becomes `.critical`
+2. `_pressureCriticals` is incremented
+3. `memoryCache.removeAllObjects()`
+4. `memoryCache.totalCostLimit = 50 * 1024 * 1024` (50 MiB floor)
+5. `_memCost` and `_memCount` are reset to zero
+6. `gridThumbnailCache.removeAllObjects()`
+7. `_gridCost` and `_gridCount` are reset to zero
+8. `_evictedRing.clear()` — wholesale flush invalidates per-URL eviction
+   tracking, otherwise every subsequent disk fallback would falsely register
+   as a boomerang miss
+9. `memorypressurewarning(true)` is sent through `FileHandlers`
 
-So critical pressure causes an immediate cache purge and temporarily floors the main cache to **50 MB** until the system returns to normal and `refreshConfig()` restores the saved limits.
+The demand counters (`_demandRequests`, `_boomerangMisses`, `_cacheCold`) are
+intentionally **not** reset — Memory Diagnostics needs cumulative totals
+across pressure events. Critical pressure causes an immediate cache purge
+and temporarily floors the main cache to **50 MiB** until the system returns
+to normal and `refreshConfig()` restores the saved limits.
 
 ---
 

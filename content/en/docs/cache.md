@@ -1,7 +1,7 @@
 +++
 author = "Thomas Evensen"
 title = "Memory Cache"
-date = "2026-04-28"
+date = "2026-04-29"
 weight = 1
 tags = ["memory", "cache", "evictions", "boomerang"]
 categories = ["technical details"]
@@ -35,7 +35,7 @@ final class CachedThumbnail: NSObject, @unchecked Sendable {
     nonisolated let cost: Int
     nonisolated let url: NSURL?
 
-    nonisolated init(image: NSImage, costPerPixel: Int = 4, url: NSURL? = nil)
+    nonisolated init(image: NSImage, url: NSURL? = nil)
 }
 ```
 
@@ -52,7 +52,7 @@ cost = (Σ rep.pixelsWide × rep.pixelsHigh × costPerPixel) × 1.1
 
 - Falls back to logical `image.size` if no representations are present.
 - The 1.1 multiplier adds 10 % overhead for the wrapper and metadata.
-- `costPerPixel` comes from `SettingsViewModel.thumbnailCostPerPixel` (default **4**).
+- `costPerPixel` is read once from `SharedMemoryCache.shared.costPerPixel` — a `nonisolated let` fixed at **4** (RGBA). It is no longer a user-tunable setting; representations in this app are always sRGB RGBA, so there is no reason for the value to vary at runtime.
 
 **The `url` field** is optional and is set whenever the entry will be admitted to the full-resolution `memoryCache`. It is read back by `CacheDelegate` when `NSCache` evicts the value, so the evicting URL can be pushed onto the recently-evicted ring used for boomerang diagnostics. Grid-cache entries are stored without a URL because grid-cache evictions are intentionally not tracked.
 
@@ -77,7 +77,6 @@ struct CacheConfig {
     nonisolated let totalCostLimit: Int          // bytes (full-res cache)
     nonisolated let countLimit: Int
     nonisolated let gridTotalCostLimit: Int      // bytes (200 px grid cache)
-    nonisolated var costPerPixel: Int?
 
     static let production = CacheConfig(
         totalCostLimit: 500 * 1024 * 1024,       // ~500 MB (overwritten from settings)
@@ -92,7 +91,9 @@ struct CacheConfig {
 }
 ```
 
-In production, both byte caps are overwritten from `SavedSettings` when `applyConfig` runs:
+`CacheConfig` carries no `costPerPixel` field — that constant lives on `SharedMemoryCache` itself and never changes.
+
+In production, both byte caps are overwritten from `SavedSettings` by `calculateConfig(from:)` before `applyConfig` runs:
 
 - `totalCostLimit = memoryCacheSizeMB · 1024 · 1024`
 - `gridTotalCostLimit = gridCacheSizeMB · 1024 · 1024`
@@ -149,6 +150,10 @@ actor SharedMemoryCache {
     // accessors below callable without an actor hop.
     nonisolated(unsafe) let memoryCache       = NSCache<NSURL, CachedThumbnail>()
     nonisolated(unsafe) let gridThumbnailCache = NSCache<NSURL, CachedThumbnail>()
+
+    /// Bytes per pixel used by `CachedThumbnail` to compute NSCache cost.
+    /// Fixed at 4 (RGBA) — no longer user-configurable.
+    nonisolated let costPerPixel: Int = 4
 
     private(set) nonisolated(unsafe) var currentPressureLevel: MemoryPressureLevel = .normal
 
@@ -224,8 +229,6 @@ memoryCache.delegate               = CacheDelegate.shared
 gridThumbnailCache.totalCostLimit  = config.gridTotalCostLimit
 gridThumbnailCache.countLimit      = 3000
 gridThumbnailCache.delegate        = CacheDelegate.shared
-
-if let costPerPixel = config.costPerPixel { _costPerPixel = costPerPixel }
 ```
 
 `evictsObjectsWithDiscardedContent` is **not** set. Since `CachedThumbnail` no longer adopts `NSDiscardableContent` it would be a no-op; eviction is governed by `totalCostLimit` / `countLimit` and the explicit pressure handler.
@@ -397,7 +400,8 @@ A 5-second diagnostics sampler can miss a `.warning → .normal` flicker, but th
 Process source URL (Sony ARW, Nikon NEF, …)
 │
 ├─ A. SharedMemoryCache.object(forKey:)                ← full-res RAM
-│   ├─ Hit:  storeInGridCache + (defensive) storeInMemory → updateCacheMemory → return
+│   ├─ Hit:  storeInGridCache only → updateCacheMemory → return
+│   │        (object(forKey:) already touched LRU; no re-admission)
 │   └─ Miss:
 │       ├─ B. DiskCacheManager.load(for:)
 │       │   ├─ Hit:  storeInGridCache only → updateCacheDisk → return
@@ -405,16 +409,16 @@ Process source URL (Sony ARW, Nikon NEF, …)
 │       │       ├─ C. notifyExtractionNeeded()         ← UI: creatingthumbnails = true
 │       │       │      RawFormatRegistry.format(for: url).extractThumbnail(…)
 │       │       │      NSImage(cgImage:size:)
-│       │       │      storeInGridCache only           ← still NOT in full-res cache
+│       │       │      storeInGridCache only           ← NOT in full-res cache
 │       │       │      DiskCacheManager.jpegData(from:) → diskCache.save(_:for:) detached
 └─ Notify UI of progress / ETA
 ```
 
-The crucial detail is in branches **B** and **C**: the bulk preload does *not* admit freshly extracted full-resolution images to the main RAM cache. Memory Diagnostics on a 635-file catalogue showed 100 % of disk-fallbacks were boomerangs when the preload pre-admitted: a freshly extracted image at ~44 MB would overflow the cap, self-evict during scan, and be paid for again on the next demand at ~31 MB (the smaller disk-decoded size). Letting `RequestThumbnail` admit on demand instead lets entries settle at their disk-loaded size, so a catalogue that would not fit at full-res still fits.
+The invariant is uniform across all three branches: **the bulk preload never admits to the full-resolution `memoryCache`**. `RequestThumbnail` is the only admitter, so LRU ordering tracks UI traffic instead of scan order. Memory Diagnostics on a 635-file catalogue (default 4 GB cap) showed 100 % of disk-fallbacks were boomerangs when scan pre-admitted: ~180 freshly extracted entries would self-evict during scan, and the user would pay near-100 % boomerang cost on first browse. Branch A also avoids re-admitting on a hit — `object(forKey:)` already touched LRU, and a second `setObject` would compete with UI-driven LRU ordering.
 
-The grid cache is always warmed and the disk JPEG is always saved — UI-driven requests then take branch B of `RequestThumbnail` and admit to the full-res cache there.
+The grid cache is always warmed and the disk JPEG is always saved — UI-driven requests then take branch B of `RequestThumbnail` and admit to the full-res cache there at the smaller disk-decoded size, so a catalogue that would not fit at full-extracted size still fits.
 
-`storeInGridCache` calls `downscale(_:to: 200)` (a private helper that uses `NSImage.draw` into a proportionally-scaled `NSImage`) before wrapping in a `CachedThumbnail` and calling `setGridObject`.
+`storeInGridCache` calls `downscale(_:to: 200)` (a private helper that uses `NSImage.lockFocus`/`draw` into a proportionally-scaled `NSImage`) before wrapping in a `CachedThumbnail` (with no URL — grid evictions are intentionally not tracked) and calling `setGridObject`.
 
 ### 3.2 On-demand — `ThumbnailLoader → RequestThumbnail`
 
@@ -486,25 +490,26 @@ Settings live in `SettingsViewModel` and are persisted to `~/Library/Application
 |---|---|---|---|
 | `memoryCacheSizeMB`     | 4000  | 1000 – 8000, step 250 | `memoryCache.totalCostLimit = memoryCacheSizeMB · 1024 · 1024` |
 | `gridCacheSizeMB`       | 400   | 400 – 2000, step 50   | `gridThumbnailCache.totalCostLimit = gridCacheSizeMB · 1024 · 1024` |
-| `thumbnailCostPerPixel` | 4     | —                     | Cost per pixel in `CachedThumbnail.cost` for both caches |
 | `thumbnailSizePreview`  | 1616  | —                     | Target size for bulk preload and on-demand preview extraction |
-| `thumbnailSizeGrid`     | 200   | —                     | Grid list thumbnail size (caches are downscaled to this value) |
+| `thumbnailSizeGrid`     | 200   | —                     | Grid list thumbnail size (grid cache is downscaled to this value) |
 | `thumbnailSizeFullSize` | 8700  | —                     | Upper bound for the full-size zoom path |
 
-Grid view thumbnails are fixed at 200 px (not user-configurable). The grid `countLimit` is hardcoded at 3000.
+`costPerPixel` is **not** a setting — it is a `nonisolated let` constant on `SharedMemoryCache` fixed at **4** (RGBA). Grid view thumbnails are fixed at 200 px (not user-configurable). The grid `countLimit` is hardcoded at 3000.
 
 The **Settings → Cache** tab shows live usage:
 
 - Disk cache size (`DiskCacheManager.getDiskCacheSize()`).
-- Grid cache (200 px): current cost / configured limit, plus a live thumbnail count (`getGridCacheCount()`).
-- An "Estimate for RAW files" panel that converts cache caps into approximate image counts at the current `thumbnailSizePreview` × `thumbnailCostPerPixel`.
+- Grid cache (200 px): current cost / configured limit, plus a live thumbnail count (`getGridCacheCount()`), refreshed every 5 seconds.
+- An "Estimate for RAW files" panel with an additional file-count slider (500 – 5000, step 100) that converts the configured cache caps into approximate image counts using `thumbnailSizePreview² × costPerPixel` for the main cache and the running average grid-entry cost (or `(thumbnailSizeGrid·2)² × 4 × 1.1` if no entries exist yet) for the grid cache.
 
 `SettingsViewModel.validateSettings()` warns when:
 
 - `memoryCacheSizeMB < 500`
-- `memoryCacheSizeMB > 80 %` of available system memory
+- `memoryCacheSizeMB > 80 %` of physical memory
 
-A change to `memoryCacheSizeMB`, `gridCacheSizeMB`, or `thumbnailCostPerPixel` triggers `SharedMemoryCache.refreshConfig()` from the Cache settings tab, which re-applies the `CacheConfig`.
+`SettingsViewModel.resetToDefaultsMemoryCache()` resets `memoryCacheSizeMB` to **5000** and `gridCacheSizeMB` to **400** (the reset baseline differs from the on-load default of 4000).
+
+A change to `memoryCacheSizeMB` or `gridCacheSizeMB` triggers `SharedMemoryCache.refreshConfig()` from the Cache settings tab via a `.task(id:)` modifier, which re-applies the `CacheConfig`.
 
 ---
 
