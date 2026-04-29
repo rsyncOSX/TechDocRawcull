@@ -1,5 +1,5 @@
-baseURL: https://techrawcull.netlify.app
-title: RawCull Tech documents
+baseURL: https://rawcull.netlify.app
+title: RawCull documents
 
 # cSpell:ignore goldmark github hugo readingtime docsy subdir lastmod pygments linenos catmullrom norsk gu
 
@@ -45,7 +45,7 @@ imaging:
 # Language configuration
 languages:
   en:
-    languageName: English
+    label: English
     title: RawCull
     params:
       description: How to use RawCull
@@ -74,6 +74,14 @@ markup:
 
 # Everything below this are Site Params
 
+security:
+  http:
+    urls:
+      - '(?i)^https?://[a-z]'
+      - '(?i)^https://cdn\.jsdelivr\.net/'
+      - '!(?i)localhost'
+      - '!@'
+    
 # Comment out if you don't want the "print entire section" link enabled.
 outputs:
   section: [HTML, print, RSS]
@@ -218,6 +226,6 @@ module:
     - path: github.com/google/docsy
       disable: false
 
-#services:
-#  googleAnalytics:
-#    id: G-5JSXW3Q8DG
+services:
+  googleAnalytics:
+    id: G-5JSXW3Q8DG
