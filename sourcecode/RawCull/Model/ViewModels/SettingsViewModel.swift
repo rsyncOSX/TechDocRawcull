@@ -50,10 +50,6 @@ final class SettingsViewModel {
     var thumbnailSizePreview: Int = 1616
     /// Full size thumbnail in pixels (default: 8700)
     var thumbnailSizeFullSize: Int = 8700
-    /// Estimated cost per pixel for thumbnail (in bytes, default: 4 for RGBA).
-    /// `CachedThumbnail` already adds a 10% overhead buffer on top of this,
-    /// so 4 = decoded RGBA without double-counting wrapper overhead.
-    var thumbnailCostPerPixel: Int = 4
     /// Use thumbnail as zoom preview (default: true)
     var useThumbnailAsZoomPreview: Bool = false
 
@@ -142,7 +138,6 @@ final class SettingsViewModel {
                 self.thumbnailSizeGrid = savedSettings.thumbnailSizeGrid
                 self.thumbnailSizePreview = savedSettings.thumbnailSizePreview
                 self.thumbnailSizeFullSize = savedSettings.thumbnailSizeFullSize
-                self.thumbnailCostPerPixel = savedSettings.thumbnailCostPerPixel
                 self.useThumbnailAsZoomPreview = savedSettings.useThumbnailAsZoomPreview
                 self.enableThumbnailSharpening = savedSettings.enableThumbnailSharpening
                 self.thumbnailSharpenAmount = savedSettings.thumbnailSharpenAmount
@@ -181,7 +176,6 @@ final class SettingsViewModel {
                 thumbnailSizeGrid: thumbnailSizeGrid,
                 thumbnailSizePreview: thumbnailSizePreview,
                 thumbnailSizeFullSize: thumbnailSizeFullSize,
-                thumbnailCostPerPixel: thumbnailCostPerPixel,
                 useThumbnailAsZoomPreview: useThumbnailAsZoomPreview,
                 enableThumbnailSharpening: enableThumbnailSharpening,
                 thumbnailSharpenAmount: thumbnailSharpenAmount,
@@ -248,7 +242,7 @@ final class SettingsViewModel {
     /// Reset settings to defaults
     func resetToDefaultsMemoryCache() async {
         await MainActor.run {
-            self.memoryCacheSizeMB = 20000
+            self.memoryCacheSizeMB = 5000
             self.gridCacheSizeMB = 400
         }
         await saveSettings()
@@ -259,40 +253,39 @@ final class SettingsViewModel {
             self.thumbnailSizeGrid = 200
             self.thumbnailSizePreview = 1616
             self.thumbnailSizeFullSize = 8700
-            self.thumbnailCostPerPixel = 4
         }
         await saveSettings()
     }
-    
-/*
-    // MARK: - Memory Projection
 
-    /// Empirically-calibrated projection of RawCull's RAM payload from the two
-    /// cache-size sliders. App baseline (no caches populated) is ~100 MB.
-    /// Interpolates between baseline and a per-slider payload ceiling using
-    /// each slider's fraction of its own range, weighted by the slider's
-    /// range share of the combined payload. Calibration anchor: with
-    /// `thumbnailCostPerPixel=4`, mem=8000 MB / grid=2000 MB, real process
-    /// RSS measured ~9330 MB peak; `maxPayloadMB = 9300` makes the formula
-    /// reproduce that ceiling. Used by both the Cache settings tab and the
-    /// Memory Diagnostics console (the console logs this side-by-side with
-    /// the real process RSS so the calibration can be tuned against real usage).
-    func projectedRawCullMemoryBytes() -> UInt64 {
-        let memMin = 1000.0, memMax = 8000.0
-        let gridMin = 400.0, gridMax = 2000.0
-        let memFrac = (Double(memoryCacheSizeMB) - memMin) / (memMax - memMin)
-        let gridFrac = (Double(gridCacheSizeMB) - gridMin) / (gridMax - gridMin)
-        let memRange = memMax - memMin
-        let gridRange = gridMax - gridMin
-        let totalRange = memRange + gridRange
-        let combined = memFrac * (memRange / totalRange) + gridFrac * (gridRange / totalRange)
-        let baselineMB = 100.0
-        let maxPayloadMB = 9300.0
-        let clamped = min(1.0, max(0.0, combined))
-        let projectedMB = baselineMB + clamped * maxPayloadMB
-        return UInt64(projectedMB * 1024.0 * 1024.0)
-    }
-*/
+    /**
+     // MARK: - Memory Projection
+
+     /// Empirically-calibrated projection of RawCull's RAM payload from the two
+     /// cache-size sliders. App baseline (no caches populated) is ~100 MB.
+     /// Interpolates between baseline and a per-slider payload ceiling using
+     /// each slider's fraction of its own range, weighted by the slider's
+     /// range share of the combined payload. Calibration anchor: with
+     /// `thumbnailCostPerPixel=4`, mem=8000 MB / grid=2000 MB, real process
+     /// RSS measured ~9330 MB peak; `maxPayloadMB = 9300` makes the formula
+     /// reproduce that ceiling. Used by both the Cache settings tab and the
+     /// Memory Diagnostics console (the console logs this side-by-side with
+     /// the real process RSS so the calibration can be tuned against real usage).
+     func projectedRawCullMemoryBytes() -> UInt64 {
+         let memMin = 1000.0, memMax = 8000.0
+         let gridMin = 400.0, gridMax = 2000.0
+         let memFrac = (Double(memoryCacheSizeMB) - memMin) / (memMax - memMin)
+         let gridFrac = (Double(gridCacheSizeMB) - gridMin) / (gridMax - gridMin)
+         let memRange = memMax - memMin
+         let gridRange = gridMax - gridMin
+         let totalRange = memRange + gridRange
+         let combined = memFrac * (memRange / totalRange) + gridFrac * (gridRange / totalRange)
+         let baselineMB = 100.0
+         let maxPayloadMB = 9300.0
+         let clamped = min(1.0, max(0.0, combined))
+         let projectedMB = baselineMB + clamped * maxPayloadMB
+         return UInt64(projectedMB * 1024.0 * 1024.0)
+     }
+     */
     /// Get a snapshot of current settings (safe to call from any context)
     nonisolated func asyncgetsettings() async -> SavedSettings {
         await MainActor.run {
@@ -302,7 +295,6 @@ final class SettingsViewModel {
                 thumbnailSizeGrid: self.thumbnailSizeGrid,
                 thumbnailSizePreview: self.thumbnailSizePreview,
                 thumbnailSizeFullSize: self.thumbnailSizeFullSize,
-                thumbnailCostPerPixel: self.thumbnailCostPerPixel,
                 useThumbnailAsZoomPreview: self.useThumbnailAsZoomPreview,
                 enableThumbnailSharpening: self.enableThumbnailSharpening,
                 thumbnailSharpenAmount: self.thumbnailSharpenAmount,
@@ -333,7 +325,6 @@ struct SavedSettings: Codable {
     let thumbnailSizeGrid: Int
     let thumbnailSizePreview: Int
     let thumbnailSizeFullSize: Int
-    let thumbnailCostPerPixel: Int
     let useThumbnailAsZoomPreview: Bool
     let enableThumbnailSharpening: Bool
     let thumbnailSharpenAmount: Float
@@ -359,7 +350,6 @@ struct SavedSettings: Codable {
         thumbnailSizeGrid: Int,
         thumbnailSizePreview: Int,
         thumbnailSizeFullSize: Int,
-        thumbnailCostPerPixel: Int,
         useThumbnailAsZoomPreview: Bool,
         enableThumbnailSharpening: Bool = false,
         thumbnailSharpenAmount: Float = 1.0,
@@ -382,7 +372,6 @@ struct SavedSettings: Codable {
         self.thumbnailSizeGrid = thumbnailSizeGrid
         self.thumbnailSizePreview = thumbnailSizePreview
         self.thumbnailSizeFullSize = thumbnailSizeFullSize
-        self.thumbnailCostPerPixel = thumbnailCostPerPixel
         self.useThumbnailAsZoomPreview = useThumbnailAsZoomPreview
         self.enableThumbnailSharpening = enableThumbnailSharpening
         self.thumbnailSharpenAmount = thumbnailSharpenAmount
@@ -408,7 +397,6 @@ struct SavedSettings: Codable {
         thumbnailSizeGrid = try c.decode(Int.self, forKey: .thumbnailSizeGrid)
         thumbnailSizePreview = try c.decode(Int.self, forKey: .thumbnailSizePreview)
         thumbnailSizeFullSize = try c.decode(Int.self, forKey: .thumbnailSizeFullSize)
-        thumbnailCostPerPixel = try c.decode(Int.self, forKey: .thumbnailCostPerPixel)
         useThumbnailAsZoomPreview = try c.decode(Bool.self, forKey: .useThumbnailAsZoomPreview)
         enableThumbnailSharpening = (try? c.decode(Bool.self, forKey: .enableThumbnailSharpening)) ?? false
         thumbnailSharpenAmount = (try? c.decode(Float.self, forKey: .thumbnailSharpenAmount)) ?? 1.0
