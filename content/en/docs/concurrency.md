@@ -71,7 +71,6 @@ RawCull defines ten actors:
 | `ExtractAndSaveJPGs` | `Actors/ExtractAndSaveJPGs.swift` | Extracts full-resolution JPEGs from RAW files in parallel |
 | `SaveJPGImage` | `Actors/SaveJPGImage.swift` | Encodes and writes a single JPEG to disk |
 | `WriteSavedFilesJSON` | `Model/JSON/WriteSavedFilesJSON.swift` | Atomic writer for `savedfiles.json` persistence |
-| `EvictionCounter` | `Model/Cache/CacheDelegate.swift` | Private actor that safely tracks NSCache eviction counts |
 
 > **Note:** `DiscoverFiles` in `Actors/DiscoverFiles.swift` is a `struct`, not an actor — its single `nonisolated func discoverFiles(at:recursive:)` runs its directory walk inside a `Task.detached(priority: .utility)`. Likewise `ActorCreateOutputforView` in `Actors/ActorCreateOutputforView.swift` is named like an actor but is also a plain `struct`; its method is `@concurrent nonisolated` — see §2.5.
 
@@ -173,8 +172,7 @@ nonisolated func asyncgetsettings() async -> SavedSettings {
             thumbnailSizeGrid: self.thumbnailSizeGrid,
             thumbnailSizePreview: self.thumbnailSizePreview,
             thumbnailSizeFullSize: self.thumbnailSizeFullSize,
-            thumbnailCostPerPixel: self.thumbnailCostPerPixel,
-            useThumbnailAsZoomPreview: self.useThumbnailAsZoomPreview
+            thumbnailCostPerPixel: self.thumbnailCostPerPixel
         )
     }   // Back to the calling actor with a Sendable value type
 }
@@ -734,9 +732,11 @@ The memory pressure handler modifies `nonisolated(unsafe) var currentPressureLev
 - `pruneCache(maxAgeInDays:)` — `Task.detached` for file enumeration.
 - `nonisolated static func jpegData(from:) -> Data?` — encodes `CGImage` to JPEG `Data` before any boundary crossing; callers invoke this while still inside their own actor, then pass `Data` to `DiskCacheManager`.
 
-### 8.3 CacheDelegate + EvictionCounter
+### 8.3 CacheDelegate — synchronous per-cache counters
 
-`NSCache` can evict objects at any time when memory gets tight. `CacheDelegate` conforms to `NSCacheDelegate` so it gets a callback when an eviction happens. The tricky part: this callback is called from `NSCache`'s internal C++ thread — not from any Swift actor. The solution is a nested actor that owns the mutable counter.
+`NSCache` can evict objects at any time when memory gets tight. `CacheDelegate` conforms to `NSCacheDelegate` so it gets a callback when an eviction happens. The tricky part: this callback is called from `NSCache`'s internal C++ thread — not from any Swift actor.
+
+The original implementation hopped into a private `EvictionCounter` actor with a fire-and-forget `Task { await actor.increment() }`. Under high eviction churn that path fell behind the synchronous delegate fires by more than 20 % at sample time, so the counter was rewritten to use `OSAllocatedUnfairLock`. It has since been split into three per-cache locks so the diagnostics TSV can show which cache an eviction came from.
 
 ```swift
 // From Model/Cache/CacheDelegate.swift
@@ -744,33 +744,38 @@ The memory pressure handler modifies `nonisolated(unsafe) var currentPressureLev
 final class CacheDelegate: NSObject, NSCacheDelegate, @unchecked Sendable {
     nonisolated static let shared = CacheDelegate()
 
-    private let evictionCounter = EvictionCounter()
+    private let memEvictionCount     = OSAllocatedUnfairLock(initialState: 0)
+    private let gridEvictionCount    = OSAllocatedUnfairLock(initialState: 0)
+    private let unknownEvictionCount = OSAllocatedUnfairLock(initialState: 0)
 
-    // Called by NSCache on its own internal thread
+    // Called by NSCache on its own internal thread — fully synchronous
     nonisolated func cache(_ cache: NSCache<AnyObject, AnyObject>,
                            willEvictObject obj: Any) {
-        if obj is DiscardableThumbnail {
-            Task {
-                let count = await evictionCounter.increment()
-                // log the count...
-            }
+        guard let thumb = obj as? CachedThumbnail else { return }
+        if cache === SharedMemoryCache.shared.gridThumbnailCache {
+            SharedMemoryCache.shared.gridEntryEvicted(cost: thumb.cost)
+            gridEvictionCount.withLock { $0 += 1 }
+        } else if cache === SharedMemoryCache.shared.memoryCache {
+            SharedMemoryCache.shared.memEntryEvicted(cost: thumb.cost)
+            memEvictionCount.withLock { $0 += 1 }
+            if let url = thumb.url { SharedMemoryCache.shared.noteEviction(url: url) }
+        } else {
+            unknownEvictionCount.withLock { $0 += 1 }
         }
     }
 
-    func getEvictionCount() async -> Int { await evictionCounter.getCount() }
-    func resetEvictionCount() async      { await evictionCounter.reset()    }
-}
-
-// A private actor that safely owns the mutable counter
-private actor EvictionCounter {
-    private var count = 0
-    func increment() -> Int { count += 1; return count }
-    func getCount()  -> Int { count }
-    func reset()             { count = 0 }
+    nonisolated func getEvictionCount() -> Int {
+        getMemEvictionCount() + getGridEvictionCount() + getUnknownEvictionCount()
+    }
+    nonisolated func getMemEvictionCount()     -> Int { memEvictionCount.withLock { $0 } }
+    nonisolated func getGridEvictionCount()    -> Int { gridEvictionCount.withLock { $0 } }
+    nonisolated func getUnknownEvictionCount() -> Int { unknownEvictionCount.withLock { $0 } }
 }
 ```
 
-`EvictionCounter` is a textbook use of an actor for the simplest possible case: protecting a single integer from concurrent writes. Before actors existed, you would use `NSLock` or `DispatchQueue(label:)`. The actor is cleaner, safer, and compiler-verified.
+`OSAllocatedUnfairLock` is the right tool here because the contention is short (one integer increment) and the call site cannot await — `NSCache` is invoking `willEvictObject` synchronously and expects the delegate to return promptly. An actor would force a `Task` hop and serialize the increment behind that hop, which is exactly the lag pattern the old `EvictionCounter` exhibited.
+
+The `unknownEvictionCount` bucket is a deliberate diagnostic: if both `===` checks miss, it means a third NSCache instance was wired to `CacheDelegate.shared` somewhere. Surfacing that as a non-zero `unk_evictions` column in the diagnostics TSV makes silent-fallthrough bugs visible instead of being absorbed into a single global counter.
 
 ---
 
@@ -1209,7 +1214,7 @@ remaining = (totalFiles - itemsProcessed) * avgTime
 | `ThumbnailLoader` | Actor-isolated slot counter and continuation queue |
 | `SaveJPGImage` | Declared `actor` but its only method is `@concurrent nonisolated` — runs on the cooperative thread pool, not the actor's executor |
 | `DiscardableThumbnail` | `@unchecked Sendable` with `OSAllocatedUnfairLock` protecting `(isDiscarded, accessCount)` |
-| `CacheDelegate` | `@unchecked Sendable` — `willEvictObject` is called synchronously by `NSCache`; increments are dispatched to the isolated `EvictionCounter` actor |
+| `CacheDelegate` | `@unchecked Sendable` — `willEvictObject` is called synchronously by `NSCache`; per-cache counters are protected by `OSAllocatedUnfairLock` (mem / grid / unknown) so the increment stays on the calling thread |
 | `RawCullViewModel`, `SharpnessScoringModel`, `GridThumbnailViewModel`, `ExecuteCopyFiles` | `@Observable @MainActor` — all UI state updates serialized on the main thread |
 | `SettingsViewModel` | `@Observable` without `@MainActor` on the class; has `@MainActor static let shared`; exposes `nonisolated func asyncgetsettings()` + `MainActor.run` for background access |
 | `SonyThumbnailExtractor`, `NikonThumbnailExtractor`, `JPGSonyARWExtractor`, `JPGNikonNEFExtractor` | Caseless enums; `nonisolated static` methods dispatched to GCD global queues to prevent actor starvation and serialization |
@@ -1310,7 +1315,6 @@ sequenceDiagram
 | `thumbnailSizePreview` | 1616 | Target size for bulk preload and on-demand loading via `ThumbnailLoader` |
 | `thumbnailSizeGrid` | 200 | Grid thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
-| `useThumbnailAsZoomPreview` | false | Use cached thumbnail instead of re-extracting for zoom |
 | `showScoringBadge` | false | Show sharpness score badge on thumbnails |
 | `showSaliencyBadge` | false | Show cyan saliency subject badge on thumbnails |
 
@@ -1346,13 +1350,13 @@ It is opened via `openWindow(id: "grid-thumbnails-window")` rather than as a con
 - `zoomExtractionTask: Task<Void, Never>?` — handle for the in-flight extraction; cancelled on dismiss or selection change
 
 **`ZoomPreviewHandler.handleOverlay`** decides which path to take:
-1. **Thumbnail reuse** (`useThumbnailAsZoomPreview = true`): calls `RequestThumbnail.shared.requestThumbnail` and stores the result as `NSImage` in `zoomOverlayNSImage`.
+1. **Thumbnail reuse** (overlay-local `useThumbnailSource` toggle, default `true`): calls `RequestThumbnail.shared.requestThumbnail` and stores the result as `NSImage` in `zoomOverlayNSImage`. The toggle lives on `ZoomOverlayView` and is flipped at runtime by pressing `j` / `J` — there is no longer a persistent settings entry for it.
 2. **Pre-extracted JPEG** (`.jpg` companion file exists): loads it synchronously via `CGImageSourceCreateImageAtIndex` with caching disabled, stores as `CGImage`. `CGImageSourceRemoveCacheAtIndex` is called immediately to prevent ImageIO's process-level cache from retaining the ~188 MB decoded buffer beyond the overlay's lifetime.
 3. **Live extraction** (no companion file): sets `zoomOverlayVisible = true` immediately (shows a progress spinner) then calls `format.extractFullJPEG(from: url, fullSize: false)` in a background task.
 
 **Async focus mask regeneration:** `ZoomOverlayView` uses `.task(id: viewModel.zoomOverlayCGImage?.hashValue)` to regenerate the focus mask whenever a new `CGImage` is assigned, and `.onChange(of: viewModel.sharpnessModel.focusMaskModel.config)` with a 400 ms debounce to regenerate when scoring parameters change. Both paths call `FocusMaskModel.generateFocusMask` which runs on a detached `userInitiated` task.
 
-**Gesture handling:** Simultaneous `MagnificationGesture` (pinch) and `DragGesture` (pan) run as a `SimultaneousGesture`. A double-tap toggles between fit (1.0×) and 2.0× zoom. Keyboard `+`/`−` increment/decrement by 0.4× per press. `Escape` dismisses.
+**Gesture handling:** Simultaneous `MagnificationGesture` (pinch) and `DragGesture` (pan) run as a `SimultaneousGesture`. A double-tap toggles between fit (1.0×) and 2.0× zoom. Keyboard `+`/`−` increment/decrement by 0.4× per press. `j` / `J` toggles `useThumbnailSource` between the cached thumbnail and the embedded JPEG. `Escape` dismisses.
 
 ### Three Main View Modes
 

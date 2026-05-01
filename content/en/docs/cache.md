@@ -109,32 +109,50 @@ In production, both byte caps are overwritten from `SavedSettings` by `calculate
 final class CacheDelegate: NSObject, NSCacheDelegate, @unchecked Sendable {
     nonisolated static let shared = CacheDelegate()
 
-    private let evictionCount = OSAllocatedUnfairLock(initialState: 0)
+    // Per-cache eviction counters. `unknownEvictionCount` catches the
+    // silent-fallthrough case where neither `===` identity check matches —
+    // a non-zero `unk_evictions` column is a hard signal that an unexpected
+    // NSCache (or a swapped reference) is wired to `CacheDelegate.shared`.
+    private let memEvictionCount = OSAllocatedUnfairLock(initialState: 0)
+    private let gridEvictionCount = OSAllocatedUnfairLock(initialState: 0)
+    private let unknownEvictionCount = OSAllocatedUnfairLock(initialState: 0)
 
     nonisolated func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
         guard let thumb = obj as? CachedThumbnail else { return }
         if cache === SharedMemoryCache.shared.gridThumbnailCache {
             SharedMemoryCache.shared.gridEntryEvicted(cost: thumb.cost)
+            gridEvictionCount.withLock { $0 += 1 }
         } else if cache === SharedMemoryCache.shared.memoryCache {
             SharedMemoryCache.shared.memEntryEvicted(cost: thumb.cost)
+            memEvictionCount.withLock { $0 += 1 }
             if let url = thumb.url {
                 SharedMemoryCache.shared.noteEviction(url: url)
             }
+        } else {
+            unknownEvictionCount.withLock { $0 += 1 }
         }
-        evictionCount.withLock { $0 += 1 }
     }
+
+    nonisolated func getEvictionCount() -> Int {
+        getMemEvictionCount() + getGridEvictionCount() + getUnknownEvictionCount()
+    }
+    nonisolated func getMemEvictionCount() -> Int { memEvictionCount.withLock { $0 } }
+    nonisolated func getGridEvictionCount() -> Int { gridEvictionCount.withLock { $0 } }
+    nonisolated func getUnknownEvictionCount() -> Int { unknownEvictionCount.withLock { $0 } }
 }
 ```
 
-The earlier delegate dispatched into an `EvictionCounter` actor with a fire-and-forget `Task { await actor.increment() }`. Under high eviction churn that path fell behind the synchronous delegate fires by more than 20 % at sample time, so the counter is now a plain `OSAllocatedUnfairLock`.
+The earlier delegate dispatched into an `EvictionCounter` actor with a fire-and-forget `Task { await actor.increment() }`. Under high eviction churn that path fell behind the synchronous delegate fires by more than 20 % at sample time, so the counter became a plain `OSAllocatedUnfairLock`. The counter has since been split into three per-cache locks so the diagnostics TSV can show *which* cache an eviction came from — non-zero `unk_evictions` under headroom indicates a stray third NSCache reaching the shared delegate.
+
+In `#if DEBUG` builds, every eviction also emits a `Logger.process.debugMessageOnly` line tagged `EVICT mem`, `EVICT grid`, or `EVICT unknown` with the live cost / limit / count at the moment of the eviction.
 
 Three things happen on every full-cache eviction:
 
-1. `memEntryEvicted` decrements the manual `_memCost` / `_memCount` counters that mirror what `NSCache` does not expose publicly.
-2. The evicted `NSURL` is pushed onto the bounded `EvictedRing` so a subsequent disk fallback for the same key can be classified as a *boomerang miss* in diagnostics.
-3. The eviction counter is incremented.
+1. `memEntryEvicted` (or `gridEntryEvicted`) decrements the manual `_memCost` / `_memCount` (or grid) counters that mirror what `NSCache` does not expose publicly.
+2. The corresponding per-cache eviction counter is incremented under its own lock.
+3. For `memoryCache` only, the evicted `NSURL` is pushed onto the bounded `EvictedRing` so a subsequent disk fallback for the same key can be classified as a *boomerang miss* in diagnostics.
 
-Grid-cache evictions only update the grid counters; they do not feed the boomerang ring.
+Grid-cache evictions only update the grid counter; they do not feed the boomerang ring.
 
 ---
 
@@ -465,7 +483,7 @@ The three demand counters — `_demandRequests`, `_cacheCold`, `_boomerangMisses
 struct CacheStatistics {
     nonisolated let hits: Int        // cacheMemory
     nonisolated let misses: Int      // cacheDisk
-    nonisolated let evictions: Int   // CacheDelegate.shared.getEvictionCount()
+    nonisolated let evictions: Int   // CacheDelegate.shared.getEvictionCount() — sum of per-cache counters
     nonisolated let hitRate: Double  // cacheMemory / (cacheMemory + cacheDisk) × 100
 }
 ```

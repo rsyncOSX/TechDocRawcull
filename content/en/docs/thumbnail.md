@@ -35,7 +35,6 @@ Thumbnail dimensions are configurable via `SettingsViewModel` and persisted to `
 | `thumbnailSizePreview` | 1616 | Bulk preload target size |
 | `thumbnailSizeFullSize` | 8700 | Upper bound for full-size zoom path |
 | `thumbnailCostPerPixel` | 6 | Bytes per pixel — drives cache cost calculation |
-| `useThumbnailAsZoomPreview` | false | Reuse cached thumbnail instead of re-extracting for zoom |
 
 **Grid view thumbnails** are fixed at **200 px** — this is hardcoded and not user-configurable. The grid view fast path always reads from `SharedMemoryCache.gridThumbnailCache` (400 MB, ≤200 px, see [Memory Cache](../cache/)).
 
@@ -492,7 +491,6 @@ flowchart TD
 | `thumbnailSizePreview` | 1616 | Bulk preload target size and on-demand `RequestThumbnail` size |
 | `thumbnailSizeGrid` | 200 | Grid list thumbnail size |
 | `thumbnailSizeFullSize` | 8700 | Full-size zoom path upper bound |
-| `useThumbnailAsZoomPreview` | false | Skip re-extraction and use cached thumbnail for zoom |
 | `showScoringBadge` | false | Show sharpness score badge on thumbnails (off by default for scroll performance) |
 | `showSaliencyBadge` | false | Show cyan saliency subject badge on thumbnails |
 
