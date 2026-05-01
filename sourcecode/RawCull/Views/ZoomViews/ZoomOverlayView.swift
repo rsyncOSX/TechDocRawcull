@@ -23,7 +23,7 @@ struct ZoomOverlayView: View {
     @State private var lastOffset: CGSize = .zero
     @State private var showFocusMask: Bool = false
     @State private var showFocusPoints: Bool = false
-    @State private var useThumbnailSource: Bool = false
+    @State private var useThumbnailSource: Bool = true
     @State private var maskTask: Task<Void, Never>?
     @FocusState private var isImageFocused: Bool
 
@@ -99,10 +99,11 @@ struct ZoomOverlayView: View {
         .focusable()
         .focused($isImageFocused)
         .focusEffectDisabled(true)
-        .onKeyPress(characters: CharacterSet(charactersIn: "+-")) { press in
+        .onKeyPress(characters: CharacterSet(charactersIn: "+-jJ")) { press in
             switch press.characters {
             case "+": increaseZoom(); return .handled
             case "-": decreaseZoom(); return .handled
+            case "j", "J": useThumbnailSource.toggle(); return .handled
             default: return .ignored
             }
         }
