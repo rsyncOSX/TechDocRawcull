@@ -1,0 +1,337 @@
++++
+author = "Thomas Evensen"
+title = "Repository Git Workflow"
+date = "2026-04-19"
+tags = ["git"]
+categories = ["technical details"]
++++
+
+# Repository Git Workflow: Linear History
+
+This page documents the preferred repository workflow for RawCull documentation changes: branch-based development, signed commits when configured, rebasing onto `main`, and fast-forward integration without merge commits.
+
+## Create a Branch
+
+```bash
+git checkout -b <new-branch>
+git push --set-upstream origin <new-branch>
+```
+
+## Daily Workflow
+
+You always work on a dedicated branch. Commit often as you make progress.
+
+### Stage changes
+
+```bash
+git add .
+```
+
+### Commit
+
+If you use the Claude CLI, it can generate a [Conventional Commits](https://www.conventionalcommits.org/) message from the staged diff:
+
+```bash
+git commit -m "$(git diff --staged | claude -p 'Write a short conventional commit message. Output only the message, nothing else.')"
+```
+
+Claude pipes the staged diff into the `claude` CLI and returns a single-line message such as `feat(cache): add LRU eviction for thumbnail layer`. The `-p` flag runs Claude non-interactively (print mode) so the output can be captured directly into `-m`.
+
+If you want to review the message before committing, capture it first:
+
+```bash
+MSG=$(git diff --staged | claude -p 'Write a short conventional commit message. Output only the message, nothing else.')
+echo "$MSG"
+git commit -m "$MSG"
+```
+
+Repeat staging and committing as often as needed while working.
+
+### Push
+
+```bash
+git push origin <your-branch>
+```
+
+---
+
+## Keep your branch current
+
+If others have pushed to `main` while you were working, rebase your commits on top of their work rather than merging.
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+This puts your commits aside, fast-forwards your branch to the latest `main`, then replays your commits on top — keeping history a straight line.
+
+---
+
+## Integrate into main (fast-forward)
+
+When your branch is finished and ready to ship, follow this procedure to keep history linear.
+
+### 1. Update main from the server
+
+```bash
+git checkout main
+git pull --rebase origin main
+```
+
+### 2. Rebase your branch onto the fresh main
+
+```bash
+git checkout <your-branch>
+git rebase main
+```
+
+### 3. Fast-forward merge into main
+
+`--ff-only` makes Git abort instead of creating a merge commit.
+
+```bash
+git checkout main
+git merge --ff-only <your-branch>
+```
+
+### 4. Push main to GitHub
+
+```bash
+git push origin main
+```
+
+### 5. Delete the branch locally
+
+```bash
+git branch -d <your-branch>
+```
+
+### 6. Delete the branch on GitHub
+
+```bash
+git push origin --delete <your-branch>
+```
+
+---
+
+## Using git fetch and git diff
+
+The git fetch command is used to update your local repository with the latest changes from the remote repository without merging them. You can then use git diff to compare the branches.
+
+### Step 1: Fetch the Latest Changes
+
+Fetch the latest changes from the remote repository to ensure you have the most up-to-date information.
+
+```bash
+git fetch origin
+```
+
+### Step 2: Compare the Branches
+
+Use the git diff command to compare your local branch with the remote branch.
+
+```bash
+git diff <local-branch> origin/<remote-branch>
+```
+
+For example, if you want to compare your local main branch with the remote main branch:
+
+```bash
+git diff main origin/main
+```
+
+## Using git log
+
+The git log command can be used to compare commit histories between your local and remote branches. This is useful for seeing which commits are present in one branch but not the other.
+
+### Fetch the Latest Changes:
+
+Ensure your local repository is updated with the latest changes from the remote repository.
+
+```bash
+git fetch origin
+```
+
+### Compare Commit Histories:
+
+Use the git log to see the differences in commit histories.
+
+```bash
+git log <local-branch>..origin/<remote-branch>
+```
+
+For example, to compare your local main branch with the remote main branch:
+
+```bash
+git log main..origin/main
+```
+
+You can also reverse the comparison to see commits in the remote branch that are not in the local branch:
+
+```bash
+git log origin/main..main
+```
+
+## Using git status
+
+The git status command provides a quick summary of the differences between your local branch and the remote branch.
+
+Fetch the Latest Changes:
+
+Update your local repository with the latest changes from the remote repository.
+
+```bash
+git fetch origin
+```
+Check the Status:
+
+### Use git status to see the differences between your local branch and the remote branch.
+
+```bash
+git status
+```
+
+The output will show messages like "Your branch is ahead of 'origin/<branch>' by X commits" or "Your branch is behind 'origin/<branch>' by X commits", indicating the differences.
+
+---
+
+## Pull and track a remote repository
+
+The error means your local branch <your-branch> has no upstream tracking set. Fix it with:
+
+```bash
+git branch --set-upstream-to=origin/<your-branch> <your-branch>
+git pull
+```
+
+Or do both in one step:
+
+```bash
+git pull origin <your-branch>
+```
+To avoid this in the future, whenever you create or checkout a new local branch that should track a remote, use:
+
+```bash
+git checkout --track origin/<your-branch>
+```
+---
+
+## Verify linear history
+
+```bash
+git log --oneline --graph --decorate
+```
+
+A clean linear history shows a straight vertical line with no merge nodes.
+
+---
+
+## Re-sign and remediation
+
+### Re-sign the last commit without changing its message
+
+```bash
+git commit --amend --no-edit -S
+```
+
+### Push after re-signing (the commit hash changed)
+
+```bash
+git push origin <your-branch> --force-with-lease
+```
+
+### Fix GPG if signing fails
+
+```bash
+git config --global gpg.format openpgp
+git config --global gpg.program gpg
+
+# Confirm the Key ID is correct (no leading '0x')
+git config --global user.signingkey <YOUR_KEY_ID>
+
+# Restart the agent
+gpgconf --kill gpg-agent
+```
+## One-time setup
+
+Run these commands once per machine to configure Git correctly for this workflow.
+
+### 1. Set your identity
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+```
+
+### 2. Verify the remote uses SSH
+
+```bash
+git remote -v
+```
+
+If the URL starts with `https://`, switch it to SSH:
+
+```bash
+git remote set-url origin git@github.com:<user>/<repo>.git
+```
+
+### 3. Configure GPG signing
+
+```bash
+# Find your GPG Key ID (the 16-character code after '/' on the 'sec' line)
+gpg --list-secret-keys --keyid-format LONG
+
+# Tell Git which key to use (omit the leading '0x')
+git config --global user.signingkey <YOUR_KEY_ID>
+
+# Auto-sign all commits and tags
+git config --global commit.gpgsign true
+git config --global tag.gpgSign true
+git config --global gpg.program gpg
+```
+
+### 4. SSH connection
+
+1. Go to [github.com/settings/keys](https://github.com/settings/keys) and delete the old key.
+2. Copy your current public key to the clipboard:
+
+```bash
+pbcopy < ~/.ssh/id_ed25519.pub
+```
+
+3. On GitHub: **Settings → SSH and GPG keys → New SSH key** → paste → **Save**.
+4. Test again:
+
+```bash
+ssh -T git@github.com
+```
+
+### 5. Test the SSH connection to GitHub
+
+```bash
+ssh -T git@github.com
+```
+
+A successful response looks like:
+
+```
+Hi <username>! You've successfully authenticated, but GitHub does not provide shell access.
+```
+
+If you get a `Permission denied (publickey)` error, the most likely cause is a stale key.
+
+### 6. Enforce linear history (no merge commits)
+
+```bash
+# Always rebase instead of merge when pulling
+git config --global pull.rebase true
+
+# Refuse any merge that would create a merge commit
+git config --global merge.ff only
+
+# Simplify first push of a new branch (Git ≥ 2.37)
+git config --global push.autoSetupRemote true
+```
+
+---
