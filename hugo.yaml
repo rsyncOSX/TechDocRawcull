@@ -1,4 +1,4 @@
-baseURL: https://rawcull.netlify.app
+baseURL: https://techrawcull.netlify.app
 title: RawCull Tech documents
 
 # cSpell:ignore goldmark github hugo readingtime docsy subdir lastmod pygments linenos catmullrom norsk gu slugorcontentbasename
