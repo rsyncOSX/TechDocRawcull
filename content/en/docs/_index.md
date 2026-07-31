@@ -33,6 +33,7 @@ Start with the pipeline pages, then use the focused references when changing one
 | [Detailed Focus Mask Computation](detailsfocusmask/) | Step-by-step source walk-through of focus-mask rendering, patch selection, visual thresholds, examples, and result-impacting factors |
 | [Burst Groups](burstgroup/) | Vision similarity indexing, grouping rules, ranking weights, review states, manual winners, and culling actions |
 | [Artificial Intelligence](ai/) | PhotoAIKit architecture, model identity, reusable AI boundaries, and the complete CLIP activation and similarity flow in RawCull |
+| [AI Model Downloads](aimodeldownloads/) | Managed Background Assets architecture, storage, validation, release gates, and self-hosted versus Apple-hosted activation |
 | [Saved Files](savedfiles/) | `savedfiles.json`, ratings, sharpness/saliency persistence, burst winner overrides, and debounced writes |
 | [File Read and Write](filereadandwrite/) | Every app file RawCull reads or writes, including caches, bookmarks, JSON, extracted JPEGs, and rsync include files |
 | [Security-Scoped URLs](security/) | Sandbox access, bookmarks, active catalog scope, and rsync source/destination scope |
