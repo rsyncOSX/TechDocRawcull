@@ -434,3 +434,191 @@ Likewise, an Apple-hosted build must construct the service with
 
 Do not mark a descriptor ready merely to test transport. Ready is an
 application-level statement that the exact pack is approved for redistribution.
+
+## Preparing the downloadable resources
+
+### Use an asset-pack archive, not a ZIP
+
+Do not ZIP model directories manually. Xcode supplies `ba-package`, which
+creates a Managed Background Assets archive with the required `.aar`
+extension. The AAR is an opaque framework artifact, not a ZIP that RawCull
+opens. Managed Background Assets downloads, verifies, installs, and exposes its
+selected files.
+
+Check the release tool before preparing packs:
+
+```sh
+xcrun --find ba-package
+xcrun ba-package --version
+xcrun ba-package help package
+```
+
+These examples use `ba-package 1.2`. Recheck its help after changing Xcode
+because its manifest schema and command interface are tool-version specific.
+
+### Recommended staging tree
+
+```text
+ModelAssets/Release/
+├── Models/
+│   ├── CLIP-DataComp/
+│   │   ├── metadata.json
+│   │   └── … .aimodel or .aimodelc plus declared resources …
+│   ├── CLIP-OpenAI/
+│   │   ├── metadata.json
+│   │   └── … .aimodel or .aimodelc plus declared resources …
+│   └── SAM3/
+│       ├── metadata.json
+│       └── … .aimodel or .aimodelc plus declared resources …
+├── Notices/
+│   ├── CLIP-DataComp/
+│   ├── CLIP-OpenAI/
+│   └── SAM3/
+├── Packaging/
+│   ├── clip-datacomp.json
+│   ├── clip-openai.json
+│   └── sam3.json
+└── Output/
+```
+
+Validate each model directory with the same PhotoAIKit rules used at runtime.
+Keep its complete redistribution notice, immutable upstream revision,
+conversion recipe and tool versions, source checksums, and final checksums.
+Packaging does not make an unverified checkpoint safe to redistribute.
+
+### Create one packaging manifest per pack
+
+With `ba-package 1.2`, one invocation creates one pack. For example,
+`Packaging/clip-openai.json` is:
+
+```json
+{
+  "assetPackID": "no.blogspot.RawCull.models.clip-openai",
+  "downloadPolicy": {
+    "onDemand": {}
+  },
+  "fileSelectors": [
+    { "directory": "Models/CLIP-OpenAI" },
+    { "directory": "Notices/CLIP-OpenAI" }
+  ],
+  "platforms": [ "macOS" ]
+}
+```
+
+Create equivalent manifests for these pairs:
+
+| Manifest | Asset-pack ID | Model directory |
+| --- | --- | --- |
+| `clip-datacomp.json` | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
+| `clip-openai.json` | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
+| `sam3.json` | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
+
+Selector paths are relative. The tool resolves them against its current working
+directory, includes directory contents recursively, and preserves their
+logical paths. Run it from the release staging root.
+
+The checked-in `ModelAssets/manifest.template.json` is only a three-pack
+design skeleton. It is **not directly accepted by `ba-package 1.2`**. That
+version expects one top-level `assetPackID` per packaging manifest and a
+relative string for each directory selector. Generate a fresh starting point
+with `xcrun ba-package template` before a release.
+
+### Generate and record the AAR files
+
+```sh
+cd /path/to/ModelAssets/Release
+
+xcrun ba-package package Packaging/clip-datacomp.json \
+  --output-path Output/clip-datacomp.aar
+xcrun ba-package package Packaging/clip-openai.json \
+  --output-path Output/clip-openai.aar
+xcrun ba-package package Packaging/sam3.json \
+  --output-path Output/sam3.aar
+
+shasum -a 256 Output/*.aar
+stat -f '%N %z bytes' Output/*.aar
+```
+
+The output path must end in `.aar`. Treat a published archive as immutable.
+Keep the manifests, checksums, provenance, conversion logs, and exact
+Xcode/`ba-package` version as release evidence. Copy archive SHA-256 and byte
+sizes into the release record and matching catalogue metadata before changing
+a descriptor to `.ready`.
+
+### Create the self-hosted download manifest
+
+The packaging manifests describe archive contents. The **download manifest** is
+a different generated JSON file served to Macs. It lists versions, sizes,
+policies, and download URLs.
+
+```sh
+xcrun ba-package download-manifest create \
+  Output/clip-datacomp.aar \
+  Output/clip-openai.aar \
+  Output/sam3.aar \
+  --asset-pack-versions 1 1 1 \
+  --macos \
+  --download-base-url https://downloads.example.com/rawcull/models/packs/ \
+  --output-path Output/manifest.json
+```
+
+The base URL is not an individual archive URL. The tool appends each
+asset-pack ID. Inspect the generated JSON and upload each AAR to the exact URL
+it records. With this example, OpenAI CLIP normally resolves to:
+
+```text
+https://downloads.example.com/rawcull/models/packs/no.blogspot.RawCull.models.clip-openai
+```
+
+The remote key need not show `.aar` when the generated URL omits it; the local
+input to `ba-package` still requires that extension. Ensure every URL returns
+the archive, not an HTML login, redirect, or error page.
+
+Upload packs first, verify every generated URL, and publish
+`manifest.json` last. Both `BAManifestURL` and RawCull's self-hosted source
+must identify the manifest, not an AAR. For later releases use
+`ba-package download-manifest update` or create a deliberately versioned new
+manifest; RawCull requests the latest pack version.
+
+For Apple hosting, generate the same AAR files but not the self-hosted download
+manifest. Upload the packs and versions in App Store Connect, then use the
+Apple-hosted app and extension configuration described above.
+
+## What happens when the user selects Download
+
+1. `startModelDownload` accepts only a ready or retryable failed row and
+   prevents two tasks for the same model.
+2. The row immediately changes to `downloading(progress: 0)` and shows Cancel.
+3. The coordinator resolves the stable model descriptor and rechecks release
+   readiness so UI state cannot bypass distribution policy.
+4. If explicit acceptance is required, it loads
+   `ModelLicenceAcceptances.json` and requires a record matching the current
+   model, licence version, and licence-text checksum.
+5. The service rejects an unconfigured source before requesting a manifest.
+6. `AssetPackManager.shared.manifest` obtains the hosting-mode manifest. A
+   self-hosted build uses `BAManifestURL`; an Apple-hosted build uses the
+   store downloader extension and Apple's asset metadata.
+7. RawCull looks up the exact asset-pack ID. It never guesses a URL or accepts
+   a similarly named pack.
+8. RawCull listens to asynchronous `statusUpdates`. Progress is delivered to
+   the main actor and clamped to zero through one.
+9. `ensureLocalAvailability(of:requireLatestVersion: true)` asks Managed
+   Background Assets to download and install the latest selected AAR in managed
+   storage.
+10. RawCull reports 100 percent, resolves the catalogue's logical model path,
+    and verifies that it is a directory. Incorrect archive organization becomes
+    `downloadedModelNotFound`.
+11. The row changes to `validating`; the URL becomes a candidate for the
+    matching CLIP or SAM 3 resource manager.
+12. PhotoAIKit validates `metadata.json`, the chosen `.aimodel` or
+    `.aimodelc`, declared resources, and the runtime contract. Only then does
+    RawCull construct a provider and refresh feature capabilities.
+13. The next snapshot reports the pack installed. The feature is active only
+    when validation and provider creation also succeeded.
+
+Cancel stops RawCull's task and status listener. RawCull does not assume the
+framework removed partial data; it requests a new authoritative snapshot.
+Failures become `failed(message:)`, and Retry repeats the guarded sequence.
+Remove asks the framework to remove the asset-pack ID, clears its managed
+candidate URL, and refreshes capabilities without deleting manually installed
+models.
