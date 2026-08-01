@@ -22,6 +22,8 @@ The source for this section comes from the sibling `PhotoAIKit` and `RawCull` pr
 |---|---|---|
 | This overview | Where does AI belong in the system? | You need the vocabulary and responsibility split |
 | [How RawCull Enables and Uses CLIP](clip-in-rawcull/) | How does the CLIP preference become a running backend? | You are tracing model discovery, activation, RAW decoding, inference, fallback, distance calculation, or persistence |
+| [How RawCull Download Models](aimodeldownloads/) | How does RawCull download the models |
+
 
 PhotoAIKit currently contains two main AI families:
 
