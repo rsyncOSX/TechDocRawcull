@@ -177,6 +177,44 @@ Official references:
    help with technical identity; the model owner or counsel should resolve
    licence scope.
 
+### Recorded LAION email request
+
+On 2026-08-02 at 17:20 CEST, the RawCull maintainer emailed
+`contact@laion.ai` with the subject “Written clarification requested for
+DataComp CLIP weight licensing and redistribution.” The request identified:
+
+- repository:
+  `laion/CLIP-ViT-B-32-256x256-DataComp-s34B-b86K`;
+- immutable revision:
+  `4afec35ffe57a943d569ff7ee888061830164da8`;
+- proposed source-weight file: `open_clip_model.safetensors`;
+- model configuration: OpenCLIP `ViT-B-32-256` with
+  `datacomp_s34b_b86k` weights;
+- transformation: a float16 Apple Core AI runtime representation for local
+  photo similarity and text-to-image semantic search; and
+- delivery: an optional model archive downloaded by RawCull from a public
+  GitHub Release, including possible use with a commercially distributed
+  version of RawCull.
+
+The email stated that RawCull has not publicly distributed the model or its
+converted derivative and will not redistribute the DataComp training dataset.
+It proposed preserving the source byte size and SHA-256 and including the
+applicable MIT licence, copyright and attribution notices, model information,
+provenance, and checksums with the archive.
+
+LAION was asked to confirm whether the displayed MIT licence covers the exact
+weight file, conversion into the proposed runtime representation, public and
+commercial redistribution of the derivative, and whether any additional
+DataComp, OpenCLIP, attribution, acceptable-use, or other conditions apply. The
+request also asked whether the model card's “out of scope” deployment language
+is safety guidance or an additional legal restriction.
+
+Status: awaiting a substantive response from LAION or another person
+authorized to clarify the rights applicable to the weights. Sending the email
+does not clear the pack. Preserve the original message and any response in the
+private evidence register; do not add the maintainer's personal email address
+or complete mail headers to this public repository.
+
 ### Questions to ask
 
 Identify the exact repository, revision, and proposed source file, then ask:
