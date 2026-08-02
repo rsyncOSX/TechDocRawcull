@@ -37,6 +37,36 @@ Store or TestFlight build. The extension already contains an Apple-hosted
 `RAWCULL_APPLE_HOSTED_MODEL_ASSETS` compilation condition, so the application
 service and UI do not change when hosting changes.
 
+### Planned GitHub release origin
+
+The proposed self-hosted origin is a dedicated repository, separate from the
+RawCull application releases:
+
+```text
+https://github.com/rsyncOSX/RawCull-AI-Models
+```
+
+The first immutable model-set release is planned as:
+
+| Field | Value |
+| --- | --- |
+| Tag | `v1` |
+| Title | `RawCull AI Models v1` |
+| Download base URL | `https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/` |
+
+This keeps model-pack versions independent of RawCull application tags such as
+`v2.2.4`. Commit only the README, notices, licence texts, provenance,
+checksums, and packaging documentation to the repository. Store the large
+archives as GitHub Release assets, not Git objects or Git LFS objects. Each
+current archive is below GitHub's 2 GiB per-release-asset limit; GitHub
+documents the current limits under
+[About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas).
+
+No model archive has been uploaded. Keep the release unpublished until all
+licence and provenance gates below are resolved. If a draft release is created
+for preparation, do not publish it or mark it as the RawCull application's
+latest release.
+
 For an Apple-hosted configuration:
 
 1. Upload approved packs in App Store Connect.
@@ -49,19 +79,28 @@ Do not enable both hosting configurations in one product.
 
 ## Licence audit
 
-The audit source was `~/Downloads/ailicences.md` and its
-`THIRD-PARTY-NOTICES` directory.
+The canonical notice catalogs are checked into RawCull under
+`ModelAssets/Notices` and mirrored into the packaging staging tree under
+`/Users/thomas/ModelAssets/Release/Notices`. Each pack contains a human-readable
+`NOTICE.md`, complete applicable licence texts, and a machine-readable
+`PROVENANCE.json` with the known upstream revisions and checksums.
 
-- OpenCLIP/DataComp: a complete MIT notice is bundled, but release remains
-  blocked until the exact source-checkpoint revision and source-file checksums
-  are cryptographically recorded with the converted archive.
-- OpenAI CLIP: the bundled MIT notice covers the source/tokenizer. Release
-  remains blocked until the exact weights licence, immutable revision, and
-  source checksums are verified.
-- Meta SAM 3: the Downloads catalogue describes a gated, non-MIT licence, but
-  no complete licence document was present. Release remains blocked until that
-  text is packaged and ungated redistribution is confirmed compatible with
-  Meta's licence and official access conditions.
+- OpenCLIP/DataComp includes the OpenCLIP/DataComp MIT notice, the OpenAI CLIP
+  tokenizer MIT notice, and Apple's `coreai-models` BSD 3-Clause notice.
+  Release remains blocked because the exporter did not record the exact source
+  checkpoint with a source-file checksum.
+- OpenAI CLIP includes the OpenAI CLIP MIT notice and Apple's `coreai-models`
+  BSD 3-Clause notice. Release remains blocked until the MIT terms are verified
+  as applying to the exact checkpoint weights and the cached immutable
+  revision and source checksum are conclusively bound to the converted output.
+- Meta SAM 3 now includes the complete SAM License dated November 19, 2025 and
+  Apple's `coreai-models` BSD 3-Clause notice. RawCull also bundles that verified
+  SAM licence text for explicit user acceptance. Release remains blocked until
+  ungated redistribution is confirmed compatible with the SAM License and
+  Meta's official gated checkpoint access conditions.
+
+The notice catalogs must remain inside their corresponding archives, but their
+presence is evidence and attribution, not release approval.
 
 The production catalogue therefore cannot start any real model download. A
 descriptor becomes downloadable only after its `releaseReadiness` changes to
@@ -388,6 +427,12 @@ and production manifest. Each pack should include the converted model plus its
 applicable licence text, immutable upstream revision, source and archive
 checksums, and conversion metadata.
 
+The checked-in `ModelAssets/Notices` directory is the canonical source for the
+three pack-specific notice catalogs. Copy the catalogs into the staging tree
+before packaging. The release manifests use explicit selectors so that the
+runtime model and required resources are included while `_source.aimodel`,
+compiled intermediates, and unrelated files are excluded.
+
 A self-hosted HTTPS origin stores the generated archives and generated
 manifest. Upload and verify immutable, versioned archives first and publish the
 manifest last, so clients cannot discover an incomplete pack. Retain an archive
@@ -453,8 +498,10 @@ xcrun ba-package --version
 xcrun ba-package help package
 ```
 
-These examples use `ba-package 1.2`. Recheck its help after changing Xcode
-because its manifest schema and command interface are tool-version specific.
+The lean archives below were created with `ba-package 2.0-beta` from the
+currently selected Xcode beta. Recheck its version and help after every Xcode
+change because its manifest schema, validation, and command interface are
+tool-version specific.
 
 ### Recommended staging tree
 
@@ -488,8 +535,8 @@ Packaging does not make an unverified checkpoint safe to redistribute.
 
 ### Create one packaging manifest per pack
 
-With `ba-package 1.2`, one invocation creates one pack. For example,
-`Packaging/clip-openai.json` is:
+One invocation creates one pack. Use explicit selectors rather than selecting
+the complete model directory. For example, `Packaging/clip-openai.json` is:
 
 ```json
 {
@@ -498,46 +545,68 @@ With `ba-package 1.2`, one invocation creates one pack. For example,
     "onDemand": {}
   },
   "fileSelectors": [
-    { "directory": "Models/CLIP-OpenAI" },
+    { "file": "Models/CLIP-OpenAI/metadata.json" },
+    { "directory": "Models/CLIP-OpenAI/tokenizer" },
+    {
+      "directory": "Models/CLIP-OpenAI/clip-vit-base-patch32_float16_static.aimodel"
+    },
     { "directory": "Notices/CLIP-OpenAI" }
   ],
   "platforms": [ "macOS" ]
 }
 ```
 
-Create equivalent manifests for these pairs:
+The three manifests select these runtime models and notice catalogs:
 
-| Manifest | Asset-pack ID | Model directory |
+| Manifest | Runtime model directory | Notice catalog |
 | --- | --- | --- |
-| `clip-datacomp.json` | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
-| `clip-openai.json` | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
-| `sam3.json` | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
+| `clip-datacomp.json` | `Models/CLIP-DataComp/ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel` | `Notices/CLIP-DataComp` |
+| `clip-openai.json` | `Models/CLIP-OpenAI/clip-vit-base-patch32_float16_static.aimodel` | `Notices/CLIP-OpenAI` |
+| `sam3.json` | `Models/SAM3/sam3_float16.aimodel` | `Notices/SAM3` |
+
+Each manifest also selects its model's `metadata.json` file and `tokenizer`
+directory. Do not replace these selectors with the broader model root. The
+broad selector also packages `_source.aimodel`, `.aimodelc`, or other
+conversion outputs that are not required at runtime.
 
 Selector paths are relative. The tool resolves them against its current working
 directory, includes directory contents recursively, and preserves their
 logical paths. Run it from the release staging root.
 
 The checked-in `ModelAssets/manifest.template.json` is only a three-pack
-design skeleton. It is **not directly accepted by `ba-package 1.2`**. That
-version expects one top-level `assetPackID` per packaging manifest and a
-relative string for each directory selector. Generate a fresh starting point
-with `xcrun ba-package template` before a release.
+design skeleton. It is **not directly accepted by `ba-package`**. The tool
+expects one top-level `assetPackID` per packaging manifest and a relative path
+for every selector. Generate a fresh starting point with
+`xcrun ba-package template` after a toolchain update, then reapply and review
+the explicit selectors.
 
 ### Generate and record the AAR files
 
 ```sh
-cd /path/to/ModelAssets/Release
+cd /Users/thomas/ModelAssets/Release
 
 xcrun ba-package package Packaging/clip-datacomp.json \
-  --output-path Output/clip-datacomp.aar
+  --output-path /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar
 xcrun ba-package package Packaging/clip-openai.json \
-  --output-path Output/clip-openai.aar
+  --output-path /Users/thomas/ModelsAAR/Output-lean/clip-openai.aar
 xcrun ba-package package Packaging/sam3.json \
-  --output-path Output/sam3.aar
+  --output-path /Users/thomas/ModelsAAR/Output-lean/sam3.aar
 
-shasum -a 256 Output/*.aar
-stat -f '%N %z bytes' Output/*.aar
+shasum -a 256 /Users/thomas/ModelsAAR/Output-lean/*.aar
+stat -f '%N %z bytes' /Users/thomas/ModelsAAR/Output-lean/*.aar
 ```
+
+The verified lean build from August 2, 2026 produced:
+
+| Archive | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `clip-datacomp.aar` | 282,967,203 | `ab109bd64f61629d33a20c55364f0e40f98cbd070547d02a86d018de5ec4a8e6` |
+| `clip-openai.aar` | 282,829,540 | `24e403f2f58cdea5765fb105d10fd37a57d4e53f5830e9b7248053e0229712dc` |
+| `sam3.aar` | 1,542,689,135 | `f207db7d83fdb90baff6f32e894935f9267e3ebdc276358011d41bd36d5cd4df` |
+
+Compared with the broad-directory archives, the two CLIP packs are about half
+the previous size and SAM 3 is about one third. This is consistent with the
+source and intermediate model representations being excluded.
 
 The output path must end in `.aar`. Treat a published archive as immutable.
 Keep the manifests, checksums, provenance, conversion logs, and exact
@@ -553,26 +622,46 @@ policies, and download URLs.
 
 ```sh
 xcrun ba-package download-manifest create \
-  Output/clip-datacomp.aar \
-  Output/clip-openai.aar \
-  Output/sam3.aar \
+  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
+  /Users/thomas/ModelsAAR/Output-lean/clip-openai.aar \
+  /Users/thomas/ModelsAAR/Output-lean/sam3.aar \
   --asset-pack-versions 1 1 1 \
   --macos \
-  --download-base-url https://downloads.example.com/rawcull/models/packs/ \
-  --output-path Output/manifest.json
+  --download-base-url \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/ \
+  --output-path /Users/thomas/ModelsAAR/Output-lean/manifest.json
 ```
 
 The base URL is not an individual archive URL. The tool appends each
-asset-pack ID. Inspect the generated JSON and upload each AAR to the exact URL
-it records. With this example, OpenAI CLIP normally resolves to:
+asset-pack ID, not the local AAR filename. Inspect the generated JSON and make
+the GitHub Release asset names match its URLs exactly. The planned URLs are:
 
 ```text
-https://downloads.example.com/rawcull/models/packs/no.blogspot.RawCull.models.clip-openai
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-datacomp
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-openai
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.sam3
 ```
 
-The remote key need not show `.aar` when the generated URL omits it; the local
-input to `ba-package` still requires that extension. Ensure every URL returns
-the archive, not an HTML login, redirect, or error page.
+The local inputs retain their `.aar` extension, but the release copies must be
+named with the exact asset-pack IDs above because those are the URL path
+components generated by `ba-package`. The proposed manifest URL, if the
+manifest is uploaded as another release asset, is:
+
+```text
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json
+```
+
+Ensure every generated pack URL returns the archive rather than an HTML login
+or error page. GitHub's release-download endpoint may redirect to asset
+storage, so HTTP verification must follow redirects and confirm the final byte
+count and checksum.
+
+At the time of this documentation update, the selected Xcode beta's
+`ba-package 2.0-beta` successfully created the archives but
+`download-manifest create` rejected the valid `.aar` inputs with the message
+`path extension isn't "aar"`. Do not rename the local archives to work around
+that contradictory diagnostic. Regenerate and inspect the manifest with a
+stable or corrected Xcode toolchain before creating the GitHub release.
 
 Upload packs first, verify every generated URL, and publish
 `manifest.json` last. Both `BAManifestURL` and RawCull's self-hosted source
