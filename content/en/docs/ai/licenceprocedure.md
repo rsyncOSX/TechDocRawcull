@@ -235,6 +235,7 @@ Official references:
 - [OpenAI CLIP MIT licence](https://github.com/openai/CLIP/blob/main/LICENSE)
 - [OpenAI CLIP checkpoint](https://huggingface.co/openai/clip-vit-base-patch32)
 - [Checkpoint licence discussion](https://huggingface.co/openai/clip-vit-base-patch32/discussions/12)
+- [RawCull weight-licence clarification request](https://huggingface.co/openai/clip-vit-base-patch32/discussions/72)
 - [OpenAI's official support instructions](https://help.openai.com/en/articles/6614161-how-can-i-contact-support/)
 - [CLIP model feedback form](https://forms.gle/Uv7afRH5dvY34ZEs9)
 
@@ -245,11 +246,83 @@ Official references:
    licensing. Retain the ticket or conversation identifier.
 2. Submit the same narrowly framed question through the feedback form linked by
    the official CLIP model card.
-3. A response from an OpenAI employee authorized to address the model's licence
-   is preferred. A Hugging Face community response is not sufficient.
+3. Open a model-specific discussion on the
+   [Hugging Face Community page](https://huggingface.co/openai/clip-vit-base-patch32/discussions)
+   using its
+   [New discussion](https://huggingface.co/openai/clip-vit-base-patch32/discussions/new)
+   action. This requires a Hugging Face login. Use a discussion rather than a
+   pull request so the licensing question remains attached to the exact model
+   distribution.
+4. A response from an OpenAI employee or repository maintainer authorized to
+   address the model's licence is preferred. An unsupported answer from another
+   community member is not sufficient.
 
 GitHub issue creation for `openai/CLIP` is currently restricted, so it should
 not be the only planned contact route.
+
+### Recorded support outcome and Hugging Face escalation
+
+OpenAI Support declined to confirm or provide an authoritative interpretation
+that the MIT licence in `openai/CLIP` applies to the pretrained weight files in
+`openai/clip-vit-base-patch32`. Support also declined to confirm that the
+licence permits RawCull's intended commercial redistribution. The response
+said that the applicable terms must be determined from the licence and notices
+shipped with the exact code and weights being used.
+
+This response does not clear the pack. Record the current conclusion as:
+
+```text
+CLIP source code: MIT licensed.
+openai/clip-vit-base-patch32 pretrained weights: no explicit weight-specific
+licence identified in the downloaded distribution, and OpenAI Support did not
+confirm that the source-repository MIT licence applies.
+Commercial redistribution: unresolved and blocked pending sufficient evidence.
+```
+
+The OpenAI Report Content form is intended for reports of potentially illegal
+or policy-violating content. It is not evidence of permission and should not be
+treated as the route for prospective licensing clearance. Support's recommended
+next step was to ask the maintainers on the distribution source. For Hugging
+Face, use the model-specific Community page linked above rather than the general
+Hugging Face forum.
+
+On 2026-08-02, the RawCull maintainer opened
+[Hugging Face discussion #72](https://huggingface.co/openai/clip-vit-base-patch32/discussions/72),
+“License applicable to pretrained CLIP ViT-B/32 weights,” asking the OpenAI
+maintainers to identify the licence covering the hosted weights and to confirm
+whether it permits commercial use and redistribution. The request also asks
+the maintainers to add the applicable licence identifier or licence file to the
+model repository. Opening the discussion records the escalation but does not
+clear the pack; retain the response and assess the responder's authority and
+the scope of any answer before changing the release decision.
+
+Suggested discussion title:
+
+```text
+Licence applicable to pretrained CLIP ViT-B/32 weights
+```
+
+Suggested discussion body:
+
+```text
+Could the OpenAI maintainers clarify the licence applicable specifically to
+the pretrained weight files in openai/clip-vit-base-patch32?
+
+In particular, does OpenAI intend the MIT License from the official
+openai/CLIP repository to cover the original ViT-B/32 checkpoint and the
+converted weight files hosted here, including commercial use, conversion to
+another runtime representation, and redistribution subject to the MIT
+conditions?
+
+If so, could you add the applicable licence identifier and/or LICENSE file to
+this model repository so downstream users can establish a reliable licensing
+record?
+```
+
+A maintainer comment may clarify intent, but the strongest resolution is a
+licence file, model-card licence declaration, or written statement from the
+rights holder that expressly covers the exact weights and proposed use. Until
+then, do not approve commercial redistribution of this pack.
 
 ### Questions to ask
 
