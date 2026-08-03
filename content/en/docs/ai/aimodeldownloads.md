@@ -769,8 +769,389 @@ Update all release records to describe the new candidate accurately:
    decision is recorded and every provenance, validation, notice, archive, and
    download check has passed.
 
-The following packaging section starts after the new bundle has passed this
-procedure.
+Repeat the same provenance-controlled conversion for SAM 3 before using the
+shared packaging procedure below.
+
+## Meta SAM 3 model for release
+
+RawCull uses Meta's `facebook/sam3` image-segmentation checkpoint through
+PhotoAIKit's Core AI SAM 3 backend. The release input must be the following
+exact Hugging Face snapshot and weight file, not a fresh resolution of the
+repository's `main` revision:
+
+| Field | Required value |
+| --- | --- |
+| Repository | `facebook/sam3` |
+| Revision | `3c879f39826c281e95690f02c7821c4de09afae7` |
+| Source file | `model.safetensors` |
+| Byte size | `3439938512` |
+| SHA-256 | `6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a` |
+| Export task | Promptable image segmentation |
+| Export precision and reference image | Float16, static batch, `1008 x 1008` pixels |
+
+The existing converted asset was created from a local Hugging Face cache at
+this revision, but the exporter did not record or cryptographically bind that
+snapshot to the converted output. Its old provenance record deliberately has
+`source_revision_recorded_by_exporter` set to `null`. The release model must
+therefore be a new conversion. Do not copy the cached weight hash into the old
+provenance record and treat the old `sam3_float16.aimodel` as verified.
+
+The pinned source is visible in the
+[SAM 3 model tree](https://huggingface.co/facebook/sam3/tree/3c879f39826c281e95690f02c7821c4de09afae7).
+Unlike DataComp, this repository is gated. Download access requires a signed-in
+Hugging Face account whose contact-sharing request has been accepted. That
+access is conversion evidence, not permission to publish an ungated mirror.
+The separate redistribution decision described under **Licence audit** remains
+mandatory even after the technical procedure below succeeds.
+
+### Create a clean SAM 3 evidence workspace
+
+Use a new evidence directory so that the gated source snapshot, converter
+checkout, dependency record, and generated output stay separate from the old
+unverified conversion:
+
+```sh
+SAM3_REPOSITORY='facebook/sam3'
+SAM3_REVISION='3c879f39826c281e95690f02c7821c4de09afae7'
+SAM3_SOURCE_FILENAME='model.safetensors'
+SAM3_EXPECTED_BYTES='3439938512'
+SAM3_EXPECTED_SHA256='6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a'
+SAM3_LICENSE_SHA256='b08db9d32c687054e99cbd41eb1dad19c76936dfb9e2b58e186a01204d8be9ab'
+
+SAM3_EVIDENCE_ROOT="/Users/thomas/ModelAssets/ReleaseEvidence/SAM3/$SAM3_REVISION"
+SAM3_SOURCE_ROOT="$SAM3_EVIDENCE_ROOT/source"
+SAM3_SOURCE_DIR="$SAM3_SOURCE_ROOT/facebook/sam3"
+SAM3_EXPORT_DIR="$SAM3_EVIDENCE_ROOT/export"
+SAM3_PHOTOAIKIT_DIR="$SAM3_EVIDENCE_ROOT/PhotoAIKit"
+
+mkdir -p "$SAM3_SOURCE_DIR" "$SAM3_EXPORT_DIR"
+```
+
+The nested `source/facebook/sam3` path is intentional. The pinned PhotoAIKit
+exporter accepts only the model name `facebook/sam3`. When the export runs from
+`$SAM3_SOURCE_ROOT`, Transformers interprets that name as this local directory
+instead of contacting the remote repository.
+
+Use the same detached, clean PhotoAIKit revision as RawCull:
+
+```sh
+SAM3_PHOTOAIKIT_REVISION='2cb07d604beee3549df4d361a5d48b3e9506fb87'
+
+git clone https://github.com/rsyncOSX/PhotoAIKit.git \
+  "$SAM3_PHOTOAIKIT_DIR"
+git -C "$SAM3_PHOTOAIKIT_DIR" switch --detach \
+  "$SAM3_PHOTOAIKIT_REVISION"
+
+test "$(git -C "$SAM3_PHOTOAIKIT_DIR" rev-parse HEAD)" = \
+  "$SAM3_PHOTOAIKIT_REVISION"
+test -z "$(git -C "$SAM3_PHOTOAIKIT_DIR" status --porcelain)"
+```
+
+If RawCull later resolves a different PhotoAIKit revision, audit changes to
+`Tools/export_sam3.py`, update this procedure, and record the revision that was
+actually executed.
+
+### Confirm gated access without exposing credentials
+
+Open the official [SAM 3 model page](https://huggingface.co/facebook/sam3),
+review the access conditions and the
+[pinned SAM License](https://huggingface.co/facebook/sam3/blob/3c879f39826c281e95690f02c7821c4de09afae7/LICENSE),
+and complete the repository's access flow. Then confirm that the CLI is logged
+in:
+
+```sh
+hf auth whoami
+```
+
+If needed, use `hf auth login` and enter the token only at its protected
+prompt. Never place a Hugging Face token in this document, a shell variable,
+the terminal transcript, provenance, or the downloadable pack. Keep the
+account and dated access evidence private; it can contain personal information.
+
+### Download the pinned source snapshot
+
+Download only the Safetensors checkpoint and the configuration, processor,
+tokenizer, licence, and model-card files required for the conversion record.
+The exporter does not use the repository's separate `sam3.pt` file:
+
+```sh
+hf download "$SAM3_REPOSITORY" \
+  "$SAM3_SOURCE_FILENAME" \
+  config.json \
+  processor_config.json \
+  tokenizer.json \
+  tokenizer_config.json \
+  special_tokens_map.json \
+  merges.txt \
+  vocab.json \
+  LICENSE \
+  README.md \
+  --revision "$SAM3_REVISION" \
+  --local-dir "$SAM3_SOURCE_DIR"
+```
+
+Preserve the command output and the local directory's `.cache/huggingface`
+metadata as private release evidence. Also preserve a dated copy of the gated
+model page and access conditions. The downloadable model archive must contain
+the verified SAM License from RawCull's notice catalog, not Hugging Face cache
+metadata or access credentials.
+
+### Verify the SAM 3 source before conversion
+
+Print the checkpoint checksum and size:
+
+```sh
+shasum -a 256 "$SAM3_SOURCE_DIR/$SAM3_SOURCE_FILENAME"
+stat -f '%z bytes %N' "$SAM3_SOURCE_DIR/$SAM3_SOURCE_FILENAME"
+```
+
+The output must contain exactly:
+
+```text
+6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a
+3439938512 bytes
+```
+
+Make the checkpoint and licence verification fail closed:
+
+```sh
+test "$(shasum -a 256 "$SAM3_SOURCE_DIR/$SAM3_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
+  "$SAM3_EXPECTED_SHA256"
+test "$(stat -f '%z' "$SAM3_SOURCE_DIR/$SAM3_SOURCE_FILENAME")" = \
+  "$SAM3_EXPECTED_BYTES"
+test "$(shasum -a 256 "$SAM3_SOURCE_DIR/LICENSE" | cut -d ' ' -f 1)" = \
+  "$SAM3_LICENSE_SHA256"
+```
+
+The pinned `LICENSE` must match the complete
+`ModelAssets/Notices/SAM3/SAM3-SAM-License-2025-11-19.txt` bundled with RawCull.
+Create a checksum manifest for every explicitly downloaded file:
+
+```sh
+(
+  cd "$SAM3_SOURCE_DIR"
+  shasum -a 256 \
+    model.safetensors \
+    config.json \
+    processor_config.json \
+    tokenizer.json \
+    tokenizer_config.json \
+    special_tokens_map.json \
+    merges.txt \
+    vocab.json \
+    LICENSE \
+    README.md
+) | tee "$SAM3_EVIDENCE_ROOT/source-sha256.txt"
+```
+
+If any required file is missing or either fixed checksum differs, stop. Do not
+convert a substitute file or retrieve `main` without the full revision.
+
+### Export only from the verified local snapshot
+
+`PhotoAIKit/Tools/export_sam3.py` calls Transformers three times: for the model,
+the processor/reference inputs, and the saved tokenizer. All three must resolve
+the same local snapshot. Change to the source root so the literal
+`facebook/sam3` argument names the verified local directory, then force the
+Hugging Face and Transformers clients offline:
+
+```sh
+cd "$SAM3_SOURCE_ROOT"
+
+HF_HUB_OFFLINE=1 \
+TRANSFORMERS_OFFLINE=1 \
+uv run --script "$SAM3_PHOTOAIKIT_DIR/Tools/export_sam3.py" \
+  --model facebook/sam3 \
+  --output-dir "$SAM3_EXPORT_DIR" \
+  --bundle-name SAM3 \
+  --dtype float16
+```
+
+Do not run this command from another current directory. Without the local
+`facebook/sam3` path, the same argument denotes the remote repository alias.
+Offline mode makes such a mistake fail instead of silently resolving a newer
+checkpoint.
+
+Do not add `--overwrite` to an evidence run. A complete SAM 3 conversion is
+resource intensive; if it fails after creating output, retain the attempt and
+start again in a new evidence directory.
+
+The exporter's PEP 723 metadata fixes `coreai-core` and `coreai-torch` and
+constrains the compatible Transformers and tokenizer versions. Record the
+complete dependency resolution in addition to the terminal log:
+
+```sh
+uv export \
+  --script "$SAM3_PHOTOAIKIT_DIR/Tools/export_sam3.py" \
+  --format requirements.txt \
+  --no-hashes \
+  --output-file "$SAM3_EVIDENCE_ROOT/python-requirements.txt"
+
+uv --version
+python3 --version
+sw_vers
+xcodebuild -version
+git -C "$SAM3_PHOTOAIKIT_DIR" rev-parse HEAD
+git -C "$SAM3_PHOTOAIKIT_DIR" show HEAD:Package.swift
+```
+
+The exporter loads `Sam3Model` at Float16, uses a static one-image reference
+input at `1008 x 1008`, exports the five SAM 3 outputs, converts and optimizes
+the Core AI program, saves the tokenizer, and fingerprints the runtime asset in
+`metadata.json`.
+
+The expected generated directory is:
+
+```text
+SAM3/
+├── metadata.json
+├── tokenizer/
+├── sam3_float16.aimodel/
+└── sam3_float16_source.aimodel/
+```
+
+The `_source.aimodel` directory is a conversion intermediate. Preserve it in
+private evidence, but do not include it in the downloadable asset pack. Do not
+rename the runtime directory without regenerating `metadata.json` and its
+fingerprint.
+
+### Inspect and fingerprint the generated SAM 3 bundle
+
+Set the generated paths and confirm the required files exist:
+
+```sh
+SAM3_BUNDLE="$SAM3_EXPORT_DIR/SAM3"
+SAM3_RUNTIME_ASSET="$SAM3_BUNDLE/sam3_float16.aimodel"
+
+test -f "$SAM3_BUNDLE/metadata.json"
+test -f "$SAM3_BUNDLE/tokenizer/tokenizer.json"
+test -f "$SAM3_BUNDLE/tokenizer/tokenizer_config.json"
+test -d "$SAM3_RUNTIME_ASSET"
+
+plutil -extract metadata_version raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract kind raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract family raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract source_model raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract preprocessing_version raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract configuration_version raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract assets.main raw -o - "$SAM3_BUNDLE/metadata.json"
+plutil -extract asset_fingerprints.main.value raw -o - \
+  "$SAM3_BUNDLE/metadata.json"
+
+python3 "$SAM3_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$SAM3_RUNTIME_ASSET"
+```
+
+The fields must report metadata version `0.3`, kind `segmenter`, family `sam3`,
+source model `facebook/sam3`, preprocessing
+`sam3-bounded-image-v1`, configuration `coreai-sam3-mask-v1`, and main asset
+`sam3_float16.aimodel`. The fingerprint printed by
+`model_fingerprint.py` must equal `asset_fingerprints.main.value`.
+
+Verify the exported tokenizer:
+
+```sh
+shasum -a 256 "$SAM3_BUNDLE/tokenizer/tokenizer.json"
+```
+
+The tokenizer SHA-256 for the pinned snapshot is
+`6d9109cc838977f3ca94a379eec36aecc7c807e1785cd729660ca2fc0171fb35`.
+If it differs, stop and audit the snapshot, dependency resolution, and exporter
+behavior.
+
+Record the new runtime fingerprint and `main.mlirb` checksum:
+
+```sh
+python3 "$SAM3_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$SAM3_RUNTIME_ASSET"
+find "$SAM3_RUNTIME_ASSET" -type f -name main.mlirb \
+  -exec shasum -a 256 {} \;
+```
+
+These are fresh conversion outputs and are not required to equal the old
+unverified runtime fingerprint or the old `main.mlirb` SHA-256
+`43a9b88e40d193f5a6608a7fee536a78f4ba4ec5d95f1eb24db03031630f0a31`.
+
+### Validate SAM 3 with PhotoAIKit and RawCull
+
+Run the tests from the exact PhotoAIKit checkout used by the exporter:
+
+```sh
+swift test --package-path "$SAM3_PHOTOAIKIT_DIR"
+```
+
+The package tests validate the resolver, fingerprint, tokenizer layout, and
+SAM 3 runtime contracts, but do not execute the newly generated model against a
+RawCull image. Install a copy of the complete `SAM3` directory at the SAM 3
+path displayed by **RawCull > Settings > AI**. A non-sandboxed development
+build normally uses:
+
+```text
+/Users/thomas/Library/Application Support/RawCull/Models/SAM3/
+```
+
+A sandboxed build normally uses:
+
+```text
+/Users/thomas/Library/Containers/no.blogspot.RawCull/Data/Library/Application Support/RawCull/Models/SAM3/
+```
+
+Use an empty destination. Move any previous test model to a separately named
+backup directory; do not merge old and new bundle contents. Launch RawCull,
+open **Settings > AI**, and choose **Check Again**. The SAM 3 model and
+in-process review capability must become available without a metadata,
+tokenizer, or fingerprint error.
+
+Analyze a representative catalog into burst groups, choose **Deep Review** on
+a burst, select the review target, and run the review. Confirm that RawCull
+creates subject masks, completes the subject-detail analysis, and presents a
+recommendation without a model-load, prompt, or mask-decoding error. Inspect
+several masks visually, including a scene with no clear subject. The first load
+may take longer while macOS specializes the portable Core AI asset for that
+Mac.
+
+PhotoAIKit's `ModelBundleResolver` verifies `metadata.json`, the selected
+asset, required tokenizer, and runtime fingerprint. `CoreAISAM3Provider` then
+loads the tokenizer and Core AI segmentation engine and validates the returned
+mask tensors. A successful Python export alone is not sufficient release
+validation.
+
+### Move the approved SAM 3 candidate into release staging
+
+After validation, copy the complete generated bundle—not the manually
+installed test copy—into:
+
+```text
+/Users/thomas/ModelAssets/Release/Models/SAM3/
+```
+
+Update the release records for the new candidate:
+
+1. In `ModelAssets/Notices/SAM3/PROVENANCE.json`, record the upstream
+   repository, revision, source filename, `3439938512` byte size, source
+   SHA-256, licence SHA-256, PhotoAIKit commit, resolved dependency versions,
+   conversion command, tokenizer checksum, runtime asset filename, asset
+   fingerprint, and `main.mlirb` checksum. Remove the old statement that the
+   exporter output is not bound to a source revision only after this evidence
+   has been reviewed.
+2. Keep `NOTICE.md`, the complete SAM License, and Apple's conversion notice
+   with the pack. Update `NOTICE.md` only if the runtime asset name changes.
+3. Keep `Packaging/sam3.json` restricted to `metadata.json`, `tokenizer`, the
+   new runtime `sam3_float16.aimodel`, and `Notices/SAM3`. Do not select the
+   bundle root or `_source.aimodel`.
+4. Rebuild and inspect `sam3.aar`, then record its new byte size and SHA-256 in
+   the provenance record and RawCull catalogue.
+5. Do not reuse the previous runtime, fingerprint, `main.mlirb`, AAR, or
+   manifest hashes. The new runtime fingerprint deliberately distinguishes
+   cached masks created with a different model artifact.
+6. Record the immutable upstream revision in RawCull's SAM 3 descriptor, but
+   change the production descriptor to `ready` only after the independent
+   legal decision confirms that RawCull may deliver the converted derivative
+   without reproducing Meta's official gated checkpoint access flow. Technical
+   provenance does not clear that release blocker.
+
+The following packaging section starts only after each candidate has passed
+its applicable provenance, licence, conversion, and runtime validation gates.
 
 ## Preparing the downloadable resources
 
