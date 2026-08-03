@@ -12,7 +12,7 @@ weight = 30
 # AI model licence and provenance clearance procedure
 
 Status: publication hold  
-Last reviewed: 2026-08-02
+Last reviewed: 2026-08-03
 
 ## Purpose and current decision
 
@@ -253,6 +253,79 @@ The pack may pass this gate when both conditions hold:
 If the answer is negative or remains materially ambiguous, replace the model
 with a checkpoint having explicit weight-level redistribution terms or omit
 the DataComp pack.
+
+## DataComp CLIP - no answer
+
+If LAION does not provide a substantive answer after a documented follow-up,
+silence neither grants additional permission nor withdraws the permission
+already stated in the published materials. A release under the displayed MIT
+licence would rely on the public licence evidence rather than individualized
+clearance from LAION. Record it as a maintainer risk-acceptance decision, not as
+an upstream-approved or upstream-cleared release.
+
+The evidence supporting that decision is:
+
+- the exact pinned model repository identifies the model as `License: mit` and
+  contains the weight files;
+- [Hugging Face's licence documentation](https://huggingface.co/docs/hub/repositories-licenses)
+  describes model-card licence metadata as communicating the permissions
+  attributed to repository content; and
+- the [MIT licence](https://opensource.org/license/mit) permits use,
+  modification, publication, redistribution, sublicensing, and sale when its
+  copyright and permission notice accompanies copies or substantial portions.
+
+The residual ambiguity is that the model repository has MIT metadata but no
+standalone `LICENSE` file identifying the trained weights and their copyright
+holder. The OpenCLIP MIT notice clearly covers the OpenCLIP software, but an
+unanswered inquiry leaves no individualized confirmation that it is also the
+intended notice for the trained weights and converted derivative. The model
+card's “out of scope” deployment language appears as safety and intended-use
+guidance rather than licence text, but this interpretation has not been
+confirmed by LAION. Qualified Norwegian counsel remains the recommended way to
+resolve that ambiguity before a public or commercial release.
+
+If the maintainer nevertheless decides to release without an answer, complete
+all of the following before publication:
+
+1. Send and preserve one documented follow-up to LAION. Record the original
+   request, follow-up date, response deadline, and absence of a substantive
+   answer in the private evidence register.
+2. Select `open_clip_model.safetensors` from revision
+   `4afec35ffe57a943d569ff7ee888061830164da8` as the only conversion input. Its
+   pinned Hugging Face metadata reports a byte size of `605189364` and SHA-256
+   `92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27`.
+   Download the file independently and verify both values before conversion.
+3. Re-export the Apple Core AI model from that pinned local file. Do not merely
+   add the upstream hash to the provenance record for the existing conversion;
+   the released derivative must be cryptographically tied to the verified
+   source file.
+4. Preserve dated copies of the pinned repository tree, model card, repository
+   API metadata, MIT licence, OpenCLIP notice, conversion command, dependency
+   versions, and all input and output checksums.
+5. Package the complete applicable MIT copyright and permission notice,
+   OpenCLIP and tokenizer notices, model card, safety limitations, provenance,
+   and conversion information with every redistributed model archive. A link
+   alone is not a substitute for including the required notice.
+6. Keep DataComp CLIP identified as a separate third-party model asset.
+   RawCull's own MIT licence does not relicense the model, and RawCull must not
+   claim ownership of or permission to redistribute the DataComp training
+   dataset.
+7. Complete the common provenance procedure, PhotoAIKit validation, AAR
+   inspection, archive hashing, manifest verification, and download tests.
+   Change `PROVENANCE.json` and the production catalogue to `ready` only after
+   those technical controls describe the new release candidate accurately.
+8. Add a signed and dated release decision stating the evidence relied upon,
+   the unresolved licence ambiguity, whether RawCull is free or commercial,
+   the intended distribution countries and channels, and the responsible
+   maintainer's acceptance of the residual risk.
+9. Keep the model pack independently removable from the manifest and release
+   so distribution can be suspended promptly if a credible rights claim or
+   contrary clarification is received.
+
+Releasing after these steps may provide a defensible MIT-compliance position,
+but it does not eliminate the residual legal risk created by the absence of a
+weight-specific licence file or an authorized response. This procedure records
+the evidence and decision; it is not a legal opinion.
 
 ## OpenAI CLIP clearance
 
