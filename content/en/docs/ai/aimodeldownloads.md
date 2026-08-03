@@ -480,6 +480,298 @@ Likewise, an Apple-hosted build must construct the service with
 Do not mark a descriptor ready merely to test transport. Ready is an
 application-level statement that the exact pack is approved for redistribution.
 
+## DataComp CLIP model for release
+
+RawCull uses the OpenCLIP `ViT-B-32-256` architecture with the
+`datacomp_s34b_b86k` weights. The release input must be the following exact
+file, not a fresh resolution of the OpenCLIP pretrained alias:
+
+| Field | Required value |
+| --- | --- |
+| Repository | `laion/CLIP-ViT-B-32-256x256-DataComp-s34B-b86K` |
+| Revision | `4afec35ffe57a943d569ff7ee888061830164da8` |
+| Source file | `open_clip_model.safetensors` |
+| Byte size | `605189364` |
+| SHA-256 | `92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27` |
+| Architecture | `ViT-B-32-256` |
+| Export precision and shapes | Float16, static batch dimensions |
+
+The repository and revision above are already referenced by RawCull, but the
+existing converted asset was not cryptographically bound to that source file.
+The release model must therefore be a new conversion. Do not copy the source
+hash into the old provenance record and treat the old `.aimodel` as verified.
+
+Hugging Face documents `hf download`, `--revision`, and `--local-dir` in its
+[official CLI guide](https://huggingface.co/docs/huggingface_hub/en/guides/cli).
+Use a full commit hash and a new evidence directory so a cached or floating
+revision cannot silently become the release input.
+
+### Create a clean evidence workspace
+
+The following variables keep the upstream download, converter checkout, and
+generated output separate. Use a new directory if an earlier attempt already
+exists; do not overwrite evidence from a previous conversion.
+
+```sh
+DATACOMP_REPOSITORY='laion/CLIP-ViT-B-32-256x256-DataComp-s34B-b86K'
+DATACOMP_REVISION='4afec35ffe57a943d569ff7ee888061830164da8'
+DATACOMP_SOURCE_FILENAME='open_clip_model.safetensors'
+DATACOMP_EXPECTED_BYTES='605189364'
+DATACOMP_EXPECTED_SHA256='92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27'
+
+DATACOMP_EVIDENCE_ROOT="/Users/thomas/ModelAssets/ReleaseEvidence/CLIP-DataComp/$DATACOMP_REVISION"
+DATACOMP_SOURCE_DIR="$DATACOMP_EVIDENCE_ROOT/source"
+DATACOMP_EXPORT_DIR="$DATACOMP_EVIDENCE_ROOT/export"
+DATACOMP_PHOTOAIKIT_DIR="$DATACOMP_EVIDENCE_ROOT/PhotoAIKit"
+
+mkdir -p "$DATACOMP_SOURCE_DIR" "$DATACOMP_EXPORT_DIR"
+```
+
+The converter itself is part of the evidence chain. RawCull currently resolves
+PhotoAIKit revision
+`2cb07d604beee3549df4d361a5d48b3e9506fb87`. Create a detached, clean checkout
+of that revision rather than changing a development checkout in place:
+
+```sh
+DATACOMP_PHOTOAIKIT_REVISION='2cb07d604beee3549df4d361a5d48b3e9506fb87'
+
+git clone https://github.com/rsyncOSX/PhotoAIKit.git \
+  "$DATACOMP_PHOTOAIKIT_DIR"
+git -C "$DATACOMP_PHOTOAIKIT_DIR" switch --detach \
+  "$DATACOMP_PHOTOAIKIT_REVISION"
+
+test "$(git -C "$DATACOMP_PHOTOAIKIT_DIR" rev-parse HEAD)" = \
+  "$DATACOMP_PHOTOAIKIT_REVISION"
+test -z "$(git -C "$DATACOMP_PHOTOAIKIT_DIR" status --porcelain)"
+```
+
+If RawCull later resolves a different PhotoAIKit revision, review the exporter
+changes, replace the revision in this procedure, and record the new value. The
+release record must identify the revision that was actually executed.
+
+### Download the pinned source model
+
+Download the weight file and the accompanying model information directly into
+the evidence directory:
+
+```sh
+hf download "$DATACOMP_REPOSITORY" \
+  "$DATACOMP_SOURCE_FILENAME" \
+  open_clip_config.json \
+  README.md \
+  --revision "$DATACOMP_REVISION" \
+  --local-dir "$DATACOMP_SOURCE_DIR"
+```
+
+The DataComp repository is public and does not require a token. Preserve the
+download output and the `.cache/huggingface` metadata created under the local
+directory as private release evidence. Also save a dated copy of the repository
+API response and model page showing the revision and MIT designation.
+
+### Verify the source before conversion
+
+Print the downloaded file's checksum and size:
+
+```sh
+shasum -a 256 "$DATACOMP_SOURCE_DIR/$DATACOMP_SOURCE_FILENAME"
+stat -f '%z bytes %N' "$DATACOMP_SOURCE_DIR/$DATACOMP_SOURCE_FILENAME"
+```
+
+The output must contain exactly:
+
+```text
+92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27
+605189364 bytes
+```
+
+Make the verification fail closed before continuing:
+
+```sh
+test "$(shasum -a 256 "$DATACOMP_SOURCE_DIR/$DATACOMP_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
+  "$DATACOMP_EXPECTED_SHA256"
+test "$(stat -f '%z' "$DATACOMP_SOURCE_DIR/$DATACOMP_SOURCE_FILENAME")" = \
+  "$DATACOMP_EXPECTED_BYTES"
+```
+
+If either command fails, stop. Do not convert, rename, repair, or substitute the
+file. Investigate the download and upstream revision first.
+
+### Export from the verified local Safetensors file
+
+`PhotoAIKit/Tools/export_clip.py` normally accepts the
+`datacomp_s34b_b86k` pretrained tag. Using that tag for this conversion would
+allow OpenCLIP to resolve the checkpoint again and would repeat the provenance
+problem. OpenCLIP 3.2.0 also accepts a local checkpoint path through the same
+`pretrained` parameter. Run the tool while the verified file is the current
+directory and pass its local filename explicitly:
+
+```sh
+cd "$DATACOMP_SOURCE_DIR"
+
+uv run --script "$DATACOMP_PHOTOAIKIT_DIR/Tools/export_clip.py" \
+  --model openclip-datacomp \
+  --architecture ViT-B-32-256 \
+  --pretrained open_clip_model.safetensors \
+  --output-dir "$DATACOMP_EXPORT_DIR" \
+  --bundle-name CLIP-DataComp \
+  --dtype float16
+```
+
+Do not add `--dynamic`; RawCull's release model uses static batch dimensions.
+Do not add `--overwrite` to the evidence run. If the destination exists, keep
+it as evidence and start a new attempt in a new directory.
+
+The script's PEP 723 metadata pins the Python conversion dependencies,
+including `coreai-core`, `coreai-torch`, OpenCLIP, PyTorch, torchvision, and
+Transformers. Preserve the complete terminal log and record at least:
+
+```sh
+uv --version
+python3 --version
+sw_vers
+xcodebuild -version
+git -C "$DATACOMP_PHOTOAIKIT_DIR" rev-parse HEAD
+git -C "$DATACOMP_PHOTOAIKIT_DIR" show HEAD:Package.swift
+```
+
+The exporter verifies tokenizer parity, creates independent `image_encoder`
+and `text_encoder` Core AI functions, optimizes the runtime asset, saves the
+CLIP tokenizer, and writes a fingerprint for the runtime asset into
+`metadata.json`.
+
+Because the verified local filename is supplied through `--pretrained`, the
+current exporter produces this runtime directory:
+
+```text
+CLIP-DataComp/
+├── metadata.json
+├── tokenizer/
+├── ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel/
+└── ViT-B-32-256-open_clip_model.safetensors_float16_static_source.aimodel/
+```
+
+The `_source.aimodel` directory is a conversion intermediate. Preserve it in
+private evidence, but do not include it in the downloadable asset pack. Do not
+rename the runtime directory without also regenerating `metadata.json` and its
+asset reference. RawCull resolves the runtime filename from `assets.main`; it
+does not require the previous alias-derived filename.
+
+### Inspect and fingerprint the generated bundle
+
+Set the generated paths and confirm the required files exist:
+
+```sh
+DATACOMP_BUNDLE="$DATACOMP_EXPORT_DIR/CLIP-DataComp"
+DATACOMP_RUNTIME_ASSET="$DATACOMP_BUNDLE/ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel"
+
+test -f "$DATACOMP_BUNDLE/metadata.json"
+test -f "$DATACOMP_BUNDLE/tokenizer/tokenizer.json"
+test -d "$DATACOMP_RUNTIME_ASSET"
+
+plutil -extract architecture raw -o - "$DATACOMP_BUNDLE/metadata.json"
+plutil -extract assets.main raw -o - "$DATACOMP_BUNDLE/metadata.json"
+plutil -extract asset_fingerprints.main.value raw -o - \
+  "$DATACOMP_BUNDLE/metadata.json"
+
+python3 "$DATACOMP_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$DATACOMP_RUNTIME_ASSET"
+```
+
+The architecture must be `ViT-B-32-256`, `assets.main` must name the runtime
+asset above, and the fingerprint printed by `model_fingerprint.py` must equal
+`asset_fingerprints.main.value` in `metadata.json`.
+
+Verify the tokenizer produced by the exporter:
+
+```sh
+shasum -a 256 "$DATACOMP_BUNDLE/tokenizer/tokenizer.json"
+```
+
+The currently audited tokenizer SHA-256 is
+`6d9109cc838977f3ca94a379eec36aecc7c807e1785cd729660ca2fc0171fb35`.
+If the new export differs, stop and audit the tokenizer source and exporter
+behavior instead of silently replacing the recorded checksum.
+
+Record a fresh directory fingerprint and locate and hash the runtime
+`main.mlirb` file. These are new conversion outputs and are not expected to
+match the hashes of the previous unverified conversion:
+
+```sh
+python3 "$DATACOMP_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$DATACOMP_RUNTIME_ASSET"
+find "$DATACOMP_RUNTIME_ASSET" -type f -name main.mlirb \
+  -exec shasum -a 256 {} \;
+```
+
+### Validate the bundle with PhotoAIKit and RawCull
+
+First run the tests for the exact PhotoAIKit checkout used by the exporter:
+
+```sh
+swift test --package-path "$DATACOMP_PHOTOAIKIT_DIR"
+```
+
+These tests verify the package contracts but do not replace validation of the
+generated bundle. For an end-to-end check, install a copy of the complete
+`CLIP-DataComp` directory at the DataComp path displayed by
+**RawCull > Settings > AI**. A non-sandboxed development build normally uses:
+
+```text
+/Users/thomas/Library/Application Support/RawCull/Models/CLIP-DataComp/
+```
+
+A sandboxed build normally uses:
+
+```text
+/Users/thomas/Library/Containers/no.blogspot.RawCull/Data/Library/Application Support/RawCull/Models/CLIP-DataComp/
+```
+
+Use an empty destination. Move any previous test model to a separately named
+backup directory; do not merge old and new bundle contents. Launch RawCull,
+open **Settings > AI**, and choose **Check Again**. The DataComp model must
+become available without a checksum or metadata error. Select DataComp, enable
+CLIP similarity, and smoke-test both image similarity and text-to-image
+semantic search. The first load may take longer while macOS specializes the
+portable Core AI asset for that Mac.
+
+PhotoAIKit's `ModelBundleResolver` verifies `metadata.json`, the selected asset,
+the required tokenizer, and the asset fingerprint. `CoreAICLIPProvider` then
+validates the runtime configuration and the normalized embedding outputs. A
+successful export command alone is not sufficient release validation.
+
+### Move the approved candidate into release staging
+
+After validation, copy the complete generated bundle—not the manually
+installed test copy—into:
+
+```text
+/Users/thomas/ModelAssets/Release/Models/CLIP-DataComp/
+```
+
+Update all release records to describe the new candidate accurately:
+
+1. In `ModelAssets/Notices/CLIP-DataComp/PROVENANCE.json`, record the upstream
+   repository, revision, source filename, `605189364` byte size, source
+   SHA-256, PhotoAIKit commit, dependency versions, conversion command,
+   tokenizer checksum, runtime asset filename, asset fingerprint, and
+   `main.mlirb` checksum.
+2. Update `NOTICE.md` if it names the old runtime asset. Keep the complete MIT,
+   tokenizer, and Apple conversion notices with the pack.
+3. Change `Packaging/clip-datacomp.json` to select `metadata.json`, `tokenizer`,
+   the new runtime `.aimodel`, and `Notices/CLIP-DataComp`. Do not select the
+   bundle root or `_source.aimodel`.
+4. Rebuild and inspect `clip-datacomp.aar`, then record its new byte size and
+   SHA-256 in the provenance record and RawCull catalogue.
+5. Do not reuse the previous runtime, AAR, or manifest hashes. Changing the
+   model fingerprint also deliberately invalidates incompatible cached CLIP
+   embeddings.
+6. Change the production descriptor to `ready` only after the separate licence
+   decision is recorded and every provenance, validation, notice, archive, and
+   download check has passed.
+
+The following packaging section starts after the new bundle has passed this
+procedure.
+
 ## Preparing the downloadable resources
 
 ### Use an asset-pack archive, not a ZIP
@@ -560,7 +852,7 @@ The three manifests select these runtime models and notice catalogs:
 
 | Manifest | Runtime model directory | Notice catalog |
 | --- | --- | --- |
-| `clip-datacomp.json` | `Models/CLIP-DataComp/ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel` | `Notices/CLIP-DataComp` |
+| `clip-datacomp.json` | `Models/CLIP-DataComp/ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel` | `Notices/CLIP-DataComp` |
 | `clip-openai.json` | `Models/CLIP-OpenAI/clip-vit-base-patch32_float16_static.aimodel` | `Notices/CLIP-OpenAI` |
 | `sam3.json` | `Models/SAM3/sam3_float16.aimodel` | `Notices/SAM3` |
 
@@ -596,7 +888,9 @@ shasum -a 256 /Users/thomas/ModelsAAR/Output-lean/*.aar
 stat -f '%N %z bytes' /Users/thomas/ModelsAAR/Output-lean/*.aar
 ```
 
-The verified lean build from August 2, 2026 produced:
+The historical, unpublished lean build from August 2, 2026 produced the values
+below. The DataComp archive predates the pinned-source re-export procedure and
+must be rebuilt; do not use its listed size or checksum for the release pack.
 
 | Archive | Bytes | SHA-256 |
 | --- | ---: | --- |
