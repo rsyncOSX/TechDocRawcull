@@ -4,7 +4,7 @@ title = "AI Model Download Service"
 linkTitle = "AI Model Downloads"
 date = "2026-07-31"
 description = "Architecture, storage, activation, and operation of RawCull AI model downloads using self-hosted or Apple-hosted Managed Background Assets."
-tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
+tags = ["ai", "models", "downloads", "efficient-sam", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 30
 +++
@@ -93,6 +93,10 @@ The canonical notice catalogs are checked into RawCull under
   BSD 3-Clause notice. Release remains blocked until the MIT terms are verified
   as applying to the exact checkpoint weights and the cached immutable
   revision and source checksum are conclusively bound to the converted output.
+- EfficientSAM uses the upstream Apache License 2.0 and Apple's
+  `coreai-models` BSD 3-Clause conversion code. Redistribution remains blocked
+  until the exact EfficientSAM source revision, checkpoint checksum, converted
+  asset fingerprint, archive checksum, and complete notices are recorded.
 - Meta SAM 3 now includes the complete SAM License dated November 19, 2025 and
   Apple's `coreai-models` BSD 3-Clause notice. RawCull also bundles that verified
   SAM licence text for explicit user acceptance. Release remains blocked until
@@ -390,7 +394,7 @@ validation:
 | `RawCullAIModelDownloadCoordinator` | Refuses blocked releases and enforces explicit licence acceptance. |
 | `RawCullManagedBackgroundAssetsModelDownloadService` | Uses `AssetPackManager` for both hosting modes. |
 | `RawCullModelDownloader` | Compiles as the self-hosted or Apple-hosted downloader extension. |
-| `RawCullAIIntegration` | Validates installed bundles and creates the CLIP or SAM 3 runtime provider. |
+| `RawCullAIIntegration` | Validates installed bundles and creates the CLIP, EfficientSAM, or SAM 3 runtime provider. |
 
 A refresh first checks each catalogue descriptor's `releaseReadiness`. A
 blocked model becomes unavailable before any manifest request. For an approved
@@ -419,6 +423,7 @@ The template defines these logical packs:
 | --- | --- | --- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
 | OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
+| EfficientSAM | `no.blogspot.RawCull.models.efficient-sam` | `Models/EfficientSAM` |
 | Meta SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
 
 `ModelAssets/manifest.template.json` is a developer input, not the deployable
@@ -428,8 +433,9 @@ applicable licence text, immutable upstream revision, source and archive
 checksums, and conversion metadata.
 
 The checked-in `ModelAssets/Notices` directory is the canonical source for the
-three pack-specific notice catalogs. Copy the catalogs into the staging tree
-before packaging. The release manifests use explicit selectors so that the
+three existing pack-specific notice catalogs. Add and review an EfficientSAM
+notice catalog before packaging that fourth model. Copy the matching catalogs
+into the staging tree before packaging. The release manifests use explicit selectors so that the
 runtime model and required resources are included while `_source.aimodel`,
 compiled intermediates, and unrelated files are excluded.
 
@@ -1153,6 +1159,138 @@ Update the release records for the new candidate:
 The following packaging section starts only after each candidate has passed
 its applicable provenance, licence, conversion, and runtime validation gates.
 
+## EfficientSAM model for local use
+
+RawCull supports Apple's Core AI conversion of EfficientSAM ViT-Tiny through
+PhotoAIKit's `CoreAIEfficientSAMBackend`. EfficientSAM is point-prompted rather
+than text-prompted. RawCull sends an empty point query: a one-query export uses
+the image center, while a perfect-square multi-query export makes the Core AI
+runtime place a regular grid of foreground points and PhotoAIKit returns the
+highest-confidence mask.
+
+For unattended Deep Review, create the 64-query, one-point variant. This gives
+an 8 × 8 segment-everything grid and is more suitable than the exporter's
+single-center-point default when the subject is off center.
+
+The procedure below creates a local model bundle only. It does not approve the
+bundle for redistribution or turn on RawCull's disabled production download.
+
+### Download the matching Core AI converter
+
+PhotoAIKit currently pins Apple's `coreai-models` revision shown below. Use the
+same revision so the exporter and Swift runtime agree:
+
+```sh
+EFFICIENTSAM_COREAI_REVISION='bffc38fe48f50e4e962ac9772b64a5b55a605286'
+EFFICIENTSAM_WORK_ROOT='/Users/thomas/ModelAssets/LocalBuild/EfficientSAM'
+EFFICIENTSAM_COREAI_DIR="$EFFICIENTSAM_WORK_ROOT/coreai-models"
+EFFICIENTSAM_EXPORT_DIR="$EFFICIENTSAM_WORK_ROOT/export"
+
+mkdir -p "$EFFICIENTSAM_WORK_ROOT" "$EFFICIENTSAM_EXPORT_DIR"
+git clone https://github.com/apple/coreai-models.git \
+  "$EFFICIENTSAM_COREAI_DIR"
+git -C "$EFFICIENTSAM_COREAI_DIR" switch --detach \
+  "$EFFICIENTSAM_COREAI_REVISION"
+
+test "$(git -C "$EFFICIENTSAM_COREAI_DIR" rev-parse HEAD)" = \
+  "$EFFICIENTSAM_COREAI_REVISION"
+test -z "$(git -C "$EFFICIENTSAM_COREAI_DIR" status --porcelain)"
+```
+
+The official exporter obtains the ViT-Tiny EfficientSAM implementation from
+`yformer/EfficientSAM` and downloads
+`efficient_sam_vitt.pt` from the `merve/EfficientSAM` Hugging Face repository.
+No separate manual checkpoint download is required for a local build. Preserve
+the terminal log and the downloaded checkpoint checksum if the result may
+later become a distributable model.
+
+### Create the RawCull EfficientSAM bundle
+
+Install `uv` if necessary, then run the exporter from the pinned checkout:
+
+```sh
+brew install uv
+
+cd "$EFFICIENTSAM_COREAI_DIR"
+uv run models/efficient-sam/export.py \
+  --model efficient_sam_vitt \
+  --dtype float16 \
+  --num-queries 64 \
+  --num-pts 1 \
+  --output-dir "$EFFICIENTSAM_EXPORT_DIR"
+```
+
+Do not add `--dynamic` to this Float16 export. Apple's runtime does not support
+the dynamic attention reshape in Float16. Do not add `--overwrite` to an
+evidence build; use a clean output directory instead.
+
+The expected generated bundle is:
+
+```text
+efficient_sam_vitt_float16_static_q64/
+├── metadata.json
+└── efficient_sam_vitt_float16_static_q64.aimodel/
+```
+
+EfficientSAM is point-only, so it does not need the `tokenizer` directory that
+CLIP and SAM 3 bundles require. Confirm that `metadata.json` selects the model
+asset and that both paths exist:
+
+```sh
+EFFICIENTSAM_BUNDLE="$EFFICIENTSAM_EXPORT_DIR/efficient_sam_vitt_float16_static_q64"
+EFFICIENTSAM_ASSET="$EFFICIENTSAM_BUNDLE/efficient_sam_vitt_float16_static_q64.aimodel"
+
+test -f "$EFFICIENTSAM_BUNDLE/metadata.json"
+test -d "$EFFICIENTSAM_ASSET"
+test "$(plutil -extract kind raw -o - "$EFFICIENTSAM_BUNDLE/metadata.json")" = \
+  'segmenter'
+test "$(plutil -extract assets.main raw -o - "$EFFICIENTSAM_BUNDLE/metadata.json")" = \
+  'efficient_sam_vitt_float16_static_q64.aimodel'
+
+shasum -a 256 \
+  "$EFFICIENTSAM_COREAI_DIR/.build/efficient_sam_weights.pt"
+```
+
+The checkpoint checksum printed by the last command is provenance evidence.
+Record it together with the `coreai-models` revision and the exact export
+command if the bundle will be retained.
+
+### Install and select EfficientSAM in RawCull
+
+RawCull expects the complete generated bundle contents in a directory named
+`EfficientSAM`. For a non-sandboxed development build, install it with:
+
+```sh
+EFFICIENTSAM_INSTALL_DIR='/Users/thomas/Library/Application Support/RawCull/Models/EfficientSAM'
+
+test ! -e "$EFFICIENTSAM_INSTALL_DIR"
+mkdir -p "$(dirname "$EFFICIENTSAM_INSTALL_DIR")"
+ditto "$EFFICIENTSAM_BUNDLE" "$EFFICIENTSAM_INSTALL_DIR"
+```
+
+A sandboxed build normally uses:
+
+```text
+/Users/thomas/Library/Containers/no.blogspot.RawCull/Data/Library/Application Support/RawCull/Models/EfficientSAM/
+```
+
+Do not merge the bundle into a previous model directory. In RawCull, open
+**Settings > AI**, choose **Check Again**, and verify that **EfficientSAM
+model** is available. Select **EfficientSAM** under **Deep Review segmentation
+model**. The in-process readiness row must then show EfficientSAM as available.
+
+EfficientSAM does not interpret the Deep Review target names such as person,
+bird, or face. Those values remain in PhotoAIKit's common diagnostics and cache
+keys, but the EfficientSAM provider uses the same grid-driven mask acquisition
+for each target. Select SAM 3 when text-guided target semantics are required.
+
+For a future downloadable pack, stage the approved bundle as
+`Models/EfficientSAM`, add complete EfficientSAM Apache 2.0 and Apple BSD
+3-Clause notices, record the checkpoint and converted-asset fingerprints, and
+package it with asset-pack ID
+`no.blogspot.RawCull.models.efficient-sam`. Keep the production catalogue entry
+blocked until those release records and archive checks are complete.
+
 ## Preparing the downloadable resources
 
 ### Use an asset-pack archive, not a ZIP
@@ -1187,16 +1325,21 @@ ModelAssets/Release/
 │   ├── CLIP-OpenAI/
 │   │   ├── metadata.json
 │   │   └── … .aimodel or .aimodelc plus declared resources …
+│   ├── EfficientSAM/
+│   │   ├── metadata.json
+│   │   └── … .aimodel or .aimodelc plus declared resources …
 │   └── SAM3/
 │       ├── metadata.json
 │       └── … .aimodel or .aimodelc plus declared resources …
 ├── Notices/
 │   ├── CLIP-DataComp/
 │   ├── CLIP-OpenAI/
+│   ├── EfficientSAM/
 │   └── SAM3/
 ├── Packaging/
 │   ├── clip-datacomp.json
 │   ├── clip-openai.json
+│   ├── efficient-sam.json
 │   └── sam3.json
 └── Output/
 ```
@@ -1229,16 +1372,18 @@ the complete model directory. For example, `Packaging/clip-openai.json` is:
 }
 ```
 
-The three manifests select these runtime models and notice catalogs:
+The four manifests select these runtime models and notice catalogs:
 
 | Manifest | Runtime model directory | Notice catalog |
 | --- | --- | --- |
 | `clip-datacomp.json` | `Models/CLIP-DataComp/ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel` | `Notices/CLIP-DataComp` |
 | `clip-openai.json` | `Models/CLIP-OpenAI/clip-vit-base-patch32_float16_static.aimodel` | `Notices/CLIP-OpenAI` |
+| `efficient-sam.json` | `Models/EfficientSAM/efficient_sam_vitt_float16_static_q64.aimodel` | `Notices/EfficientSAM` |
 | `sam3.json` | `Models/SAM3/sam3_float16.aimodel` | `Notices/SAM3` |
 
-Each manifest also selects its model's `metadata.json` file and `tokenizer`
-directory. Do not replace these selectors with the broader model root. The
+Each manifest also selects its model's `metadata.json` file. The CLIP and SAM
+3 manifests additionally select their `tokenizer` directory; EfficientSAM has
+no tokenizer. Do not replace these selectors with the broader model root. The
 broad selector also packages `_source.aimodel`, `.aimodelc`, or other
 conversion outputs that are not required at runtime.
 
@@ -1246,7 +1391,7 @@ Selector paths are relative. The tool resolves them against its current working
 directory, includes directory contents recursively, and preserves their
 logical paths. Run it from the release staging root.
 
-The checked-in `ModelAssets/manifest.template.json` is only a three-pack
+The checked-in `ModelAssets/manifest.template.json` is only a four-pack
 design skeleton. It is **not directly accepted by `ba-package`**. The tool
 expects one top-level `assetPackID` per packaging manifest and a relative path
 for every selector. Generate a fresh starting point with
@@ -1262,6 +1407,8 @@ xcrun ba-package package Packaging/clip-datacomp.json \
   --output-path /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar
 xcrun ba-package package Packaging/clip-openai.json \
   --output-path /Users/thomas/ModelsAAR/Output-lean/clip-openai.aar
+xcrun ba-package package Packaging/efficient-sam.json \
+  --output-path /Users/thomas/ModelsAAR/Output-lean/efficient-sam.aar
 xcrun ba-package package Packaging/sam3.json \
   --output-path /Users/thomas/ModelsAAR/Output-lean/sam3.aar
 
@@ -1277,6 +1424,7 @@ must be rebuilt; do not use its listed size or checksum for the release pack.
 | --- | ---: | --- |
 | `clip-datacomp.aar` | 282,967,203 | `ab109bd64f61629d33a20c55364f0e40f98cbd070547d02a86d018de5ec4a8e6` |
 | `clip-openai.aar` | 282,829,540 | `24e403f2f58cdea5765fb105d10fd37a57d4e53f5830e9b7248053e0229712dc` |
+| `efficient-sam.aar` | Not generated | Not generated |
 | `sam3.aar` | 1,542,689,135 | `f207db7d83fdb90baff6f32e894935f9267e3ebdc276358011d41bd36d5cd4df` |
 
 Compared with the broad-directory archives, the two CLIP packs are about half
@@ -1299,8 +1447,9 @@ policies, and download URLs.
 xcrun ba-package download-manifest create \
   /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
   /Users/thomas/ModelsAAR/Output-lean/clip-openai.aar \
+  /Users/thomas/ModelsAAR/Output-lean/efficient-sam.aar \
   /Users/thomas/ModelsAAR/Output-lean/sam3.aar \
-  --asset-pack-versions 1 1 1 \
+  --asset-pack-versions 1 1 1 1 \
   --macos \
   --download-base-url \
   https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/ \
@@ -1314,6 +1463,7 @@ the GitHub Release asset names match its URLs exactly. The planned URLs are:
 ```text
 https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-datacomp
 https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-openai
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.efficient-sam
 https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.sam3
 ```
 
@@ -1373,7 +1523,7 @@ Apple-hosted app and extension configuration described above.
     and verifies that it is a directory. Incorrect archive organization becomes
     `downloadedModelNotFound`.
 11. The row changes to `validating`; the URL becomes a candidate for the
-    matching CLIP or SAM 3 resource manager.
+    matching CLIP, EfficientSAM, or SAM 3 resource manager.
 12. PhotoAIKit validates `metadata.json`, the chosen `.aimodel` or
     `.aimodelc`, declared resources, and the runtime contract. Only then does
     RawCull construct a provider and refresh feature capabilities.
