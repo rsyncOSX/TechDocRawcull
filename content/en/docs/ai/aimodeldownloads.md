@@ -1171,7 +1171,7 @@ unversioned Core AI source locations and later fail to compile with
 | Implementation repository  | `yformer/EfficientSAM`                                             |
 | Implementation revision    | `d525f622e6f640acf5a0fc37c7ca1f243da5bde0`                         |
 | Checkpoint repository      | `merve/EfficientSAM`                                               |
-| Checkpoint revision        | `517e547d40d8d5b5fc9bc8c8334414ce9a0927e6`                         |
+| Checkpoint revision        | `38bb0b55425abf62274ba4a8c51249e3d7298b70`                         |
 | Source file                | `efficient_sam_vitt.pt`                                            |
 | Byte size                  | `40982470`                                                         |
 | SHA-256                    | `dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a` |
@@ -1192,7 +1192,7 @@ runtime validation tools together in a new evidence directory:
 ```sh
 EFFICIENTSAM_IMPLEMENTATION_REVISION='d525f622e6f640acf5a0fc37c7ca1f243da5bde0'
 EFFICIENTSAM_CHECKPOINT_REPOSITORY='merve/EfficientSAM'
-EFFICIENTSAM_CHECKPOINT_REVISION='517e547d40d8d5b5fc9bc8c8334414ce9a0927e6'
+EFFICIENTSAM_CHECKPOINT_REVISION='38bb0b55425abf62274ba4a8c51249e3d7298b70'
 EFFICIENTSAM_SOURCE_FILENAME='efficient_sam_vitt.pt'
 EFFICIENTSAM_EXPECTED_BYTES='40982470'
 EFFICIENTSAM_EXPECTED_SHA256='dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a'
