@@ -1156,8 +1156,8 @@ applicable provenance, licence, conversion, and runtime validation gates.
 
 RawCull uses EfficientSAM ViT-Tiny through PhotoAIKit's
 `CoreAIEfficientSAMBackend`. EfficientSAM is point-prompted rather than
-text-prompted. For unattended Deep Review, RawCull uses a 64-query, one-point
-model: the Core AI runtime places an 8 × 8 grid of foreground points and the
+text-prompted. For unattended Deep Review, RawCull uses a 16-query, one-point
+model: the Core AI runtime places a 4 × 4 grid of foreground points and the
 backend returns the highest-confidence mask.
 
 The release candidate must be rebuilt from the exact implementation, checkpoint,
@@ -1165,6 +1165,12 @@ and converter revisions below. Do not use the earlier asset made with
 `coreai-core 1.0.0b1` and `coreai-torch 0.4.0`. That toolchain can emit
 unversioned Core AI source locations and later fail to compile with
 `expected AICode versioned location` and `cannot unwrap empty odiec_module_t`.
+
+Do not use a 64-query export on RawCull's 16-GB baseline. EfficientSAM first
+emits three 1024 × 1024 candidate masks for every query, so a Q64 graph has a
+large fixed GPU and host-memory peak and fails on the baseline M4 with
+`kIOGPUCommandBufferCallbackErrorOutOfMemory`. The Q16 configuration below
+completed segment-everything inference on that Mac and is the release target.
 
 | Field                      | Required value                                                     |
 | -------------------------- | ------------------------------------------------------------------ |
@@ -1177,7 +1183,7 @@ unversioned Core AI source locations and later fail to compile with
 | SHA-256                    | `dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a` |
 | Apple converter revision   | `c2a0274af289bf481e2d6fd292a86a5bff038f12`                         |
 | Python conversion packages | `coreai-core 1.0.0b2`, `coreai-torch 0.4.1`                        |
-| Export configuration       | Float16, static batch, 64 queries, one point per query             |
+| Export configuration       | Float16, static batch, 16 queries, one point per query             |
 
 The source checkpoint is public, but technical access does not by itself make
 the converted asset releasable. Complete the Apache 2.0 and Apple BSD 3-Clause
@@ -1326,7 +1332,7 @@ TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
 uv run --locked --script models/efficient-sam/export.py \
   --model efficient_sam_vitt \
   --dtype float16 \
-  --num-queries 64 \
+  --num-queries 16 \
   --num-pts 1 \
   --output-dir "$EFFICIENTSAM_EXPORT_DIR"
 ```
@@ -1358,9 +1364,9 @@ reserialization can have different bytes.
 The expected generated directory is:
 
 ```text
-efficient_sam_vitt_float16_static_q64/
+efficient_sam_vitt_float16_static_q16/
 ├── metadata.json
-└── efficient_sam_vitt_float16_static_q64.aimodel/
+└── efficient_sam_vitt_float16_static_q16.aimodel/
 ```
 
 EfficientSAM is point-only and therefore has no tokenizer directory.
@@ -1370,8 +1376,8 @@ EfficientSAM is point-only and therefore has no tokenizer directory.
 Set the generated paths and verify the metadata and runtime asset:
 
 ```sh
-EFFICIENTSAM_BUNDLE="$EFFICIENTSAM_EXPORT_DIR/efficient_sam_vitt_float16_static_q64"
-EFFICIENTSAM_RUNTIME_ASSET="$EFFICIENTSAM_BUNDLE/efficient_sam_vitt_float16_static_q64.aimodel"
+EFFICIENTSAM_BUNDLE="$EFFICIENTSAM_EXPORT_DIR/efficient_sam_vitt_float16_static_q16"
+EFFICIENTSAM_RUNTIME_ASSET="$EFFICIENTSAM_BUNDLE/efficient_sam_vitt_float16_static_q16.aimodel"
 
 test -f "$EFFICIENTSAM_BUNDLE/metadata.json"
 test -d "$EFFICIENTSAM_RUNTIME_ASSET"
@@ -1380,7 +1386,7 @@ test "$(plutil -extract metadata_version raw -o - "$EFFICIENTSAM_BUNDLE/metadata
 test "$(plutil -extract kind raw -o - "$EFFICIENTSAM_BUNDLE/metadata.json")" = \
   'segmenter'
 test "$(plutil -extract assets.main raw -o - "$EFFICIENTSAM_BUNDLE/metadata.json")" = \
-  'efficient_sam_vitt_float16_static_q64.aimodel'
+  'efficient_sam_vitt_float16_static_q16.aimodel'
 
 python3 "$EFFICIENTSAM_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
   "$EFFICIENTSAM_RUNTIME_ASSET"
@@ -1426,7 +1432,7 @@ scene with no clear subject.
 
 EfficientSAM does not interpret target names such as person, bird, or face.
 Those values remain in the common diagnostics and cache keys, while this backend
-uses the same 8 × 8 point grid for every target. Use SAM 3 when text-guided
+uses the same 4 × 4 point grid for every target. Use SAM 3 when text-guided
 target semantics are required.
 
 A successful Python export is not sufficient validation. PhotoAIKit must resolve
@@ -1551,7 +1557,7 @@ The four manifests select these runtime models and notice catalogs:
 | -------------------- | -------------------------------------------------------------------------------------- | ----------------------- |
 | `clip-datacomp.json` | `Models/CLIP-DataComp/ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel` | `Notices/CLIP-DataComp` |
 | `clip-openai.json`   | `Models/CLIP-OpenAI/clip-vit-base-patch32_float16_static.aimodel`                      | `Notices/CLIP-OpenAI`   |
-| `efficient-sam.json` | `Models/EfficientSAM/efficient_sam_vitt_float16_static_q64.aimodel`                    | `Notices/EfficientSAM`  |
+| `efficient-sam.json` | `Models/EfficientSAM/efficient_sam_vitt_float16_static_q16.aimodel`                    | `Notices/EfficientSAM`  |
 | `sam3.json`          | `Models/SAM3/sam3_float16.aimodel`                                                     | `Notices/SAM3`          |
 
 Each manifest also selects its model's `metadata.json` file. The CLIP and SAM 3
