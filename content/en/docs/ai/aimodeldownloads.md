@@ -1676,6 +1676,64 @@ For Apple hosting, generate the same AAR files but not the self-hosted download
 manifest. Upload the packs and versions in App Store Connect, then use the
 Apple-hosted app and extension configuration described above.
 
+## Hosting Apple Background Assets (.aar) on GitHub Releases
+
+GitHub Releases easily accommodates your 500 MB `.aar` file because it supports individual file sizes up to **2 GB**. Follow this step-by-step guide to generate your manifest and upload your files securely using the macOS Terminal.
+
+---
+
+### Step 1: Create the Download Manifest
+
+Run the `xcrun` command to analyze your local `.aar` file and generate the matching `manifest.json`. Ensure your `--download-base-url` exactly matches your intended GitHub Release structure.
+
+```bash
+xcrun ba-package download-manifest create \
+  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
+  --asset-pack-versions 1 1 1 1 \
+  --macos \
+  --download-base-url https://github.com \
+  --output-path /Users/thomas/ModelsAAR/Output-lean/manifest.json
+```
+
+---
+
+### Step 2: Install and Authenticate GitHub CLI
+
+Using the GitHub CLI (`gh`) is highly recommended over a web browser for 500 MB uploads to prevent network timeouts and upload corruptions.
+
+1. **Install GitHub CLI** using Homebrew:
+   ```bash
+   brew install gh
+   ```
+
+2. **Log into your GitHub account** (follow the on-screen prompts to authorize via your browser):
+   ```bash
+   gh auth login
+   ```
+
+---
+
+### Step 3: Upload the Files to your GitHub Release
+
+Run the upload command to attach both the raw asset package and its corresponding manifest to your `v1` release. 
+
+```bash
+gh release upload v1 \
+  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
+  /Users/thomas/ModelsAAR/Output-lean/manifest.json \
+  --repo rsyncOSX/RawCull-AI-Models
+```
+
+*Note: If the release tag `v1` does not exist yet, create it first using `gh release create v1 --title "v1 Release"`.*
+
+---
+
+### Important Architecture Rules
+
+* **Do Not Use Standard Git Push:** Keep the `clip-datacomp.aar` file out of your main Git repository history. Pushing files over 100 MB via standard `git push` will be rejected by GitHub.
+* **Match URLs Exactly:** The Background Assets framework on macOS will look for the asset by appending the file name to your base URL. Verify that your file is accessible at:
+  `https://github.comclip-datacomp.aar`
+
 ## What happens when the user selects Download
 
 1. `startModelDownload` accepts only a ready or retryable failed row and
