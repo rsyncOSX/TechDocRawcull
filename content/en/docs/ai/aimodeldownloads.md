@@ -1692,7 +1692,7 @@ Run the `xcrun` command to analyze your local `.aar` file and generate the match
 ```bash
 xcrun ba-package download-manifest create \
   /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
-  --asset-pack-versions 1 1 1 1 \
+  --asset-pack-versions 1 \
   --macos \
   --download-base-url https://github.com \
   --output-path /Users/thomas/ModelsAAR/Output-lean/manifest.json
