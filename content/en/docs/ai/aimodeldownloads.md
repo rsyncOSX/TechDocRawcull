@@ -608,15 +608,18 @@ parameter. Run the tool while the verified file is the current directory and
 pass its local filename explicitly:
 
 ```sh
-cd "$DATACOMP_SOURCE_DIR"
+(
+  cd "$(dirname "$DATACOMP_PHOTOAIKIT_DIR")/source" || exit 1
 
-uv run --script "$DATACOMP_PHOTOAIKIT_DIR/Tools/export_clip.py" \
-  --model openclip-datacomp \
-  --architecture ViT-B-32-256 \
-  --pretrained open_clip_model.safetensors \
-  --output-dir "$DATACOMP_EXPORT_DIR" \
-  --bundle-name CLIP-DataComp \
-  --dtype float16
+  uv run --python 3.13 \
+    --script "$DATACOMP_PHOTOAIKIT_DIR/Tools/export_clip.py" \
+    --model openclip-datacomp \
+    --architecture ViT-B-32-256 \
+    --pretrained open_clip_model.safetensors \
+    --output-dir "$DATACOMP_EXPORT_DIR" \
+    --bundle-name CLIP-DataComp \
+    --dtype float16
+)
 ```
 
 Do not add `--dynamic`; RawCull's release model uses static batch dimensions. Do
