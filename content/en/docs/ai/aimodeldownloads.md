@@ -15,14 +15,14 @@ RawCull uses Managed Background Assets for optional AI model bundles. The app
 talks only to `AssetPackManager`; the downloader extension selects whether the
 packs are self-hosted or Apple-hosted.
 
-The current build is deliberately configured for self-hosting with the
-non-routable placeholder:
+The production build is configured for the public model-release manifest:
 
-`https://example.invalid/rawcull/models/manifest.json`
+`https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json`
 
-This keeps the full user interface, progress, cancellation, removal, local
-licence acceptance, and model validation path in place without making a live
-network request.
+Only catalogue entries whose release readiness is `ready` appear as
+downloadable. The DataComp CLIP pack is on demand, so no model transfer starts
+until the user selects **Download**. Progress, cancellation, removal, local
+licence handling, and model validation remain managed by RawCull.
 
 The app and extension share only the Managed Background Assets container
 `group.no.blogspot.RawCull.model-assets`. This identifier is also recorded as
@@ -37,7 +37,7 @@ Store or TestFlight build. The extension already contains an Apple-hosted
 `RAWCULL_APPLE_HOSTED_MODEL_ASSETS` compilation condition, so the application
 service and UI do not change when hosting changes.
 
-### Planned GitHub release origin
+### GitHub release origin
 
 The proposed self-hosted origin is a dedicated repository, separate from the
 RawCull application releases:
@@ -46,7 +46,7 @@ RawCull application releases:
 https://github.com/rsyncOSX/RawCull-AI-Models
 ```
 
-The first immutable model-set release is planned as:
+The first model-set release is:
 
 | Field             | Value                                                                 |
 | ----------------- | --------------------------------------------------------------------- |
@@ -62,10 +62,10 @@ is below GitHub's 2 GiB per-release-asset limit; GitHub documents the current
 limits under
 [About releases](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas).
 
-No model archive has been uploaded. Keep the release unpublished until all
-licence and provenance gates below are resolved. If a draft release is created
-for preparation, do not publish it or mark it as the RawCull application's
-latest release.
+The `v1` release currently contains `clip-datacomp.aar` and `manifest.json`.
+The app pins the manifest and archive to the `v1` download path. GitHub's
+`releases/latest/download` redirect excludes prereleases and therefore cannot
+be used while `v1` is classified as a prerelease.
 
 For an Apple-hosted configuration:
 
@@ -86,9 +86,11 @@ The canonical notice catalogs are checked into RawCull under
 `PROVENANCE.json` with the known upstream revisions and checksums.
 
 - OpenCLIP/DataComp includes the OpenCLIP/DataComp MIT notice, the OpenAI CLIP
-  tokenizer MIT notice, and Apple's `coreai-models` BSD 3-Clause notice. Release
-  remains blocked because the exporter did not record the exact source
-  checkpoint with a source-file checksum.
+  tokenizer MIT notice, and Apple's `coreai-models` BSD 3-Clause notice. Its
+  published `v1` archive is the only production descriptor currently enabled.
+  The archive's embedded `PROVENANCE.json` still describes the earlier runtime
+  filename and hashes; refresh that record and rebuild the archive before using
+  RawCull's provenance-enforcing release target.
 - OpenAI CLIP includes the OpenAI CLIP MIT notice and Apple's `coreai-models`
   BSD 3-Clause notice. Release remains blocked until the MIT terms are verified
   as applying to the exact checkpoint weights and the cached immutable revision
@@ -106,10 +108,10 @@ The canonical notice catalogs are checked into RawCull under
 The notice catalogs must remain inside their corresponding archives, but their
 presence is evidence and attribution, not release approval.
 
-The production catalogue therefore cannot start any real model download. A
-descriptor becomes downloadable only after its `releaseReadiness` changes to
-`ready`, its archive metadata is complete, and any required verified licence has
-been accepted.
+The production catalogue can download DataComp CLIP. The OpenAI CLIP,
+EfficientSAM, and SAM 3 descriptors remain blocked. A descriptor becomes
+downloadable only after its `releaseReadiness` changes to `ready`, its archive
+metadata is complete, and any required verified licence has been accepted.
 
 ## Security and privacy boundary
 
@@ -273,11 +275,11 @@ Inspect the Background Assets configuration:
   "$RAWCULL_EXTENSION/Contents/Info.plist"
 ```
 
-The current placeholder build must report:
+The production self-hosted build must report:
 
 ```text
 group.no.blogspot.RawCull.model-assets
-https://example.invalid/rawcull/models/manifest.json
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json
 com.apple.backgroundassets.managed
 ```
 
@@ -472,12 +474,11 @@ A live service requires three independent gates:
    or `.appleHosted`.
 3. The app plist and downloader extension must select that same hosting mode.
 
-The current `RawCullAIModelDownloadCoordinator.live(paths:)` passes the in-code
-`.invalid` placeholder. Editing only `BAManifestURL` therefore does not activate
-the current build; both values must be changed consistently. Likewise, an
-Apple-hosted build must construct the service with `.appleHosted` in addition to
-defining `RAWCULL_APPLE_HOSTED_MODEL_ASSETS`, setting `BAUsesAppleHosting` to
-`YES`, and removing `BAManifestURL`.
+`RawCullAIModelDownloadCoordinator.live(paths:)` and `BAManifestURL` use the
+same GitHub manifest endpoint. Keep those values synchronized. An Apple-hosted
+build must instead construct the service with `.appleHosted`, define
+`RAWCULL_APPLE_HOSTED_MODEL_ASSETS`, set `BAUsesAppleHosting` to `YES`, and
+remove `BAManifestURL`.
 
 Do not mark a descriptor ready merely to test transport. Ready is an
 application-level statement that the exact pack is approved for redistribution.
@@ -1597,13 +1598,12 @@ shasum -a 256 /Users/thomas/ModelsAAR/Output-lean/*.aar
 stat -f '%N %z bytes' /Users/thomas/ModelsAAR/Output-lean/*.aar
 ```
 
-The historical, unpublished lean build from August 2, 2026 produced the values
-below. The DataComp archive predates the pinned-source re-export procedure and
-must be rebuilt; do not use its listed size or checksum for the release pack.
+The current published DataComp archive and the historical unpublished packs
+have these values:
 
 | Archive             |         Bytes | SHA-256                                                            |
 | ------------------- | ------------: | ------------------------------------------------------------------ |
-| `clip-datacomp.aar` |   282,967,203 | `ab109bd64f61629d33a20c55364f0e40f98cbd070547d02a86d018de5ec4a8e6` |
+| `clip-datacomp.aar` |   282,967,394 | `fae9cab286e0e3605d27de01865122f177d515984b152610005cc793012bd3aa` |
 | `clip-openai.aar`   |   282,829,540 | `24e403f2f58cdea5765fb105d10fd37a57d4e53f5830e9b7248053e0229712dc` |
 | `efficient-sam.aar` | Not generated | Not generated                                                      |
 | `sam3.aar`          | 1,542,689,135 | `f207db7d83fdb90baff6f32e894935f9267e3ebdc276358011d41bd36d5cd4df` |
@@ -1625,117 +1625,118 @@ a different generated JSON file served to Macs. It lists versions, sizes,
 policies, and download URLs.
 
 ```sh
+MODEL_RELEASE_TAG='v1'
+MODEL_RELEASE_ROOT='/Users/thomas/ModelsAAR/Output-lean'
+MODEL_DOWNLOAD_BASE="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/$MODEL_RELEASE_TAG/"
+
 xcrun ba-package download-manifest create \
-  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
-  /Users/thomas/ModelsAAR/Output-lean/clip-openai.aar \
-  /Users/thomas/ModelsAAR/Output-lean/efficient-sam.aar \
-  /Users/thomas/ModelsAAR/Output-lean/sam3.aar \
-  --asset-pack-versions 1 1 1 1 \
+  "$MODEL_RELEASE_ROOT/clip-datacomp.aar" \
+  --asset-pack-versions 1 \
   --macos \
-  --download-base-url \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/ \
-  --output-path /Users/thomas/ModelsAAR/Output-lean/manifest.json
+  --download-base-url "$MODEL_DOWNLOAD_BASE" \
+  --output-path "$MODEL_RELEASE_ROOT/manifest.generated.json"
 ```
 
 The base URL is not an individual archive URL. The tool appends each asset-pack
-ID, not the local AAR filename. Inspect the generated JSON and make the GitHub
-Release asset names match its URLs exactly. The planned URLs are:
+ID, not the local AAR filename. The release asset is named
+`clip-datacomp.aar`, so replace the generated pack URL with that exact GitHub
+Release URL while preserving every other generated field:
 
-```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-datacomp
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.clip-openai
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.efficient-sam
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/no.blogspot.RawCull.models.sam3
+```sh
+DATACOMP_ARCHIVE_URL="$MODEL_DOWNLOAD_BASE"'clip-datacomp.aar'
+
+jq --arg archiveURL "$DATACOMP_ARCHIVE_URL" '
+  (.assetPacks[] |
+    select(.id == "no.blogspot.RawCull.models.clip-datacomp") |
+    .url) = $archiveURL
+' "$MODEL_RELEASE_ROOT/manifest.generated.json" \
+  > "$MODEL_RELEASE_ROOT/manifest.json"
 ```
 
-The local inputs retain their `.aar` extension, but the release copies must be
-named with the exact asset-pack IDs above because those are the URL path
-components generated by `ba-package`. The proposed manifest URL, if the manifest
-is uploaded as another release asset, is:
+Do not use `https://github.com` by itself as `--download-base-url`; that creates
+the invalid URL `https://github.com/no.blogspot.RawCull.models.clip-datacomp`.
+Alternatively, keep the generated URL unchanged and upload a release copy named
+exactly `no.blogspot.RawCull.models.clip-datacomp`. Patching the URL is clearer
+when the release asset keeps its `.aar` extension.
 
-```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json
+Validate the finished manifest before publishing it:
+
+```sh
+jq -e '
+  .assetPacks | length == 1 and
+  .[0].id == "no.blogspot.RawCull.models.clip-datacomp" and
+  .[0].version == 1 and
+  .[0].downloadSize == 282967394 and
+  .[0].url == "https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/clip-datacomp.aar"
+' "$MODEL_RELEASE_ROOT/manifest.json"
+
+shasum -a 256 \
+  "$MODEL_RELEASE_ROOT/clip-datacomp.aar" \
+  "$MODEL_RELEASE_ROOT/manifest.json"
 ```
 
-Ensure every generated pack URL returns the archive rather than an HTML login or
-error page. GitHub's release-download endpoint may redirect to asset storage, so
-HTTP verification must follow redirects and confirm the final byte count and
-checksum.
+The archive SHA-256 must be
+`fae9cab286e0e3605d27de01865122f177d515984b152610005cc793012bd3aa`.
+The manifest checksum changes whenever its JSON formatting or fields change and
+is recorded as release evidence rather than in RawCull's model catalogue.
 
-At the time of this documentation update, the selected Xcode beta's
-`ba-package 2.0-beta` successfully created the archives but
-`download-manifest create` rejected the valid `.aar` inputs with the message
-`path extension isn't "aar"`. Do not rename the local archives to work around
-that contradictory diagnostic. Regenerate and inspect the manifest with a stable
-or corrected Xcode toolchain before creating the GitHub release.
+### Publish the archive and manifest
 
-Upload packs first, verify every generated URL, and publish `manifest.json`
-last. Both `BAManifestURL` and RawCull's self-hosted source must identify the
-manifest, not an AAR. For later releases use
-`ba-package download-manifest update` or create a deliberately versioned new
-manifest; RawCull requests the latest pack version.
+Install and authenticate GitHub CLI once if necessary:
 
-For Apple hosting, generate the same AAR files but not the self-hosted download
-manifest. Upload the packs and versions in App Store Connect, then use the
-Apple-hosted app and extension configuration described above.
-
-## Hosting Apple Background Assets (.aar) on GitHub Releases
-
-GitHub Releases easily accommodates your 500 MB `.aar` file because it supports individual file sizes up to **2 GB**. Follow this step-by-step guide to generate your manifest and upload your files securely using the macOS Terminal.
-
----
-
-### Step 1: Create the Download Manifest
-
-Run the `xcrun` command to analyze your local `.aar` file and generate the matching `manifest.json`. Ensure your `--download-base-url` exactly matches your intended GitHub Release structure.
-
-```bash
-xcrun ba-package download-manifest create \
-  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
-  --asset-pack-versions 1 \
-  --macos \
-  --download-base-url https://github.com \
-  --output-path /Users/thomas/ModelsAAR/Output-lean/manifest.json
+```sh
+brew install gh
+gh auth login
 ```
 
----
+Create the release if it does not exist, then upload the archive first:
 
-### Step 2: Install and Authenticate GitHub CLI
+```sh
+gh release view "$MODEL_RELEASE_TAG" \
+  --repo rsyncOSX/RawCull-AI-Models >/dev/null 2>&1 || \
+gh release create "$MODEL_RELEASE_TAG" \
+  --repo rsyncOSX/RawCull-AI-Models \
+  --title "RawCull AI Models $MODEL_RELEASE_TAG"
 
-Using the GitHub CLI (`gh`) is highly recommended over a web browser for 500 MB uploads to prevent network timeouts and upload corruptions.
-
-1. **Install GitHub CLI** using Homebrew:
-   ```bash
-   brew install gh
-   ```
-
-2. **Log into your GitHub account** (follow the on-screen prompts to authorize via your browser):
-   ```bash
-   gh auth login
-   ```
-
----
-
-### Step 3: Upload the Files to your GitHub Release
-
-Run the upload command to attach both the raw asset package and its corresponding manifest to your `v1` release. 
-
-```bash
-gh release upload v1 \
-  /Users/thomas/ModelsAAR/Output-lean/clip-datacomp.aar \
-  /Users/thomas/ModelsAAR/Output-lean/manifest.json \
-  --repo rsyncOSX/RawCull-AI-Models
+gh release upload "$MODEL_RELEASE_TAG" \
+  "$MODEL_RELEASE_ROOT/clip-datacomp.aar" \
+  --repo rsyncOSX/RawCull-AI-Models \
+  --clobber
 ```
 
-*Note: If the release tag `v1` does not exist yet, create it first using `gh release create v1 --title "v1 Release"`.*
+Upload the validated manifest last so clients never discover a missing archive:
 
----
+```sh
+gh release upload "$MODEL_RELEASE_TAG" \
+  "$MODEL_RELEASE_ROOT/manifest.json" \
+  --repo rsyncOSX/RawCull-AI-Models \
+  --clobber
+```
 
-### Important Architecture Rules
+Verify both public downloads, following GitHub's redirects:
 
-* **Do Not Use Standard Git Push:** Keep the `clip-datacomp.aar` file out of your main Git repository history. Pushing files over 100 MB via standard `git push` will be rejected by GitHub.
-* **Match URLs Exactly:** The Background Assets framework on macOS will look for the asset by appending the file name to your base URL. Verify that your file is accessible at:
-  `https://github.comclip-datacomp.aar`
+```sh
+curl --fail --location --output /tmp/rawcull-manifest.json \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json
+
+jq -e '.assetPacks[0].url | endswith("/v1/clip-datacomp.aar")' \
+  /tmp/rawcull-manifest.json
+
+curl --fail --location --output /tmp/clip-datacomp.aar \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/clip-datacomp.aar
+
+test "$(shasum -a 256 /tmp/clip-datacomp.aar | cut -d ' ' -f 1)" = \
+  'fae9cab286e0e3605d27de01865122f177d515984b152610005cc793012bd3aa'
+```
+
+Keep `.aar` files out of Git history. For subsequent model versions, publish a
+new release tag, increase the manifest's asset-pack version, pin its archive URL
+to the new tag, and replace the latest release's `manifest.json`. RawCull asks
+Managed Background Assets for the latest declared pack version.
+
+Both `BAManifestURL` and RawCull's self-hosted service source identify the
+manifest, not the AAR. For Apple hosting, generate the same AAR but omit the
+self-hosted download manifest and upload the pack through App Store Connect.
 
 ## What happens when the user selects Download
 
