@@ -131,7 +131,31 @@ the integrity information inside that manifest must also be correct.
 
 ## 4. Publish the `v2` GitHub release safely
 
-Create the `v2` release in `RawCull-AI-Models`, then publish in this order:
+Create the `v2` tag and its GitHub release in `RawCull-AI-Models`. The Git tag
+and GitHub release status are separate: `v2` identifies the immutable files,
+while GitHub classifies the release as draft, prerelease, or full release.
+
+Choose the status deliberately. A draft is not publicly downloadable and must
+never be used by RawCull. A published prerelease and a full release both work
+with the tag-pinned `/releases/download/v2/...` URLs used by RawCull. However,
+GitHub's `/releases/latest/download/...` redirect excludes prereleases, so do
+not use that redirect for model manifests or archives.
+
+After publishing, verify the tag and status explicitly:
+
+```sh
+gh release view v2 \
+  --repo rsyncOSX/RawCull-AI-Models \
+  --json tagName,isDraft,isPrerelease
+```
+
+The result must report `"tagName":"v2"` and `"isDraft":false`. For a
+production release that is intended to be a full GitHub release, also require
+`"isPrerelease":false`. If the models are intentionally being distributed as
+a prerelease, `"isPrerelease":true` is acceptable because RawCull uses exact,
+tag-pinned URLs; record that decision in the release notes.
+
+Then publish the assets in this order:
 
 1. Upload every generated asset-pack archive.
 2. Verify that each archive can be downloaded over HTTPS.
@@ -392,6 +416,8 @@ Before shipping RawCull with the `v2` URL:
 - [ ] Exact upstream revisions and source-weight checksums are recorded.
 - [ ] Converted model fingerprints are recorded.
 - [ ] All required licences and notices accompany every pack.
+- [ ] The GitHub release reports the exact `v2` tag and is not a draft.
+- [ ] Prerelease or full-release status was selected intentionally and recorded.
 - [ ] All three generated archives are uploaded to the `v2` release.
 - [ ] Archive SHA-256 values and exact byte counts match the catalog.
 - [ ] `manifest.json` was uploaded after the archives.
