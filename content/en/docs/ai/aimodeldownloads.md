@@ -774,8 +774,294 @@ Update all release records to describe the new candidate accurately:
    decision is recorded and every provenance, validation, notice, archive, and
    download check has passed.
 
-Repeat the same provenance-controlled conversion for SAM 3 before using the
-shared packaging procedure below.
+Repeat the same provenance-controlled conversion for OpenAI CLIP and SAM 3
+before using the shared packaging procedure below.
+
+## OpenAI CLIP model for release
+
+RawCull uses the original OpenAI CLIP ViT-B/32 checkpoint exported through
+Transformers. The release input must be the following exact Hugging Face
+snapshot and PyTorch weight file, not an unpinned resolution of `main`:
+
+| Field                       | Required value                                                     |
+| --------------------------- | ------------------------------------------------------------------ |
+| Repository                  | `openai/clip-vit-base-patch32`                                      |
+| Revision                    | `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`                         |
+| Source file                 | `pytorch_model.bin`                                                |
+| Byte size                   | `605247071`                                                        |
+| SHA-256                     | `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f` |
+| Architecture                | `ViT-B-32`                                                         |
+| Export precision and shapes | Float16, static batch dimensions                                   |
+
+The existing converted asset was created from a local cache at this revision,
+but the exporter did not cryptographically bind that snapshot to the output.
+Its provenance record therefore has `source_revision_recorded_by_exporter` set
+to `null`. Create a new conversion; do not add the cached hash to the old record
+and treat the old `.aimodel` as verified.
+
+The technical procedure below does not clear redistribution. The Hugging Face
+checkpoint does not currently identify an explicit weight-level licence, and
+OpenAI Support did not confirm that the source repository's MIT licence covers
+the hosted weights. Keep the descriptor blocked until the separate decision in
+**Licence audit** and the OpenAI CLIP clearance procedure is complete.
+
+### Create a clean OpenAI CLIP evidence workspace
+
+Use a new evidence directory so the pinned Hugging Face cache, converter
+checkout, and output remain separate from the earlier conversion:
+
+```sh
+OPENAI_CLIP_REPOSITORY='openai/clip-vit-base-patch32'
+OPENAI_CLIP_REVISION='3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268'
+OPENAI_CLIP_SOURCE_FILENAME='pytorch_model.bin'
+OPENAI_CLIP_EXPECTED_BYTES='605247071'
+OPENAI_CLIP_EXPECTED_SHA256='a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f'
+
+OPENAI_CLIP_EVIDENCE_ROOT="/Users/thomas/ModelAssets/ReleaseEvidence/CLIP-OpenAI/$OPENAI_CLIP_REVISION"
+OPENAI_CLIP_HF_HOME="$OPENAI_CLIP_EVIDENCE_ROOT/huggingface"
+OPENAI_CLIP_EXPORT_DIR="$OPENAI_CLIP_EVIDENCE_ROOT/export"
+OPENAI_CLIP_PHOTOAIKIT_DIR="$OPENAI_CLIP_EVIDENCE_ROOT/PhotoAIKit"
+
+mkdir -p "$OPENAI_CLIP_HF_HOME" "$OPENAI_CLIP_EXPORT_DIR"
+```
+
+Use the same reviewed PhotoAIKit revision as the DataComp release conversion:
+
+```sh
+OPENAI_CLIP_PHOTOAIKIT_REVISION='2cb07d604beee3549df4d361a5d48b3e9506fb87'
+
+git clone https://github.com/rsyncOSX/PhotoAIKit.git \
+  "$OPENAI_CLIP_PHOTOAIKIT_DIR"
+git -C "$OPENAI_CLIP_PHOTOAIKIT_DIR" switch --detach \
+  "$OPENAI_CLIP_PHOTOAIKIT_REVISION"
+
+test "$(git -C "$OPENAI_CLIP_PHOTOAIKIT_DIR" rev-parse HEAD)" = \
+  "$OPENAI_CLIP_PHOTOAIKIT_REVISION"
+test -z "$(git -C "$OPENAI_CLIP_PHOTOAIKIT_DIR" status --porcelain)"
+```
+
+If RawCull resolves a later PhotoAIKit revision, review the exporter changes and
+record the exact revision actually used instead of copying the value above.
+
+### Download the pinned OpenAI CLIP snapshot
+
+Point Hugging Face and Transformers at the evidence-specific cache, then
+download only the PyTorch model and its configuration and tokenizer resources:
+
+```sh
+export HF_HOME="$OPENAI_CLIP_HF_HOME"
+
+OPENAI_CLIP_SNAPSHOT="$(hf download "$OPENAI_CLIP_REPOSITORY" \
+  config.json \
+  "$OPENAI_CLIP_SOURCE_FILENAME" \
+  merges.txt \
+  preprocessor_config.json \
+  special_tokens_map.json \
+  tokenizer.json \
+  tokenizer_config.json \
+  vocab.json \
+  README.md \
+  --revision "$OPENAI_CLIP_REVISION" \
+  --quiet)"
+
+test "$(basename "$OPENAI_CLIP_SNAPSHOT")" = "$OPENAI_CLIP_REVISION"
+```
+
+The exporter currently asks Transformers for the repository ID rather than a
+local snapshot path. Establish its cached `main` reference separately and
+require that reference to resolve to the pinned snapshot before enabling
+offline mode:
+
+```sh
+OPENAI_CLIP_MAIN_SNAPSHOT="$(hf download "$OPENAI_CLIP_REPOSITORY" \
+  --revision main \
+  --exclude flax_model.msgpack \
+  --exclude tf_model.h5 \
+  --quiet)"
+
+test "$(basename "$OPENAI_CLIP_MAIN_SNAPSHOT")" = "$OPENAI_CLIP_REVISION"
+test "$OPENAI_CLIP_MAIN_SNAPSHOT" = "$OPENAI_CLIP_SNAPSHOT"
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+```
+
+The `main` lookup is only a compatibility step for the current exporter. If it
+does not resolve to the required commit, stop; do not convert a newer snapshot.
+Prefer a future exporter option that accepts `OPENAI_CLIP_SNAPSHOT` directly,
+then remove this compatibility lookup. Preserve the CLI output and the cache
+metadata as private evidence.
+
+### Verify the OpenAI source before conversion
+
+Confirm the selected weight file and all resources required by the exporter:
+
+```sh
+OPENAI_CLIP_SOURCE="$OPENAI_CLIP_SNAPSHOT/$OPENAI_CLIP_SOURCE_FILENAME"
+
+test -f "$OPENAI_CLIP_SNAPSHOT/config.json"
+test -f "$OPENAI_CLIP_SOURCE"
+test -f "$OPENAI_CLIP_SNAPSHOT/tokenizer.json"
+test -f "$OPENAI_CLIP_SNAPSHOT/tokenizer_config.json"
+test -f "$OPENAI_CLIP_SNAPSHOT/merges.txt"
+test -f "$OPENAI_CLIP_SNAPSHOT/vocab.json"
+
+shasum -a 256 "$OPENAI_CLIP_SOURCE"
+stat -f '%z bytes %N' "$OPENAI_CLIP_SOURCE"
+```
+
+The checksum and byte size must be exactly:
+
+```text
+a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f
+605247071 bytes
+```
+
+Make the verification fail closed:
+
+```sh
+test "$(shasum -a 256 "$OPENAI_CLIP_SOURCE" | cut -d ' ' -f 1)" = \
+  "$OPENAI_CLIP_EXPECTED_SHA256"
+test "$(stat -f '%z' "$OPENAI_CLIP_SOURCE")" = \
+  "$OPENAI_CLIP_EXPECTED_BYTES"
+```
+
+If any check fails, stop without converting or substituting another weight
+format. Investigate the source revision and download first.
+
+### Export from the verified offline cache
+
+Run the OpenAI preset only after the exact snapshot and cached reference checks
+have succeeded. Offline mode prevents Transformers from fetching a different
+revision during model or tokenizer loading:
+
+```sh
+uv run --python 3.13 \
+  --script "$OPENAI_CLIP_PHOTOAIKIT_DIR/Tools/export_clip.py" \
+  --model openai \
+  --output-dir "$OPENAI_CLIP_EXPORT_DIR" \
+  --bundle-name CLIP-OpenAI \
+  --dtype float16
+```
+
+Do not add `--dynamic` or `--overwrite` to the evidence run. Preserve the
+complete terminal log and record the toolchain alongside the DataComp record:
+
+```sh
+uv --version
+python3 --version
+sw_vers
+xcodebuild -version
+git -C "$OPENAI_CLIP_PHOTOAIKIT_DIR" rev-parse HEAD
+git -C "$OPENAI_CLIP_PHOTOAIKIT_DIR" show HEAD:Package.swift
+```
+
+The exporter must write `source_revision` as the required commit in
+`metadata.json`. A missing or different value breaks the provenance chain even
+when the source file checksum was verified.
+
+The generated bundle has this layout:
+
+```text
+CLIP-OpenAI/
+├── metadata.json
+├── tokenizer/
+├── clip-vit-base-patch32_float16_static.aimodel/
+└── clip-vit-base-patch32_float16_static_source.aimodel/
+```
+
+Keep `_source.aimodel` in private conversion evidence but exclude it from the
+downloadable pack.
+
+### Inspect, fingerprint, and validate the OpenAI bundle
+
+Set the generated paths and validate the metadata and selected runtime asset:
+
+```sh
+OPENAI_CLIP_BUNDLE="$OPENAI_CLIP_EXPORT_DIR/CLIP-OpenAI"
+OPENAI_CLIP_RUNTIME_ASSET="$OPENAI_CLIP_BUNDLE/clip-vit-base-patch32_float16_static.aimodel"
+
+test -f "$OPENAI_CLIP_BUNDLE/metadata.json"
+test -f "$OPENAI_CLIP_BUNDLE/tokenizer/tokenizer.json"
+test -d "$OPENAI_CLIP_RUNTIME_ASSET"
+
+plutil -extract source_revision raw -o - \
+  "$OPENAI_CLIP_BUNDLE/metadata.json"
+plutil -extract architecture raw -o - \
+  "$OPENAI_CLIP_BUNDLE/metadata.json"
+plutil -extract assets.main raw -o - \
+  "$OPENAI_CLIP_BUNDLE/metadata.json"
+plutil -extract asset_fingerprints.main.value raw -o - \
+  "$OPENAI_CLIP_BUNDLE/metadata.json"
+
+test "$(plutil -extract source_revision raw -o - \
+  "$OPENAI_CLIP_BUNDLE/metadata.json")" = "$OPENAI_CLIP_REVISION"
+
+python3 "$OPENAI_CLIP_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$OPENAI_CLIP_RUNTIME_ASSET"
+```
+
+The architecture must be `ViT-B-32`, `assets.main` must name the runtime asset
+above, and the generated fingerprint must equal the fingerprint recorded in
+`metadata.json`.
+
+Verify the tokenizer and record fresh output hashes:
+
+```sh
+shasum -a 256 "$OPENAI_CLIP_BUNDLE/tokenizer/tokenizer.json"
+python3 "$OPENAI_CLIP_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$OPENAI_CLIP_RUNTIME_ASSET"
+find "$OPENAI_CLIP_RUNTIME_ASSET" -type f -name main.mlirb \
+  -exec shasum -a 256 {} \;
+```
+
+The currently audited tokenizer SHA-256 is
+`6d9109cc838977f3ca94a379eec36aecc7c807e1785cd729660ca2fc0171fb35`.
+If it changes, audit the pinned tokenizer files and exporter before proceeding.
+The new runtime hashes are conversion outputs and need not match the previous
+unverified model.
+
+Run the PhotoAIKit tests, then install a copy of the complete `CLIP-OpenAI`
+directory at the OpenAI path shown by **RawCull > Settings > AI**:
+
+```sh
+swift test --package-path "$OPENAI_CLIP_PHOTOAIKIT_DIR"
+```
+
+Use an empty destination rather than merging it with an older bundle. Choose
+**Check Again**, select OpenAI CLIP, enable CLIP similarity, and smoke-test both
+image similarity and text-to-image semantic search. PhotoAIKit must accept the
+metadata, tokenizer, asset fingerprint, runtime configuration, and normalized
+embeddings before the candidate can proceed.
+
+### Move the approved OpenAI candidate into release staging
+
+After validation, copy the generated candidate, not the manually installed test
+copy, into:
+
+```text
+/Users/thomas/ModelAssets/Release/Models/CLIP-OpenAI/
+```
+
+Complete the release evidence and packaging records:
+
+1. Update `ModelAssets/Notices/CLIP-OpenAI/PROVENANCE.json` with the exact
+   repository, revision, source filename, byte size, source SHA-256, PhotoAIKit
+   commit, dependency versions, command, tokenizer checksum, runtime filename,
+   asset fingerprint, and `main.mlirb` checksum.
+2. Update `NOTICE.md` when the runtime filename or recorded evidence changes.
+   Keep the complete applicable OpenAI CLIP and Apple conversion notices in the
+   pack, without treating their presence as licence approval.
+3. Ensure `Packaging/clip-openai.json` selects `metadata.json`, `tokenizer`, the
+   optimized runtime `.aimodel`, and `Notices/CLIP-OpenAI`; exclude the bundle
+   root and `_source.aimodel`.
+4. Rebuild and inspect `clip-openai.aar`, then record its new byte size and
+   SHA-256 in provenance and in the RawCull catalogue.
+5. Do not reuse the historical runtime, archive, or manifest hashes. A new model
+   fingerprint intentionally invalidates incompatible cached embeddings.
+6. Keep the production descriptor blocked until the exact trained weights are
+   cleared for the intended conversion, commercial use, and redistribution and
+   every provenance, validation, notice, archive, and download check passes.
 
 ## Meta SAM 3 model for release
 
