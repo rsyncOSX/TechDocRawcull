@@ -4,7 +4,7 @@ title = "AI Model Download Service"
 linkTitle = "AI Model Downloads"
 date = "2026-07-31"
 description = "Architecture, storage, activation, and operation of RawCull AI model downloads using self-hosted or Apple-hosted Managed Background Assets."
-tags = ["ai", "models", "downloads", "efficient-sam", "background-assets", "self-hosting", "apple-hosting"]
+tags = ["ai", "models", "downloads", "siglip2", "efficient-sam", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 30
 +++
@@ -95,6 +95,11 @@ The canonical notice catalogs are checked into RawCull under
   BSD 3-Clause notice. Release remains blocked until the MIT terms are verified
   as applying to the exact checkpoint weights and the cached immutable revision
   and source checksum are conclusively bound to the converted output.
+- SigLIP 2 Base/16-256 uses Google's Apache License 2.0 checkpoint and Apple's
+  `coreai-models` BSD 3-Clause conversion code. It is currently an experimental
+  RawCullFB model, not a production Managed Background Assets descriptor. Before
+  release, add a pack-specific notice catalogue and review redistribution,
+  provenance, archive, and catalogue metadata independently.
 - EfficientSAM uses the upstream Apache License 2.0 and Apple's `coreai-models`
   BSD 3-Clause conversion code. Redistribution remains blocked until the exact
   EfficientSAM source revision, checkpoint checksum, converted asset
@@ -1062,6 +1067,258 @@ Complete the release evidence and packaging records:
 6. Keep the production descriptor blocked until the exact trained weights are
    cleared for the intended conversion, commercial use, and redistribution and
    every provenance, validation, notice, archive, and download check passes.
+
+## SigLIP 2 Base/16-256 experimental model
+
+RawCullFB can test Google's fixed-resolution SigLIP 2 Base Patch16 model through
+PhotoAIKit and Core AI. This model is not currently part of RawCull's production
+Managed Background Assets catalogue. Do not add it to the public manifest until
+the separate licence, notice, packaging, and release-readiness work is complete.
+
+Use the following exact source snapshot:
+
+| Field                       | Required value                                                     |
+| --------------------------- | ------------------------------------------------------------------ |
+| Repository                  | `google/siglip2-base-patch16-256`                                  |
+| Revision                    | `3f9f96cb90da5dbc758b01813f2f6f1aee24c1ab`                         |
+| Source file                 | `model.safetensors`                                                |
+| Byte size                   | `1500985224`                                                       |
+| SHA-256                     | `6125cacc01fa93bdc98a0c5101cefcd69b2ed1f8ab4f38d86f4ad5984f5dc863` |
+| Architecture                | `SigLIP2-Base-Patch16-256`                                         |
+| Image input                 | `1 x 3 x 256 x 256`, fixed stretch with bilinear interpolation     |
+| Text input                  | `1 x 64`, Gemma/Hugging Face tokenizer JSON                        |
+| Embedding dimensions        | `768`                                                              |
+| Export precision and shapes | Float16, static batch dimensions                                   |
+| Upstream licence            | Apache License 2.0                                                 |
+
+Google's fixed-resolution SigLIP 2 checkpoint intentionally retains the
+original `siglip` configuration type. The exporter follows the checkpoint's
+declared architecture through Transformers `AutoModel`; forcing
+`Siglip2Model` creates an incompatible flexible-resolution patch projection.
+
+### Create a clean SigLIP 2 workspace
+
+Keep the source snapshot and converted output separate. For an experimental
+local build:
+
+```sh
+SIGLIP2_REPOSITORY='google/siglip2-base-patch16-256'
+SIGLIP2_REVISION='3f9f96cb90da5dbc758b01813f2f6f1aee24c1ab'
+SIGLIP2_SOURCE_FILENAME='model.safetensors'
+SIGLIP2_EXPECTED_BYTES='1500985224'
+SIGLIP2_EXPECTED_SHA256='6125cacc01fa93bdc98a0c5101cefcd69b2ed1f8ab4f38d86f4ad5984f5dc863'
+
+SIGLIP2_ROOT='/Users/thomas/GitHub/Models/SigLIP2-Base-Patch16-256'
+SIGLIP2_SOURCE_DIR="$SIGLIP2_ROOT/source"
+SIGLIP2_EXPORT_DIR="$SIGLIP2_ROOT"
+SIGLIP2_PHOTOAIKIT_DIR='/Users/thomas/GitHub/RawCull/PhotoAIKit'
+
+mkdir -p "$SIGLIP2_SOURCE_DIR"
+test -f "$SIGLIP2_PHOTOAIKIT_DIR/Tools/export_siglip2.py"
+```
+
+The current exporter is in the local PhotoAIKit development checkout. Record
+its exact state with the conversion evidence:
+
+```sh
+git -C "$SIGLIP2_PHOTOAIKIT_DIR" rev-parse HEAD
+git -C "$SIGLIP2_PHOTOAIKIT_DIR" status --short
+git -C "$SIGLIP2_PHOTOAIKIT_DIR" diff -- \
+  Package.swift \
+  Sources/CoreAICLIPBackend \
+  Tools/export_siglip2.py
+```
+
+A production conversion must use a reviewed, committed, clean PhotoAIKit
+revision. Do not describe an uncommitted development checkout as immutable
+release evidence.
+
+### Download the pinned SigLIP 2 snapshot
+
+Download the complete public snapshot into the explicit source directory:
+
+```sh
+uvx --from huggingface-hub hf download \
+  "$SIGLIP2_REPOSITORY" \
+  --revision "$SIGLIP2_REVISION" \
+  --local-dir "$SIGLIP2_SOURCE_DIR"
+```
+
+The snapshot contains the Safetensors weights, model configuration, image
+processor configuration, tokenizer JSON, tokenizer model, tokenizer
+configuration, special-token map, model card, and Hugging Face cache evidence.
+The current source directory occupies approximately 1.4 GiB.
+
+### Verify the source before conversion
+
+Verify the immutable weight file before running the exporter:
+
+```sh
+SIGLIP2_SOURCE="$SIGLIP2_SOURCE_DIR/$SIGLIP2_SOURCE_FILENAME"
+
+shasum -a 256 "$SIGLIP2_SOURCE"
+stat -f '%z bytes %N' "$SIGLIP2_SOURCE"
+
+test "$(shasum -a 256 "$SIGLIP2_SOURCE" | cut -d ' ' -f 1)" = \
+  "$SIGLIP2_EXPECTED_SHA256"
+test "$(stat -f '%z' "$SIGLIP2_SOURCE")" = \
+  "$SIGLIP2_EXPECTED_BYTES"
+```
+
+The expected output is:
+
+```text
+6125cacc01fa93bdc98a0c5101cefcd69b2ed1f8ab4f38d86f4ad5984f5dc863
+1500985224 bytes
+```
+
+Also verify the tokenizer inputs used by the Swift runtime:
+
+```sh
+shasum -a 256 \
+  "$SIGLIP2_SOURCE_DIR/tokenizer.json" \
+  "$SIGLIP2_SOURCE_DIR/tokenizer.model"
+```
+
+The tested snapshot reports:
+
+```text
+cb9140fae3ac5122c972d37adf83e1248471a38147ad76f8215c8872c6fd8322  tokenizer.json
+61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2  tokenizer.model
+```
+
+Stop if a checksum or byte count differs. Do not convert a floating revision or
+silently replace the recorded source format.
+
+### Export the Core AI model
+
+Run the PhotoAIKit exporter from the verified local snapshot:
+
+```sh
+uv run --python 3.13 \
+  --script "$SIGLIP2_PHOTOAIKIT_DIR/Tools/export_siglip2.py" \
+  --source-dir "$SIGLIP2_SOURCE_DIR" \
+  --output-dir "$SIGLIP2_EXPORT_DIR"
+```
+
+Use a new output directory for provenance-controlled conversions. The
+`--overwrite` option is convenient for local iteration but must not overwrite
+release evidence. The exporter pins its Python/CoreAI dependencies, exports
+normalized image and text encoders, copies the tokenizer resources, and writes
+`metadata.json`, `PROVENANCE.json`, and a verified runtime-asset fingerprint.
+
+The generated bundle is:
+
+```text
+SigLIP2-Base-Patch16-256/
+├── metadata.json
+├── PROVENANCE.json
+├── tokenizer/
+│   ├── config.json
+│   ├── special_tokens_map.json
+│   ├── tokenizer.json
+│   ├── tokenizer.model
+│   └── tokenizer_config.json
+└── siglip2-base-patch16-256_float16_static.aimodel/
+```
+
+The tested Core AI bundle occupies approximately 753 MiB. Its runtime asset
+fingerprint is:
+
+```text
+directory-tree-sha256-v1
+191995066342dc0febcddea08ab24bc4a2cdc60efc98c2a53c8380323ca57602
+```
+
+The generated `main.mlirb` is `750665474` bytes with SHA-256:
+
+```text
+aabefd212c5fae7a01b2a53dc6aa02bcc0f0887bb95fbdd998d817bf140f53e3
+```
+
+These output hashes describe the tested conversion. Recompute and record new
+values whenever the exporter, dependencies, precision, or source changes.
+
+### Inspect the SigLIP 2 bundle
+
+Set the generated paths and compare the recorded and computed fingerprints:
+
+```sh
+SIGLIP2_BUNDLE="$SIGLIP2_EXPORT_DIR/SigLIP2-Base-Patch16-256"
+SIGLIP2_RUNTIME_ASSET="$SIGLIP2_BUNDLE/siglip2-base-patch16-256_float16_static.aimodel"
+
+test -f "$SIGLIP2_BUNDLE/metadata.json"
+test -f "$SIGLIP2_BUNDLE/PROVENANCE.json"
+test -f "$SIGLIP2_BUNDLE/tokenizer/tokenizer.json"
+test -d "$SIGLIP2_RUNTIME_ASSET"
+
+plutil -extract family raw -o - "$SIGLIP2_BUNDLE/metadata.json"
+plutil -extract architecture raw -o - "$SIGLIP2_BUNDLE/metadata.json"
+plutil -extract source_revision raw -o - "$SIGLIP2_BUNDLE/metadata.json"
+plutil -extract assets.main raw -o - "$SIGLIP2_BUNDLE/metadata.json"
+plutil -extract asset_fingerprints.main.value raw -o - \
+  "$SIGLIP2_BUNDLE/metadata.json"
+
+python3 "$SIGLIP2_PHOTOAIKIT_DIR/Tools/model_fingerprint.py" \
+  "$SIGLIP2_RUNTIME_ASSET"
+```
+
+The family must be `siglip2`, the architecture must be
+`SigLIP2-Base-Patch16-256`, the revision must equal `SIGLIP2_REVISION`, and the
+computed fingerprint must equal `asset_fingerprints.main.value`.
+
+### Validate CoreAI parity and RawCullFB search
+
+Generate PyTorch reference embeddings from representative photographs and
+English and Norwegian prompts:
+
+```sh
+SIGLIP2_REFERENCE='/private/tmp/siglip2-reference.json'
+
+uv run --python 3.13 \
+  --script "$SIGLIP2_PHOTOAIKIT_DIR/Tools/generate_clip_reference.py" \
+  --model siglip2 \
+  --source-dir "$SIGLIP2_SOURCE_DIR" \
+  --image /path/to/reference-image-1.jpg \
+  --image /path/to/reference-image-2.jpg \
+  --text 'puffins portrait' \
+  --text 'a portrait photo of a puffin' \
+  --text 'rødnebbede lundefugler i flukt' \
+  --output "$SIGLIP2_REFERENCE"
+```
+
+Run PhotoAIKit's opt-in CoreAI parity test:
+
+```sh
+SIGLIP2_COREAI_BUNDLE="$SIGLIP2_BUNDLE" \
+SIGLIP2_REFERENCE="$SIGLIP2_REFERENCE" \
+swift test \
+  --package-path "$SIGLIP2_PHOTOAIKIT_DIR" \
+  --filter SigLIP2CoreAIIntegrationTests
+```
+
+The tested conversion exceeded `0.995` cosine similarity for text embeddings.
+Two end-to-end image embeddings scored `0.9949` and `0.9932` against PyTorch;
+the small difference is consistent with PIL versus Core Graphics bilinear
+resampling. PhotoAIKit requires greater than `0.99` for image parity.
+
+RawCullFB's development project resolves the sibling PhotoAIKit checkout. Open
+`RawCullFB.xcodeproj`, then choose the generated `SIGLIP2_BUNDLE` directory in
+**RawCullFB > Settings > CLIP**. It must report
+`SigLIP2-Base-Patch16-256`. Select a photo folder and run **Index Selected
+Folder** before searching.
+
+SigLIP 2 uses the `siglip2` backend together with the model fingerprint. Its
+index is therefore separate from OpenAI CLIP and DataComp CLIP indexes even
+though all three may use normalized embeddings. The tested RawCullFB
+integration successfully loaded the bundle, indexed two photographs, persisted
+the model-specific index, and completed a search for `puffins portrait`.
+
+Before making SigLIP 2 downloadable in production, create its notice catalogue,
+packaging selector, archive and manifest entries; record the committed
+PhotoAIKit revision and all source, tokenizer, runtime, archive, and licence
+hashes; and complete the same release-readiness review required for the other
+models.
 
 ## Meta SAM 3 model for release
 
