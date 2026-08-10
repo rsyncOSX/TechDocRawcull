@@ -232,6 +232,90 @@ prereleases and makes the resolved version less explicit. Use URLs under:
 https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/
 ```
 
+### 6.1. How to create the manifest
+
+Create the manifest with the same Xcode installation used to package the AAR
+files. Run the command from the release staging root and pass only the approved
+archives. The order of `--asset-pack-versions` must match the order of the AAR
+paths. Version `2` is used below for the new `v2` release; replace it with the
+next monotonically increasing integer for any pack that has already used that
+version.
+
+The base URL is the immutable release directory, including its trailing slash:
+
+```sh
+cd /Users/thomas/ModelAssets/Release
+
+xcrun ba-package help download-manifest create
+
+DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/"
+```
+
+Generate `Output/manifest.json` with one of the commands below. Do not edit the
+generated JSON to add a blocked model. If the ready set changes, regenerate the
+manifest from exactly that set of AAR files.
+
+After generation, validate the JSON, print the included IDs, and inspect every
+generated pack entry before publishing:
+
+```sh
+jq empty Output/manifest.json
+jq -r '.assetPacks[].assetPackID' Output/manifest.json
+jq '.assetPacks[]' Output/manifest.json
+```
+
+Verify the version, archive URL, and download size shown in each complete entry.
+The Background Assets tool constructs each archive URL by appending the
+asset-pack ID to the base URL. Make sure the release asset is uploaded under the
+exact final path generated in the manifest and that the URL resolves under the
+`v2` release directory. Do not hand-edit the generated URL.
+
+### 6.2. Manifest for both CLIP models
+
+Use this manifest after DataComp CLIP and OpenAI CLIP have both passed their
+technical and legal gates, while SAM 3 remains blocked:
+
+```sh
+xcrun ba-package download-manifest create \
+  Output/clip-datacomp.aar \
+  Output/clip-openai.aar \
+  --asset-pack-versions 2 2 \
+  --macos \
+  --download-base-url "$DOWNLOAD_BASE_URL" \
+  --output-path Output/manifest.json
+```
+
+The result must contain exactly these asset-pack IDs:
+
+```text
+no.blogspot.RawCull.models.clip-datacomp
+no.blogspot.RawCull.models.clip-openai
+```
+
+### 6.3. Manifest for all three models
+
+Use this manifest only after both CLIP models and SAM 3 have passed all release
+gates:
+
+```sh
+xcrun ba-package download-manifest create \
+  Output/clip-datacomp.aar \
+  Output/clip-openai.aar \
+  Output/sam3.aar \
+  --asset-pack-versions 2 2 2 \
+  --macos \
+  --download-base-url "$DOWNLOAD_BASE_URL" \
+  --output-path Output/manifest.json
+```
+
+The result must contain exactly these asset-pack IDs:
+
+```text
+no.blogspot.RawCull.models.clip-datacomp
+no.blogspot.RawCull.models.clip-openai
+no.blogspot.RawCull.models.sam3
+```
+
 ## 7. Publish the immutable GitHub release
 
 Create the `v2` tag and release, then verify its state:
