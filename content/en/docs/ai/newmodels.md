@@ -245,10 +245,19 @@ The base URL is the immutable release directory, including its trailing slash:
 
 ```sh
 cd /Users/thomas/ModelAssets/Release
+mkdir -p Output
 
-xcrun ba-package help download-manifest create
+xcrun ba-package package Packaging/clip-datacomp.json \
+  --output-path Output/clip-datacomp.aar
 
 DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/"
+
+xcrun ba-package download-manifest create \
+  Output/clip-datacomp.aar \
+  --asset-pack-versions 2 \
+  --macos \
+  --download-base-url "$DOWNLOAD_BASE_URL" \
+  --output-path Output/manifest.json
 ```
 
 Generate `Output/manifest.json` with one of the commands below. Do not edit the
