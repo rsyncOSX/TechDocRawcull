@@ -212,10 +212,23 @@ archive. Record the newly generated SHA-256 and exact byte count for every pack.
 
 ## 6. Generate the download manifest
 
-Create a self-hosted manifest from the exact approved AAR files. The generated
-manifest must contain only packs that have passed both technical and legal
-release gates. It may contain one, two, or all three packs while reviews are in
-progress; RawCull must expose only the same ready set.
+The catalogue used in this chapter is the release staging directory:
+
+```text
+/Users/thomas/ModelAssets/Release
+```
+
+Run every `ba-package` command in chapter 6 from that directory. Relative paths
+such as `Output/clip-datacomp.aar` and `Packaging/clip-datacomp.json` are
+resolved from the current directory; running the commands from
+`/Users/thomas/ModelAssets` or a RawCull source checkout selects the wrong
+paths.
+
+Create a self-hosted manifest from the exact approved AAR files in
+`/Users/thomas/ModelAssets/Release/Output`. The generated manifest must contain
+only packs that have passed both technical and legal release gates. It may
+contain one, two, or all three packs while reviews are in progress; RawCull
+must expose only the same ready set.
 
 Verify every entry before publishing:
 
@@ -235,21 +248,25 @@ https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/
 ### 6.1. How to create the manifest
 
 Create the manifest with the same Xcode installation used to package the AAR
-files. Run the command from the release staging root and pass only the approved
-archives. The order of `--asset-pack-versions` must match the order of the AAR
-paths. Version `2` is used below for the new `v2` release; replace it with the
-next monotonically increasing integer for any pack that has already used that
-version.
+files. First verify the working directory and inputs. These checks must list the
+release packaging catalogues and the AAR files generated in chapter 5:
+
+```sh
+cd /Users/thomas/ModelAssets/Release
+pwd
+ls -l Packaging/*.json Output/*.aar
+```
+
+Pass only approved archives. `ba-package` matches version numbers to archive
+paths by position: the first value after `--asset-pack-versions` applies to the
+first AAR path, the second value to the second AAR path, and so on. Supply
+exactly one version for each AAR. Version `2` is used below for the new `v2`
+release; replace it with the next monotonically increasing integer for any pack
+that has already used that version.
 
 The base URL is the immutable release directory, including its trailing slash:
 
 ```sh
-cd /Users/thomas/ModelAssets/Release
-mkdir -p Output
-
-xcrun ba-package package Packaging/clip-datacomp.json \
-  --output-path Output/clip-datacomp.aar
-
 DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/"
 
 xcrun ba-package download-manifest create \
@@ -269,15 +286,18 @@ generated pack entry before publishing:
 
 ```sh
 jq empty Output/manifest.json
-jq -r '.assetPacks[].assetPackID' Output/manifest.json
-jq '.assetPacks[]' Output/manifest.json
+jq -r '.assetPacks[].id' Output/manifest.json
+jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
+  Output/manifest.json
 ```
 
-Verify the version, archive URL, and download size shown in each complete entry.
-The Background Assets tool constructs each archive URL by appending the
-asset-pack ID to the base URL. Make sure the release asset is uploaded under the
-exact final path generated in the manifest and that the URL resolves under the
-`v2` release directory. Do not hand-edit the generated URL.
+The generated key is `id`, not `assetPackID`; `assetPackID` is used only in the
+packaging catalogue. Verify the version, archive URL, and download size in each
+entry. The Background Assets tool constructs the URL by appending the pack ID
+to `DOWNLOAD_BASE_URL`. Consequently, the GitHub release asset must be named
+exactly like the final URL component, for example
+`no.blogspot.RawCull.models.clip-datacomp`, with no `.aar` suffix. Chapter 7
+prepares those upload names. Do not hand-edit the generated JSON or URL.
 
 ### 6.2. Manifest for both CLIP models
 
@@ -327,26 +347,156 @@ no.blogspot.RawCull.models.sam3
 
 ## 7. Publish the immutable GitHub release
 
-Create the `v2` tag and release, then verify its state:
+Chapter 7 uses two different locations:
+
+- local files come from `/Users/thomas/ModelAssets/Release/Output`;
+- the release itself is in the GitHub repository
+  `rsyncOSX/RawCull-AI-Models`.
+
+`gh release view` does not read a local model or packaging catalogue. Because
+the command supplies `--repo rsyncOSX/RawCull-AI-Models`, it can be run from any
+directory. Change to the release staging directory anyway so the later upload
+paths resolve correctly:
 
 ```sh
-gh release view v2 \
-  --repo rsyncOSX/RawCull-AI-Models \
-  --json tagName,isDraft,isPrerelease
+cd /Users/thomas/ModelAssets/Release
+gh auth status
+gh repo view rsyncOSX/RawCull-AI-Models --json nameWithOwner,url
 ```
 
-`tagName` must be `v2` and `isDraft` must be `false`. A tag-pinned URL can use
-a published prerelease, but record that decision. Upload files in this order:
+### 7.1. Create or inspect `v2`
 
-1. all approved AAR files;
-2. download each AAR anonymously and verify its checksum and size;
+`gh release view` only inspects an existing release; it does not create the tag
+or release. To inspect `v2`, use this one-line form, which also avoids shell
+errors caused by spaces after a line-continuation backslash:
+
+```sh
+gh release view v2 --repo rsyncOSX/RawCull-AI-Models --json tagName,isDraft,isPrerelease,isImmutable
+```
+
+For the existing `v2` release, the command returns:
+
+```json
+{"isDraft":false,"isImmutable":false,"isPrerelease":true,"tagName":"v2"}
+```
+
+`isImmutable:false` means GitHub is not currently enforcing immutable-release
+protection for this repository. The runbook still treats every published tag
+and asset as immutable: never replace or delete an uploaded file; publish a new
+corrective tag instead.
+
+If the command fails, interpret the error before changing its arguments:
+
+- `accepts at most 1 arg(s)` usually means a copied multiline command lost a
+  continuation backslash; use the one-line command above;
+- `release not found` or `Could not resolve to a Release` means `v2` does not
+  exist in the repository selected by `--repo`;
+- an authentication error requires `gh auth login` or a valid `GH_TOKEN`;
+- `error connecting to api.github.com` is a network or proxy failure, not a
+  problem with `v2`, `--repo`, or `--json`.
+
+If GitHub reports `release not found`, create the release explicitly from the
+repository's `main` branch. Choose `--prerelease` only when that is the intended
+publication state:
+
+```sh
+gh release create v2 --repo rsyncOSX/RawCull-AI-Models \
+  --target main \
+  --title "RawCull AI models v2" \
+  --prerelease \
+  --notes "RawCull AI model asset packs for manifest version 2."
+```
+
+Do not run `gh release create` when `gh release view v2` already succeeds.
+At verification time, `tagName` must be `v2` and `isDraft` must be `false`. A
+tag-pinned URL can use a published prerelease, but record that decision.
+
+### 7.2. Prepare the exact release asset names
+
+The local package filenames end in `.aar`, but the generated manifest URLs do
+not. Make extensionless upload copies whose basenames exactly match the `id`
+values in `Output/manifest.json`:
+
+```sh
+cd /Users/thomas/ModelAssets/Release
+mkdir -p Output/Upload
+
+cp Output/clip-datacomp.aar \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp
+cp Output/clip-openai.aar \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai
+# Only when SAM 3 is present in Output/manifest.json:
+cp Output/sam3.aar \
+  Output/Upload/no.blogspot.RawCull.models.sam3
+```
+
+Before uploading, confirm that every manifest URL basename has a matching local
+file and that its byte count equals `downloadSize`:
+
+```sh
+jq -r '.assetPacks[] | [.id, (.downloadSize | tostring)] | @tsv' \
+  Output/manifest.json
+stat -f '%N %z' Output/Upload/no.blogspot.RawCull.models.*
+```
+
+Do not upload `clip-datacomp.aar` or `clip-openai.aar` under those local names;
+they would produce URLs that do not match the generated manifest.
+
+### 7.3. Upload and verify
+
+Upload files in this order:
+
+1. all approved AAR payloads under their exact extensionless manifest IDs;
+2. download each payload anonymously and verify its checksum and size;
 3. upload `manifest.json` last;
 4. download and inspect the published manifest anonymously.
+
+For the current two-CLIP manifest, upload the extensionless assets explicitly:
+
+```sh
+gh release upload v2 \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  --repo rsyncOSX/RawCull-AI-Models
+```
+
+Do not use `--clobber` on a published release. Verify the remote filenames:
+
+```sh
+gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+  --json assets \
+  --jq '.assets[] | [.name, (.size | tostring), .url] | @tsv'
+```
+
+Download the asset-pack URLs from the generated manifest, compare them with the
+local upload copies, and only then upload the manifest:
+
+```sh
+curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-datacomp \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-datacomp
+curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-openai \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-openai
+
+shasum -a 256 \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  /tmp/no.blogspot.RawCull.models.clip-datacomp
+shasum -a 256 \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  /tmp/no.blogspot.RawCull.models.clip-openai
+
+gh release upload v2 Output/manifest.json \
+  --repo rsyncOSX/RawCull-AI-Models
+```
+
+Each local/remote checksum pair must match. Finally, download and inspect the
+published manifest anonymously:
 
 ```sh
 curl --fail --location --output /tmp/rawcull-v2-manifest.json \
   https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
 jq empty /tmp/rawcull-v2-manifest.json
+jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
+  /tmp/rawcull-v2-manifest.json
 ```
 
 Never replace files under a published tag. Publish a corrected immutable tag,
