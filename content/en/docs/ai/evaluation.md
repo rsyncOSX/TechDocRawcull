@@ -1,0 +1,362 @@
++++
+author = "Thomas Evensen"
+title = "CLIP Model Evaluation Results"
+linkTitle = "CLIP Evaluation Results"
+date = "2026-08-12"
+description = "Detailed comparison of OpenAI CLIP ViT-B/32 and OpenCLIP DataComp ViT-B/32-256 using RawCullFB semantic-search and image-similarity reports."
+tags = ["ai", "clip", "openai", "datacomp", "evaluation", "semantic-search", "image-similarity", "rawcullfb"]
+categories = ["technical details"]
+weight = 32
++++
+
+# CLIP Model Evaluation Results
+
+**Report date:** 2026-08-12
+
+This report compares the product-behavior results produced by RawCullFB for:
+
+- OpenAI CLIP ViT-B/32 at 224 × 224; and
+- OpenCLIP DataComp ViT-B/32-256 using the `datacomp_s34b_b86k`
+  checkpoint.
+
+The runs follow the product-behavior portion of
+[Evaluating CLIP Models](../evaluateclipmodels/). They cover the canonical 77
+semantic queries and a complete all-pairs image-similarity pass over 453 indexed
+images.
+
+The reports show that both integrations completed cleanly, neither model shows
+semantic collapse, and both produce coherent image-neighbourhood structures.
+DataComp is modestly faster and more consistent across paraphrases. Those are
+promising sanity-check results, but they are not labeled accuracy metrics.
+
+No final release-model selection can be made from these two reports alone.
+Source-framework parity evidence, pooled relevance labels, a calibrated labeled
+similarity benchmark, and full operational measurements are still required by
+the evaluation procedure.
+
+## 1. Evidence analyzed
+
+| Evidence | OpenAI | DataComp |
+|---|---|---|
+| RawCullFB report | `ViT-B-32-semantic-test-results.txt` | `datacomp_s34b_b86k-semantic-test-results.txt` |
+| Model label | `ViT-B-32` | `datacomp_s34b_b86k` |
+| Run started, UTC | 2026-08-09 15:56:46 | 2026-08-10 05:07:09 |
+| Report updated, UTC | 2026-08-09 15:56:53 | 2026-08-10 05:07:16 |
+| Catalog recorded by report | `/Users/thomas/Downloads/testphotos` | `/Users/thomas/Downloads/testphotos` |
+| Result limit | 50 | 50 |
+
+The complete model fingerprints recorded in the reports are:
+
+```text
+OpenAI
+clip:clip-vit-base-patch32_float16_static:openai/clip-vit-base-patch32:clip-vit-base-patch32_float16_static.aimodel:0.4:directory-tree-sha256-v1:a71ceca116e13b334b0679c95bd85d7ecda14fd68bd7a3ea84b83c286005f45b
+
+DataComp
+clip:ViT-B-32-256-datacomp_s34b_b86k_float16_static:mlfoundations/open_clip:ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel:0.4:directory-tree-sha256-v1:6a3639a2049b8a4ea23fe04c3083e199a4f505433f7c8bd0748b3c8d4fcb1572
+```
+
+The fingerprints are distinct, as required. Each result set therefore
+identifies a separate model asset and embedding space.
+
+This analysis did not receive the run's environment record, catalog hashes,
+query hash, model metadata, parity outputs, or relevance-label CSV. Matching
+catalog paths and image counts support comparability, but do not independently
+prove that every catalog byte and software revision was unchanged between the
+two run times.
+
+## 2. Report-integrity checks
+
+| Integrity check | OpenAI | DataComp | Result |
+|---|---:|---:|---|
+| Overall status | `completed` | `completed` | Pass |
+| Completed queries | 77/77 | 77/77 | Pass |
+| Result limit | 50 | 50 | Pass |
+| Similarity status | `completed` | `completed` | Pass |
+| Similarity anchors | 453 | 453 | Pass |
+| Pair comparisons | 102,378 | 102,378 | Pass |
+| Incompatible pairs | 0 | 0 | Pass |
+
+For 453 images, the number of unique unordered pairs is:
+
+```text
+453 × 452 / 2 = 102,378
+```
+
+The reported pair count is therefore complete for both models. There is no
+evidence of a partial query run, partial similarity run, incompatible vector,
+or accidental reuse of one model fingerprint for both reports.
+
+## 3. Semantic sanity-check methodology
+
+The following report-derived diagnostics were calculated independently for each
+model:
+
+- distinct images returned at rank one across all 77 queries;
+- the most frequently reused rank-one image;
+- unique images appearing anywhere in the 77 top-50 result sets;
+- mean rank-one minus rank-two score margin;
+- mean shared images between the top ten of every pair of unrelated and related
+  queries;
+- mean shared top-ten images within the five three-query paraphrase groups;
+- first-query latency; and
+- warmed mean, median, and P95 latency, excluding the first query.
+
+These are collapse, diversity, consistency, and operational diagnostics. They
+do not establish whether an image is relevant to a query. Relevance must be
+judged from the image itself using the pooled labeling procedure in the main
+evaluation guide.
+
+## 4. Semantic retrieval results
+
+### 4.1 Diversity and hub behavior
+
+| Metric | OpenAI | DataComp | Interpretation |
+|---|---:|---:|---|
+| Distinct rank-one images | 53/77 | **58/77** | DataComp uses a slightly broader set of winners |
+| Largest rank-one hub | 4/77 | 4/77 | Neither model has a universal winner |
+| Unique images across all top-50 results | 418/453 | **423/453** | Both search broadly across the catalog |
+| Mean top-one minus top-two margin | 0.00737 | 0.00994 | DataComp has wider within-model separation on this run |
+| Median top-one minus top-two margin | 0.00533 | 0.00708 | Same direction as the mean |
+
+The most frequently returned rank-one image for OpenAI is
+`62480371.jpg`, selected for four queries. The most frequent DataComp winner is
+`2132732266.jpg`, also selected for four queries.
+
+Both results are consistent with healthy retrieval diversity. The established
+OpenAI sanity reference in the evaluation procedure is 53 distinct top-one
+images and a maximum hub frequency of 4/77; this run reproduces those exact
+values. DataComp slightly increases rank-one and top-50 coverage without
+creating a larger semantic hub.
+
+The score-margin values may be compared between ranks from the same model, but
+not treated as calibrated confidence or compared directly as accuracy between
+models. The two models produce different embedding spaces and score
+distributions.
+
+### 4.2 Paraphrase consistency
+
+Across all 2,926 pairs of queries, the mean number of shared images in two
+top-ten result lists is low, as expected:
+
+| Metric | OpenAI | DataComp |
+|---|---:|---:|
+| Mean shared top-ten images, all query pairs | 0.724 | 0.703 |
+| Median shared top-ten images, all query pairs | 0 | 0 |
+| Mean shared top-ten images, paraphrase pairs | 4.93 | **5.60** |
+| Median shared top-ten images, paraphrase pairs | 5 | 5 |
+| Paraphrase/general overlap ratio | 6.82× | **7.97×** |
+
+Paraphrases are materially more consistent than unrelated prompts for both
+models. This is an important sanity check: changing the wording while retaining
+the intent produces strongly overlapping results, without causing unrelated
+queries to collapse onto a common result pool.
+
+The group-level mean shared top-ten counts are:
+
+| Paraphrase group | OpenAI | DataComp |
+|---|---:|---:|
+| Dog on a beach | 6.00 | **6.33** |
+| City street at night | 7.33 | **7.67** |
+| Sharp portrait | 3.33 | **4.67** |
+| Blurry photograph | 3.67 | **4.33** |
+| Beautiful landscape | 4.33 | **5.00** |
+
+DataComp has higher top-ten overlap in all five groups. Its largest advantage is
+on the sharp-portrait group. This is the clearest positive signal for DataComp
+in the current unlabeled reports.
+
+Top-one identity is less stable than top-ten membership for both models. That
+is not necessarily a failure: several images can have near-equal relevance,
+and a small score change can reorder the first few results. Graded relevance
+labels and nDCG@5 are needed to distinguish harmless reordering from a real
+quality difference.
+
+### 4.3 Agreement between models
+
+The models return the same rank-one image for 19 of 77 queries, or 24.7%. Their
+top-ten lists contain an average of 4.69 identical images, or 46.9% of a
+ten-result list.
+
+| Query category | Queries | Same rank one | Mean shared top-ten images |
+|---|---:|---:|---:|
+| Objects and scenes | 16 | 6 | 5.63 |
+| Colors and attributes | 9 | 4 | 5.56 |
+| Actions and relations | 7 | 2 | 5.00 |
+| Photographic quality and style | 13 | 2 | 4.54 |
+| Composition and subjective judgment | 9 | 1 | 2.44 |
+| Count, spatial relation, and negation | 8 | 3 | 3.63 |
+| Paraphrases | 15 | 1 | 5.07 |
+
+Concrete objects, scenes, colors, and attributes show the strongest agreement.
+Composition and subjective photographic judgments show the weakest agreement,
+followed by count, spatial, and negative-language prompts.
+
+The strongest top-ten agreement includes:
+
+- `a yellow flower`: 10/10 shared results;
+- `a lake surrounded by mountains`: 9/10;
+- `food on a plate`: 8/10;
+- `dog on a beach`: 8/10; and
+- `canine at the seaside`: 8/10.
+
+The most model-sensitive prompts include:
+
+- `a subject positioned using the rule of thirds`: 0/10 shared results;
+- `a photograph with strong leading lines`: 1/10;
+- `a candid emotional moment`: 1/10;
+- `a reflection of a person in a mirror`: 1/10;
+- `sharp portrait`: 1/10; and
+- `a photograph where the subject is not sharply focused`: 1/10.
+
+Disagreement is not itself proof that either result is wrong. It identifies the
+queries that should receive the closest attention during blind relevance
+labeling.
+
+## 5. Query latency
+
+| Metric | OpenAI | DataComp | DataComp difference |
+|---|---:|---:|---:|
+| First query | 157 ms | **130 ms** | 17.2% faster |
+| Warm mean | 67.25 ms | **65.67 ms** | 2.3% faster |
+| Warm median | 66 ms | **65 ms** | 1.5% faster |
+| Warm P95 | 72 ms | **69 ms** | 4.2% faster |
+| Warm range | 63–130 ms | 61–129 ms | Similar |
+
+DataComp is consistently but only modestly faster in this report. The first
+query is the largest difference. Warmed latency is effectively in the same
+operational class for both models.
+
+These timings are useful observations, not the complete operational benchmark
+required by the evaluation procedure. The reports do not establish that 30
+unmeasured warm-up queries were run, and they do not contain P99 latency, model
+load time, indexing throughput, peak memory, energy impact, bundle size, or
+index size.
+
+## 6. Image-similarity results
+
+| Metric | OpenAI | DataComp |
+|---|---:|---:|
+| Similarity pass duration | 861 ms | **842 ms** |
+| Mutual top-one pairs | 122 | **124** |
+| Unique top-one targets | 298 | **318** |
+| Maximum top-one target reuse | **7** | 9 |
+| Nearest-distance minimum | 0.00082 | 0.00586 |
+| Nearest-distance median | 0.17191 | 0.30235 |
+| Nearest-distance mean | 0.16290 | 0.27934 |
+| Nearest-distance P95 | 0.30612 | 0.50179 |
+| Nearest-distance maximum | 0.45259 | 0.78558 |
+
+DataComp completes the all-pairs similarity pass 19 ms, or 2.2%, faster. It
+produces two more mutual top-one pairs and a broader set of unique top-one
+targets. OpenAI has a lower maximum target-reuse count.
+
+OpenAI's distances are numerically lower throughout the distribution. This does
+not mean that OpenAI is more accurate: distance and cosine values are calibrated
+differently in the two embedding spaces. A threshold selected for one model
+must never be copied to the other model.
+
+As an additional, non-gating diagnostic, 50 obvious two-file groups were
+identified from shared numeric filename prefixes under `images/`. This gives
+100 eligible anchors. Both models retrieved the apparent partner at the same
+rates:
+
+| Heuristic paired-file recovery | OpenAI | DataComp |
+|---|---:|---:|
+| Recall at rank 1 | 98/100 | 98/100 |
+| Recall within rank 3 | 99/100 | 99/100 |
+| Recall within rank 5 | 100/100 | 100/100 |
+
+This heuristic is encouraging, but filenames are not ground-truth labels. It
+must not replace the labeled pair set prescribed by the evaluation procedure:
+exact duplicates, re-encodes, edits, crops, burst frames, same-subject images,
+hard negatives, and unrelated negatives.
+
+## 7. What the reports establish
+
+The two reports establish that:
+
+1. RawCullFB completed the same 77-query and 453-anchor workload for both
+   distinct model fingerprints.
+2. No incompatible image pairs were encountered.
+3. Neither model exhibits obvious semantic collapse or a universal top-one
+   image.
+4. Both models distinguish paraphrases from unrelated queries.
+5. DataComp has stronger paraphrase overlap in this run.
+6. DataComp has slightly broader retrieval diversity.
+7. DataComp is modestly faster for semantic queries and the all-pairs
+   similarity pass.
+8. The models disagree most on composition, subjective photographic quality,
+   counting, spatial relations, and negation.
+
+The reports do **not** establish that:
+
+- either converted bundle matches its source framework numerically;
+- one model has higher semantic Precision@1, Precision@5, MRR, or nDCG@5;
+- one model has a better duplicate-detection ROC-AUC or precision-recall AUC;
+- a shared image-similarity threshold is valid;
+- all catalog bytes, query bytes, software revisions, and index identities were
+  frozen and archived; or
+- either model has acceptable indexing throughput, memory, energy, and storage
+  costs for release.
+
+## 8. Provisional decision table
+
+| Gate or metric | OpenAI ViT-B/32 | DataComp ViT-B/32-256 | Current decision |
+|---|---:|---:|---|
+| Distinct model identity in report | Pass | Pass | Both fingerprints recorded |
+| Complete RawCullFB report | Pass | Pass | Both completed |
+| Source identity verified against archive | Not provided | Not provided | Open |
+| Minimum text parity | Not provided | Not provided | Open |
+| Minimum end-to-end image parity | Not provided | Not provided | Open |
+| Semantic collapse diagnostic | Pass | Pass | Both healthy |
+| Distinct semantic rank-one images | 53 | **58** | DataComp signal |
+| Largest semantic hub | 4/77 | 4/77 | Tie |
+| Mean paraphrase top-ten overlap | 4.93 | **5.60** | DataComp signal |
+| Precision@1 | Not labeled | Not labeled | Open |
+| Precision@5 | Not labeled | Not labeled | Open |
+| MRR | Not labeled | Not labeled | Open |
+| nDCG@5 | Not labeled | Not labeled | Open |
+| Similarity PR-AUC | Not labeled | Not labeled | Open |
+| Similarity FPR at selected recall | Not labeled | Not labeled | Open |
+| First-query latency | 157 ms | **130 ms** | DataComp signal |
+| Warm P95 latency | 72 ms | **69 ms** | Small DataComp signal |
+| Indexing throughput | Not provided | Not provided | Open |
+| Peak memory | Not provided | Not provided | Open |
+| Bundle and index size | Not provided | Not provided | Open |
+
+## 9. Recommendation and next steps
+
+DataComp is the more promising candidate in this unlabeled RawCullFB run. It is
+more paraphrase-consistent, slightly more diverse, and modestly faster, while
+retaining healthy similarity-neighbourhood behavior.
+
+The current evidence is not sufficient to prefer DataComp for release. The
+evaluation procedure explicitly requires a material **labeled-quality**
+improvement before replacing the established OpenAI control. If labeled quality
+is effectively tied, OpenAI remains the simpler established choice and DataComp
+may remain experimental.
+
+Complete the following work before making the model decision:
+
+1. Archive the environment, source revisions, model metadata, fingerprints,
+   catalog manifest, catalog hashes, and semantic-query hash for this run.
+2. Attach the OpenAI Hugging Face and DataComp OpenCLIP parity results, proving
+   text cosine of at least 0.999 and end-to-end fixture cosine of at least 0.998.
+3. Pool and blind-label the union of both models' top five results for every
+   query using relevance grades 0, 1, and 2.
+4. Calculate Precision@1, Precision@5, MRR, and nDCG@5 overall and by query
+   category.
+5. Prioritize manual review of composition, subjective-quality, count, spatial,
+   and negation prompts because those categories differ most strongly.
+6. Build the labeled image-pair benchmark and calculate ROC-AUC, PR-AUC,
+   false-positive rate, false-negative rate, and a model-specific threshold.
+7. Measure indexing throughput, peak memory, P99 latency, bundle size, index
+   size, and energy impact under controlled conditions.
+8. Revisit the provisional decision using the completed decision table.
+
+Until those steps are complete, the defensible conclusion is:
+
+> Both models pass the RawCullFB report-integrity and semantic-collapse sanity
+> checks. DataComp shows better paraphrase consistency and small operational
+> advantages, but the release choice remains open pending parity evidence and
+> blinded relevance and similarity labels.
