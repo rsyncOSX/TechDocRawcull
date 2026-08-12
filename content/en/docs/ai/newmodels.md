@@ -13,26 +13,30 @@ weight = 31
 
 This runbook publishes exactly three optional models:
 
-| Model | Asset-pack ID | Installed destination |
-|---|---|---|
+| Model         | Asset-pack ID                              | Installed destination  |
+| ------------- | ------------------------------------------ | ---------------------- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
-| OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
-| Meta SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
+| OpenAI CLIP   | `no.blogspot.RawCull.models.clip-openai`   | `Models/CLIP-OpenAI`   |
+| Meta SAM 3    | `no.blogspot.RawCull.models.sam3`          | `Models/SAM3`          |
 
 SigLIP2 and EfficientSAM are deliberately excluded. Do not add them to the
 release staging tree, packaging manifests, download manifest, production
 catalogue, settings UI, notices, or tests.
 
-The examples use a new immutable `v2` release in
+The examples use the `v2` release in
 [`RawCull-AI-Models`](https://github.com/rsyncOSX/RawCull-AI-Models/releases).
 Tag names and GitHub release URLs are case-sensitive. If another tag is chosen,
 replace `v2` everywhere and keep both RawCull manifest URLs identical.
 
+The current `v2` manifest publishes DataComp CLIP and OpenAI CLIP only. Meta SAM
+3 remains blocked and must not be uploaded or added to the deployable manifest
+until its redistribution review is complete.
+
 ## 1. Build the three canonical bundles
 
 Follow [AI Model Download Service](../aimodeldownloads/) for the pinned source
-checks, exact PhotoAIKit commands, runtime validation, and packaging layout.
-The canonical release outputs are:
+checks, exact PhotoAIKit commands, runtime validation, and packaging layout. The
+canonical release outputs are:
 
 ```text
 CLIP-DataComp/
@@ -51,12 +55,11 @@ SAM3/
 └── sam3_float16.aimodel/
 ```
 
-Use PhotoAIKit revision
-`6e3216027b267c27ccaf99d334807b18ea1aaec9`, or document and review the exact
-later revision actually used. Release CLIP bundles must use Float16, static
-batch dimensions, metadata version `0.4`, separate `image_encoder` and
-`text_encoder` functions, and corrected bicubic preprocessing. The SAM 3 bundle
-must use metadata version `0.3`.
+Use PhotoAIKit revision `6e3216027b267c27ccaf99d334807b18ea1aaec9`, or document
+and review the exact later revision actually used. Release CLIP bundles must use
+Float16, static batch dimensions, metadata version `0.4`, separate
+`image_encoder` and `text_encoder` functions, and corrected bicubic
+preprocessing. The SAM 3 bundle currently uses metadata version `0.2`.
 
 DataComp must be exported with:
 
@@ -119,7 +122,8 @@ Before enabling the OpenAI pack:
 2. confirm that the applicable terms cover the exact trained weights and their
    redistribution, not only source code and tokenizer files;
 3. record the PhotoAIKit revision, command, tokenizer checksum, runtime
-   fingerprint, AAR checksum, and byte count;
+   fingerprint, archive checksum, and byte count in the external release
+   catalogue;
 4. include the complete required notices in `Notices/CLIP-OpenAI`.
 
 Leave the descriptor blocked and omit its pack from a public manifest while
@@ -134,7 +138,8 @@ Before enabling the SAM 3 pack:
 2. confirm that an ungated GitHub release of the converted derivative complies
    with the SAM License and Meta's gated checkpoint access conditions;
 3. record the PhotoAIKit revision, command, tokenizer checksum, runtime
-   fingerprint, AAR checksum, and byte count;
+   fingerprint, archive checksum, and byte count in the external release
+   catalogue;
 4. include the complete SAM License and notices in `Notices/SAM3`;
 5. keep explicit in-app licence acceptance enabled.
 
@@ -180,7 +185,7 @@ If any checked-in packaging manifest still selects
 `ViT-B-32-256-open_clip_model.safetensors_float16_static.aimodel`, it is stale
 and must be corrected before packaging.
 
-## 5. Generate and record the AAR files
+## 5. Generate and record the asset-pack archives
 
 Check the selected Xcode tool before every release:
 
@@ -190,7 +195,8 @@ xcrun ba-package --version
 xcrun ba-package help package
 ```
 
-Run one package operation per model from the staging root:
+Run one package operation per ready model from the staging root. For the current
+`v2` republish, package the two CLIP models only:
 
 ```sh
 cd /Users/thomas/ModelAssets/Release
@@ -199,16 +205,29 @@ xcrun ba-package package Packaging/clip-datacomp.json \
   --output-path Output/clip-datacomp.aar
 xcrun ba-package package Packaging/clip-openai.json \
   --output-path Output/clip-openai.aar
-xcrun ba-package package Packaging/sam3.json \
-  --output-path Output/sam3.aar
 
 shasum -a 256 Output/*.aar
 stat -f '%N %z bytes' Output/*.aar
 ```
 
-Do not copy old archive checksums into the catalogue. A changed model,
-metadata file, tokenizer, notice, selector, or packaging tool can change the
-archive. Record the newly generated SHA-256 and exact byte count for every pack.
+Run the SAM 3 operation only after its redistribution review is complete and its
+status changes from blocked to ready:
+
+```sh
+xcrun ba-package package Packaging/sam3.json \
+  --output-path Output/sam3.aar
+```
+
+The `.aar` suffix here means an Apple Archive produced for Managed Background
+Assets; it is not an Android library.
+
+Do not copy old archive checksums into the application catalogue. A changed
+model, metadata file, tokenizer, notice, selector, or packaging tool can change
+the archive. Record the newly generated SHA-256 and exact byte count for every
+pack. Keep these archive-level values in the generated download manifest,
+RawCull's production download catalogue, release documentation, and GitHub
+release metadata. Do not embed an archive checksum or size in a provenance file
+inside that same archive; doing so creates a self-referential checksum.
 
 ## 6. Generate the download manifest
 
@@ -227,8 +246,8 @@ paths.
 Create a self-hosted manifest from the exact approved AAR files in
 `/Users/thomas/ModelAssets/Release/Output`. The generated manifest must contain
 only packs that have passed both technical and legal release gates. It may
-contain one, two, or all three packs while reviews are in progress; RawCull
-must expose only the same ready set.
+contain one, two, or all three packs while reviews are in progress; RawCull must
+expose only the same ready set.
 
 Verify every entry before publishing:
 
@@ -264,7 +283,7 @@ exactly one version for each AAR. Version `2` is used below for the new `v2`
 release; replace it with the next monotonically increasing integer for any pack
 that has already used that version.
 
-The base URL is the immutable release directory, including its trailing slash:
+The base URL is the tag-pinned release directory, including its trailing slash:
 
 ```sh
 DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/"
@@ -293,8 +312,8 @@ jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), 
 
 The generated key is `id`, not `assetPackID`; `assetPackID` is used only in the
 packaging catalogue. Verify the version, archive URL, and download size in each
-entry. The Background Assets tool constructs the URL by appending the pack ID
-to `DOWNLOAD_BASE_URL`. Consequently, the GitHub release asset must be named
+entry. The Background Assets tool constructs the URL by appending the pack ID to
+`DOWNLOAD_BASE_URL`. Consequently, the GitHub release asset must be named
 exactly like the final URL component, for example
 `no.blogspot.RawCull.models.clip-datacomp`, with no `.aar` suffix. Chapter 7
 prepares those upload names. Do not hand-edit the generated JSON or URL.
@@ -345,13 +364,12 @@ no.blogspot.RawCull.models.clip-openai
 no.blogspot.RawCull.models.sam3
 ```
 
-## 7. Publish the immutable GitHub release
+## 7. Publish the GitHub release
 
 Chapter 7 uses two different locations:
 
 - local files come from `/Users/thomas/ModelAssets/Release/Output`;
-- the release itself is in the GitHub repository
-  `rsyncOSX/RawCull-AI-Models`.
+- the release itself is in the GitHub repository `rsyncOSX/RawCull-AI-Models`.
 
 `gh release view` does not read a local model or packaging catalogue. Because
 the command supplies `--repo rsyncOSX/RawCull-AI-Models`, it can be run from any
@@ -377,13 +395,19 @@ gh release view v2 --repo rsyncOSX/RawCull-AI-Models --json tagName,isDraft,isPr
 For the existing `v2` release, the command returns:
 
 ```json
-{"isDraft":false,"isImmutable":false,"isPrerelease":true,"tagName":"v2"}
+{
+  "isDraft": false,
+  "isImmutable": false,
+  "isPrerelease": true,
+  "tagName": "v2"
+}
 ```
 
 `isImmutable:false` means GitHub is not currently enforcing immutable-release
-protection for this repository. The runbook still treats every published tag
-and asset as immutable: never replace or delete an uploaded file; publish a new
-corrective tag instead.
+protection for this repository. Normally treat a release as immutable once
+clients have downloaded or consumed its manifest. The narrowly scoped republish
+procedure in section 7.4 is permitted only when the release is known to be
+unused and the entire affected payload-and-manifest set is replaced.
 
 If the command fails, interpret the error before changing its arguments:
 
@@ -407,8 +431,8 @@ gh release create v2 --repo rsyncOSX/RawCull-AI-Models \
   --notes "RawCull AI model asset packs for manifest version 2."
 ```
 
-Do not run `gh release create` when `gh release view v2` already succeeds.
-At verification time, `tagName` must be `v2` and `isDraft` must be `false`. A
+Do not run `gh release create` when `gh release view v2` already succeeds. At
+verification time, `tagName` must be `v2` and `isDraft` must be `false`. A
 tag-pinned URL can use a published prerelease, but record that decision.
 
 ### 7.2. Prepare the exact release asset names
@@ -460,7 +484,8 @@ gh release upload v2 \
   --repo rsyncOSX/RawCull-AI-Models
 ```
 
-Do not use `--clobber` on a published release. Verify the remote filenames:
+Do not use `--clobber` during a normal new-tag publication. Verify the remote
+filenames:
 
 ```sh
 gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
@@ -499,22 +524,148 @@ jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), 
   /tmp/rawcull-v2-manifest.json
 ```
 
-Never replace files under a published tag. Publish a corrected immutable tag,
-for example `v2.0.1`, and update both RawCull manifest URLs.
+If clients might already have consumed the release, never replace files under
+its tag. Publish a corrective tag, for example `v2.0.1`, and update both RawCull
+manifest URLs. If the release is confirmed unused, follow section 7.4 instead.
+
+### 7.4. Republish unused models on the same `v2` tag
+
+Use this exception only when all of the following are true:
+
+- no user or client has downloaded or cached the model release;
+- the GitHub release reports `isImmutable:false`;
+- the replacement archives, manifest, RawCull catalogue, tests, notices, and
+  documentation have already been updated and verified together;
+- every model omitted for legal or technical reasons remains omitted. For the
+  current republish, SAM 3 remains blocked and absent.
+
+First verify the local replacement set. The manifest must contain exactly the
+two ready CLIP packs, and each `downloadSize` must match its extensionless
+upload file:
+
+| Asset                                      | Expected v2 bytes | Expected SHA-256                                                   |
+| ------------------------------------------ | ----------------: | ------------------------------------------------------------------ |
+| `no.blogspot.RawCull.models.clip-datacomp` |       282,966,632 | `cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7` |
+| `no.blogspot.RawCull.models.clip-openai`   |       282,866,068 | `e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c` |
+| `manifest.json`                            |               783 | `d9c58b6ff6752f5ae4e3d692a6d6d5839edca733d7d60da6ed4f54eca336d8a6` |
+
+```sh
+cd /Users/thomas/ModelAssets/Release
+
+jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
+  Output/manifest.json
+stat -f '%N %z' \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai
+shasum -a 256 \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  Output/manifest.json
+```
+
+Confirm that the manifest includes no SAM 3 entry:
+
+```sh
+test "$(jq -r '.assetPacks[].id' Output/manifest.json | sort | tr '\n' ' ')" = \
+  "no.blogspot.RawCull.models.clip-datacomp no.blogspot.RawCull.models.clip-openai "
+```
+
+Inspect the current remote assets and record their names, sizes, and digests
+before deleting anything:
+
+```sh
+gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+  --json tagName,isDraft,isPrerelease,isImmutable,assets \
+  --jq '{tagName,isDraft,isPrerelease,isImmutable,assets:[.assets[]|{name,size,digest,url}]}'
+```
+
+Delete the old `manifest.json` first. This prevents a client from discovering
+the old manifest while its referenced payloads are being replaced. Then delete
+the two old CLIP uploads by exact name. Do not delete or recreate the release or
+tag itself:
+
+```sh
+gh release delete-asset v2 manifest.json \
+  --repo rsyncOSX/RawCull-AI-Models --yes
+gh release delete-asset v2 no.blogspot.RawCull.models.clip-datacomp \
+  --repo rsyncOSX/RawCull-AI-Models --yes
+gh release delete-asset v2 no.blogspot.RawCull.models.clip-openai \
+  --repo rsyncOSX/RawCull-AI-Models --yes
+```
+
+Verify those three names are absent. If any deletion failed, stop and resolve it
+before uploading replacements:
+
+```sh
+gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+  --json assets --jq '.assets[].name'
+```
+
+Upload the two replacement payloads first. SAM 3 must not be included:
+
+```sh
+gh release upload v2 \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  --repo rsyncOSX/RawCull-AI-Models
+```
+
+Download both published payloads anonymously and compare their byte counts and
+SHA-256 values with the exact local upload files. Upload `manifest.json` only
+after both comparisons succeed:
+
+```sh
+curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-datacomp \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-datacomp
+curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-openai \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-openai
+
+cmp Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  /tmp/no.blogspot.RawCull.models.clip-datacomp
+cmp Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  /tmp/no.blogspot.RawCull.models.clip-openai
+shasum -a 256 \
+  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  /tmp/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  /tmp/no.blogspot.RawCull.models.clip-openai
+
+gh release upload v2 Output/manifest.json \
+  --repo rsyncOSX/RawCull-AI-Models
+```
+
+Finally, download the new manifest anonymously and verify it byte-for-byte, then
+cross-check every remote asset against its manifest entry and local catalogue:
+
+```sh
+curl --fail --location --output /tmp/rawcull-v2-manifest.json \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
+cmp Output/manifest.json /tmp/rawcull-v2-manifest.json
+jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
+  /tmp/rawcull-v2-manifest.json
+gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+  --json assets \
+  --jq '.assets[] | [.name, (.size | tostring), .digest, .url] | @tsv'
+```
+
+Do not leave `v2` without a manifest longer than necessary. If replacement or
+verification fails after deletion, keep the manifest absent until the two
+payloads are complete and verified; never restore a manifest that references a
+missing or mismatched archive.
 
 ## 8. Update RawCull's production catalogue
 
-RawCull currently has these inclusion switches:
+The current two-CLIP `v2` release uses:
 
 ```swift
-static let includeOpenAICLIP = false
+static let includeOpenAICLIP = true
 static let includeDataCompCLIP = true
 static let includeSAM3 = false
 ```
 
-This correctly exposes only the currently ready DataComp pack. After each new
-pack is published and cleared, change only its switch to `true`. The final
-three-model configuration is:
+SAM 3 remains blocked. Change its switch only after its redistribution review
+and all technical release gates are complete. The eventual three-model
+configuration is:
 
 ```swift
 static let includeOpenAICLIP = true
@@ -559,9 +710,11 @@ verified.
 
 For every released pack, update `ModelAssets/Notices/<model>/PROVENANCE.json`
 and `NOTICE.md` with the source revision, source checksum, PhotoAIKit revision,
-command, runtime filename, model fingerprint, AAR checksum, byte count, and
-review status. Update `ModelAssets/README.md` to list the exact release URL and
-available packs.
+command, runtime filename, model fingerprint, and review status. Keep archive
+SHA-256 and byte-count values in RawCull's production download catalogue,
+release documentation, generated manifest, and release-host metadata—not in the
+provenance packaged inside that archive. Update `ModelAssets/README.md` to list
+the exact release URL and available packs.
 
 Tests must verify:
 
@@ -599,33 +752,40 @@ Before shipping:
 2. download each enabled model through Managed Background Assets;
 3. rebuild each CLIP index and test semantic search and similarity;
 4. verify that DataComp and OpenAI artifacts never cross-load;
-5. accept the SAM 3 licence and verify segmentation;
+5. after SAM 3 becomes ready and is published, accept its licence and verify
+   segmentation;
 6. relaunch and verify installation and selection persistence;
 7. remove each pack independently;
 8. interrupt a download and verify retry;
-9. verify Vision feature-print similarity remains the safe fallback when no
-   CLIP model is available.
+9. verify Vision feature-print similarity remains the safe fallback when no CLIP
+   model is available.
 
 ## Release checklist
 
-- [ ] Exactly DataComp CLIP, OpenAI CLIP, and SAM 3 are in release scope.
+- [ ] The supported model scope remains DataComp CLIP, OpenAI CLIP, and SAM 3.
+- [ ] The current manifest contains exactly the ready subset (both CLIP packs
+      for v2).
 - [ ] DataComp uses `datacomp_s34b_b86k`, not the custom filename preset.
 - [ ] Exact upstream revisions and source checksums are recorded.
 - [ ] The exact PhotoAIKit revision and conversion commands are recorded.
 - [ ] Runtime fingerprints match `metadata.json`.
 - [ ] CLIP parity, semantic search, and image similarity are reviewed.
 - [ ] SAM 3 segmentation and licence acceptance are tested.
-- [ ] OpenAI and SAM 3 redistribution blockers are resolved before release.
+- [ ] OpenAI redistribution blockers are resolved before its release.
+- [ ] SAM 3 remains blocked and absent, or its redistribution review is
+      complete.
 - [ ] Only optimized runtime assets are packaged.
-- [ ] Fresh AAR checksums and byte counts are in provenance and RawCull.
+- [ ] Fresh archive checksums and byte counts are in RawCull, the generated
+      manifest, and release records.
 - [ ] Archives are uploaded and verified before `manifest.json`.
-- [ ] Both RawCull manifest URLs point to the same immutable tag.
+- [ ] Both RawCull manifest URLs point to the same tag-pinned manifest.
 - [ ] Inclusion flags and readiness values match the published manifest.
 - [ ] Focused, full, and clean-machine tests pass.
 
 ## Rollback
 
 Before an app release, restore both manifest URLs and catalogue readiness to the
-last known-good release if the new model release fails. After publication, do
-not mutate an existing tag. Publish a corrected tag, verify it, and update both
-RawCull URLs together.
+last known-good release if the new model release fails. After clients have
+consumed a publication, do not mutate its tag. Publish a corrected tag, verify
+it, and update both RawCull URLs together. The same-tag procedure in section 7.4
+is only for a confirmed-unused release.
