@@ -2,6 +2,7 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
+lastmod = "2026-08-20"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
@@ -10,23 +11,31 @@ mermaid = true
 
 # Thumbnails and Scan Pipeline
 
-RawCull separates catalog scanning, thumbnail preloading, UI-driven thumbnail requests, and full-size preview extraction. They share RawParserKit and disk-cache infrastructure, but they have deliberately different memory-admission rules.
+RawCull separates catalog scanning, thumbnail preloading, UI-driven thumbnail
+requests, and full-size preview extraction. They share RawParserKit and
+disk-cache infrastructure, but they have deliberately different memory-admission
+rules.
 
-The key current invariant is: **catalog preloading warms the 200 px grid cache and disk cache, but only UI demand may admit an image to the preview-size RAM cache**. This keeps scan order from displacing the images the user is actively viewing.
+The key current invariant is: **catalog preloading warms the 200 px grid cache
+and disk cache, but only UI demand may admit an image to the preview-size RAM
+cache**. This keeps scan order from displacing the images the user is actively
+viewing. Cache reuse is also replacement-safe: a file written over the same path
+is a different source when its size or modification date changes.
 
 ## Source Map
 
-| Area | Main files |
-|---|---|
-| Catalog lifecycle | `RawCullViewModel+Catalog.swift`, `RawCullMainView.swift` |
-| App/package loading boundary | `Model/RawImageLoading.swift`, `RawParserKit/Sources/RawParserKit/RawImageLoader.swift` |
-| File discovery and metadata scan | `Actors/DiscoverFiles.swift`, `Actors/ScanFiles.swift` |
-| Catalog thumbnail preload | `Actors/ScanAndCreateThumbnails.swift`, `Model/Handlers/CreateFileHandlers.swift` |
-| UI-driven thumbnails | `Actors/ThumbnailLoader.swift`, `Actors/RequestThumbnail.swift`, `ThumbnailImageView.swift` |
-| Thumbnail caches | `Actors/SharedMemoryCache.swift`, `Actors/DiskCacheManager.swift`, `Model/Cache/CachedThumbnail.swift` |
-| Full-size preview loading | `Model/FullSizePreviewLoader.swift`, `Model/Handlers/ZoomPreviewHandler.swift`, `Actors/FullSizeJPGDiskCache.swift` |
-| Vendor dispatch | `RawParserKit/Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift`, `SonyRawFormat.swift`, `NikonRawFormat.swift` |
-| Concurrency tests | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`, `ThumbnailProviderTests.swift`, `DiskCacheAndScanAdmissionTests.swift` |
+| Area                             | Main files                                                                                                                                                                                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalog lifecycle                | `RawCullViewModel+Catalog.swift`, `RawCullMainView.swift`                                                                                                                                           |
+| App/package loading boundary     | `Model/RawImageLoading.swift`, `RawParserKit/Sources/RawParserKit/RawImageLoader.swift`                                                                                                             |
+| File discovery and metadata scan | `Actors/DiscoverFiles.swift`, `Actors/ScanFiles.swift`                                                                                                                                              |
+| Catalog thumbnail preload        | `Actors/ScanAndCreateThumbnails.swift`, `Model/Handlers/CreateFileHandlers.swift`                                                                                                                   |
+| Preload/UI contention gate       | `Actors/ThumbnailPreloadGate.swift`                                                                                                                                                                 |
+| UI-driven thumbnails             | `Actors/ThumbnailLoader.swift`, `Actors/RequestThumbnail.swift`, `Views/ThumbnailComponents/ThumbnailImageView.swift`                                                                               |
+| Thumbnail identity and caches    | `Model/Cache/ThumbnailCacheKey.swift`, `Actors/SharedMemoryCache.swift`, `Actors/DiskCacheManager.swift`, `Model/Cache/CachedThumbnail.swift`                                                       |
+| Full-size preview loading        | `Model/FullSizePreviewLoader.swift`, `Model/Handlers/ZoomPreviewHandler.swift`, `Actors/FullSizeJPGDiskCache.swift`                                                                                 |
+| Vendor dispatch                  | `RawParserKit/Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift`, `SonyRawFormat.swift`, `NikonRawFormat.swift`                                                                       |
+| Behavior tests                   | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`, `ThumbnailProviderTests.swift`, `DiskCacheAndScanAdmissionTests.swift`, `ThumbnailCacheIdentityTests.swift`, `ThumbnailContentionTests.swift` |
 
 ## Catalog Load Flow
 
@@ -39,66 +48,98 @@ flowchart TD
     E --> F["Sort and filter on MainActor"]
     F --> G["Load ratings and valid saved scores"]
     G --> H["ScanAndCreateThumbnails.preloadCatalog"]
-    H --> I["200 px grid RAM cache"]
-    H --> J["JPEG thumbnail disk cache"]
+    H --> Gate["ThumbnailPreloadGate: active catalog"]
+    Gate --> I["200 px grid RAM cache"]
+    Gate --> J["JPEG thumbnail disk cache"]
     F --> K["SwiftUI grid and detail views"]
     K --> L["ThumbnailLoader / RequestThumbnail"]
+    L -. "grid miss waits during preload" .-> Gate
     L --> M["Preview RAM cache"]
     L --> J
 ```
 
 ## Catalog Load Ownership
 
-`RawCullViewModel.startCatalogLoad(for:)` cancels the older load, starts security-scoped access, and creates a background-priority `catalogLoadTask` that runs `handleSourceChange(url:)`.
+`RawCullViewModel.startCatalogLoad(for:)` cancels the older load, starts
+security-scoped access, and creates a background-priority `catalogLoadTask` that
+runs `handleSourceChange(url:)`.
 
-`handleSourceChange(url:)` is main-actor orchestration. File I/O, metadata work, decoding, and cache I/O are awaited through actors or detached work. After every significant suspension, `isActiveCatalogLoad(_:)` and cancellation checks prevent an old catalog from publishing into the current UI.
+`handleSourceChange(url:)` is main-actor orchestration. File I/O, metadata work,
+decoding, and cache I/O are awaited through actors or detached work. After every
+significant suspension, `isActiveCatalogLoad(_:)` and cancellation checks
+prevent an old catalog from publishing into the current UI.
 
-Changing catalogs also cancels thumbnail/full-preview work, clears burst analysis state, stops the old security scope, and releases the current scanning actors.
+Changing catalogs also cancels thumbnail/full-preview work, clears burst
+analysis state, stops the old security scope, and releases the current scanning
+actors.
 
 ## File Discovery
 
-`DiscoverFiles` enumerates a directory off the main actor and filters extensions through `RawFormatRegistry.allExtensions`. Its `recursive` parameter controls whether subdirectories are traversed.
+`DiscoverFiles` enumerates a directory off the main actor and filters extensions
+through `RawFormatRegistry.allExtensions`. Its `recursive` parameter controls
+whether subdirectories are traversed.
 
 The current registry contains:
 
-| Format | Extension | Conformer |
-|---|---|---|
-| Sony ARW | `.arw` | `SonyRawFormat` |
-| Nikon NEF | `.nef` | `NikonRawFormat` |
+| Format    | Extension | Conformer        |
+| --------- | --------- | ---------------- |
+| Sony ARW  | `.arw`    | `SonyRawFormat`  |
+| Nikon NEF | `.nef`    | `NikonRawFormat` |
 
-`ScanFiles` performs its own non-recursive directory listing and asks `RawFormatRegistry.format(for:)` whether each item is supported. Discovery and scan therefore share registry policy rather than maintaining separate hard-coded extension lists.
+`ScanFiles` performs its own non-recursive directory listing and asks
+`RawFormatRegistry.format(for:)` whether each item is supported. Discovery and
+scan therefore share registry policy rather than maintaining separate hard-coded
+extension lists.
 
 ## Metadata Scan
 
-`ScanFiles.scanFiles(url:onProgress:)` starts its own security-scoped access and creates one child task per supported file. Each child:
+`ScanFiles.scanFiles(url:onProgress:)` starts its own security-scoped access and
+creates one child task per supported file. Each child:
 
-1. reads URL resource values for name, byte size, content type, and modification date;
+1. reads URL resource values for name, byte size, content type, and modification
+   date;
 2. calls the injected `RawImageLoading.fileMetadata(for:)` abstraction;
 3. builds a `FileItem` with EXIF metadata and the normalized AF point;
 4. records the package focus-location string when available.
 
-The production adapter, `RawParserKitImageLoader`, maps `RawParserKit.RawImageLoader.metadata(for:)` into the app's `ExifMetadata`. RawParserKit reads ImageIO EXIF/TIFF data, dispatches body-specific details through `RawFormatRegistry`, and resolves MakerNote or EXIF subject-area focus evidence.
+The production adapter, `RawParserKitImageLoader`, maps
+`RawParserKit.RawImageLoader.metadata(for:)` into the app's `ExifMetadata`.
+RawParserKit reads ImageIO EXIF/TIFF data, dispatches body-specific details
+through `RawFormatRegistry`, and resolves MakerNote or EXIF subject-area focus
+evidence.
 
-This is a single metadata pass per file. The app no longer runs separate EXIF and MakerNote extraction passes.
+This is a single metadata pass per file. The app no longer runs separate EXIF
+and MakerNote extraction passes.
 
-If **no** native focus-location strings are found for the catalog, `ScanFiles` falls back to `focuspoints.json`. This is catalog-wide fallback behavior; it does not merge JSON entries into a partly populated native result.
+If **no** native focus-location strings are found for the catalog, `ScanFiles`
+falls back to `focuspoints.json`. This is catalog-wide fallback behavior; it
+does not merge JSON entries into a partly populated native result.
 
-`FileItem` is an app typealias for `RawCullCore.RawCullFileItem`, keeping scan output usable by the pure package engines and tests.
+`FileItem` is an app typealias for `RawCullCore.RawCullFileItem`, keeping scan
+output usable by the pure package engines and tests.
 
 ## Thumbnail Preload
 
-After scan, sort, ratings, and valid saved scores are applied, `ScanAndCreateThumbnails.preloadCatalog(at:targetSize:)` walks the catalog again to warm browsing caches. A catalog URL already recorded in `processedURLs` is not preloaded again during the same app session.
+After scan, sort, ratings, and valid saved scores are applied,
+`ScanAndCreateThumbnails.preloadCatalog(at:targetSize:)` walks the catalog again
+to warm browsing caches. A catalog URL already recorded in `processedURLs` is
+not preloaded again during the same app session. The actor registers the catalog
+with `ThumbnailPreloadGate` for exactly the lifetime of this preload and always
+ends the gate after the task returns or is cancelled.
 
 The outer task group admits at most:
 
 ```text
-RawImageLoadingConcurrency.batchExtractionLimit
-= max(1, activeProcessorCount * 2)
+RawImageLoadingConcurrency.thumbnailPreloadLimit
 ```
 
-RawParserKit adds an internal six-slot thumbnail decode limiter and coalesces identical URL/size requests. The outer limit bounds catalog work; the package limit prevents simultaneous RAW decodes from growing without bound.
+The app-level limit bounds catalog work. RawParserKit adds its own thumbnail
+decode limiter and coalesces identical URL/size requests, preventing
+simultaneous RAW decodes from growing without bound at the package boundary.
 
-For each file, preload uses this path:
+Before any lookup, preload resolves a preview `ThumbnailCacheKey` from current
+file metadata and derives its 200 px grid representation. For each file, preload
+then uses this path:
 
 ```mermaid
 flowchart LR
@@ -114,20 +155,30 @@ flowchart LR
     H --> I["Background atomic disk save"]
 ```
 
-All three branches populate the dedicated grid cache when needed. Disk and source branches **do not** insert into the preview-size RAM cache. `RequestThumbnail` is its only admitter, so preview LRU ordering reflects user demand instead of scan order.
+All three branches populate the dedicated grid cache when needed. Disk and
+source branches **do not** insert into the preview-size RAM cache.
+`RequestThumbnail` is its only admitter, so preview LRU ordering reflects user
+demand instead of scan order. After a cold decode, preload resolves the key
+again before caching; if the source changed while decoding, the result is
+discarded rather than being stored under stale identity.
 
-On a cold extraction, `ScanAndCreateThumbnails` converts the actor-owned image to JPEG `Data` before launching the background disk save. This avoids sending `CGImage` or `NSImage` across the detached-task boundary.
+On a cold extraction, `ScanAndCreateThumbnails` converts the actor-owned image
+to JPEG `Data` before launching the background disk save. This avoids sending
+`CGImage` or `NSImage` across the detached-task boundary.
 
 ## The Two Memory Caches
 
 `SharedMemoryCache` owns two `NSCache` instances:
 
-| Cache | Content | Admission policy |
-|---|---|---|
-| Preview cache (`memoryCache`) | Preview-size images used for detail/list demand | Only `RequestThumbnail` inserts; a hit touches its LRU position |
-| Grid cache (`gridThumbnailCache`) | Downscaled 200 px images | Preload populates it; grid requests can return immediately |
+| Cache                             | Content                                         | Admission policy                                                |
+| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| Preview cache (`memoryCache`)     | Preview-size images used for detail/list demand | Only `RequestThumbnail` inserts; a hit touches its LRU position |
+| Grid cache (`gridThumbnailCache`) | Downscaled 200 px images                        | Preload populates it; grid requests can return immediately      |
 
-Both caches are cost-limited. The preview item count limit is intentionally high so byte cost is the normal binding constraint. Under warning memory pressure both limits shrink to 60%; under critical pressure both caches are cleared and the preview cache is temporarily capped at 50 MiB.
+Both caches are cost-limited. The preview item count limit is intentionally high
+so byte cost is the normal binding constraint. Under warning memory pressure
+both limits shrink to 60%; under critical pressure both caches are cleared and
+the preview cache is temporarily capped at 50 MiB.
 
 ## UI-Driven Thumbnail Loading
 
@@ -136,9 +187,23 @@ Both caches are cost-limited. The preview item count limit is intentionally high
 - `.grid` calls the shared `ThumbnailLoader` actor;
 - `.list` calls `RequestThumbnail` directly.
 
-For grid targets of 200 px or less, `ThumbnailLoader` first checks the grid cache without acquiring a concurrency slot. A miss joins its FIFO-like slot queue, which allows at most six active requests and removes cancelled waiters safely.
+For grid targets of 200 px or less, `ThumbnailLoader` first checks the grid
+cache without acquiring a concurrency slot. A miss joins its FIFO-like slot
+queue, which allows at most six active requests and removes cancelled waiters
+safely.
 
-After a slot is acquired, the loader reads saved settings and asks `RequestThumbnail` for `settings.thumbnailSizePreview`. The passed grid target controls the grid-cache fast path; the slower preview request uses the configured preview size.
+There is one step before that queue: a grid miss for the catalog currently being
+preloaded waits on `ThumbnailPreloadGate`, then checks the grid cache again.
+This prevents the visible grid from launching a duplicate cold decode while
+preload is already producing the same catalog. Only grid misses in that catalog
+wait; AI indexing, semantic search, Deep Review, model downloads, non-grid
+requests, and other catalogs are independent of this gate. Cancellation removes
+and resumes the gate waiter safely.
+
+After a slot is acquired, the loader reads saved settings and asks
+`RequestThumbnail` for `settings.thumbnailSizePreview`. The passed grid target
+controls the grid-cache fast path; the slower preview request uses the
+configured preview size.
 
 `RequestThumbnail` resolves a request in this order:
 
@@ -146,13 +211,55 @@ After a slot is acquired, the loader reads saved settings and asks `RequestThumb
 2. oriented JPEG disk cache;
 3. `RawImageLoading.thumbnailCGImage` source decode.
 
-A disk hit is promoted into preview RAM. A cold source decode is inserted into preview RAM and asynchronously encoded to the thumbnail disk cache. The cache also records UI demand, cold extraction, eviction, and “boomerang” diagnostics for measuring whether a recently evicted image had to be reloaded from disk.
+A disk hit is promoted into preview RAM. A cold source decode is inserted into
+preview RAM and asynchronously encoded to the thumbnail disk cache. The cache
+also records UI demand, cold extraction, eviction, and “boomerang” diagnostics
+for measuring whether a recently evicted image had to be reloaded from disk.
+
+Requests with the same complete `ThumbnailCacheKey` share one producer in
+`RequestThumbnail`. Each caller has its own continuation. Cancelling one waiter
+does not cancel work needed by other waiters; the producer is cancelled only
+when its last waiter leaves.
+
+## Replacement-Safe Thumbnail Identity
+
+`ThumbnailCacheKey` is the identity shared by grid RAM, preview RAM, in-flight
+request coalescing, and the disk cache. It has two layers:
+
+```text
+ThumbnailSourceFingerprint
+  standardized file URL
+  file size
+  modification date
+
+ThumbnailCacheKey
+  source fingerprint
+  purpose: grid or preview
+  requested pixel size
+  orientation policy
+  schema version
+```
+
+The source fingerprint is optional. If filesystem size or modification date
+cannot be read, RawCull still decodes the image but does not reuse it through a
+potentially unsafe key. Purpose and requested size prevent a 200 px grid
+representation from satisfying a larger preview request. The schema version
+invalidates all older representation semantics without coupling thumbnail
+invalidation to PhotoAIKit artifacts.
 
 ## Disk Thumbnail Cache
 
-`DiskCacheManager` stores quality-0.7 JPEGs. Its key is an MD5 filename hash of a version string plus the standardized source path. MD5 is used only as a compact filesystem key, not for security.
+`DiskCacheManager` stores quality-0.7 JPEGs under a directory named for
+`ThumbnailCacheKey.schemaVersion`. The filename is an MD5 hash of the complete,
+locale-independent `cacheIdentifier`: schema, source path bytes, size,
+modification-date bits, purpose, requested pixels, and orientation policy. MD5
+is used only as a compact filesystem name, not for security.
 
-The current key version includes oriented-thumbnail semantics, so thumbnails from older orientation behavior are automatically invalidated. Loads use `OrientationNormalizedImageLoader`, and writes are atomic.
+Older root-level JPEG entries are removed when the current representation-aware
+cache is initialized. Loads use `OrientationNormalizedImageLoader`; a corrupt or
+partial JPEG is deleted and treated as a recoverable miss. Writes accept
+pre-encoded `Data` and are atomic, so `CGImage` does not cross an actor/task
+boundary.
 
 ## Full-Size And Zoom Preview Paths
 
@@ -174,41 +281,62 @@ flowchart TD
     L -->|"no"| M["SonyRawFormat.createFullSizeJPEG"]
 ```
 
-`FullSizePreviewLoader` prefers a same-basename `.jpg` sidecar, then the full-size disk cache, then RawParserKit extraction. RawParserKit itself coalesces duplicate preview requests and limits expensive full-size decode work to two concurrent operations.
+`FullSizePreviewLoader` prefers a same-basename `.jpg` sidecar, then the
+full-size disk cache, then RawParserKit extraction. RawParserKit itself
+coalesces duplicate preview requests and limits expensive full-size decode work
+to two concurrent operations.
 
-The developed-RAW route is currently Sony-specific and uses its own cache variant. The full-size cache stores quality-0.85 JPEG data and has a versioned orientation-aware key. Keeping these larger images on disk prevents a few pixel-peeping previews from evicting many browsing thumbnails from RAM.
+The developed-RAW route is currently Sony-specific and uses its own cache
+variant. The full-size cache stores quality-0.85 JPEG data and has a versioned
+orientation-aware key. Keeping these larger images on disk prevents a few
+pixel-peeping previews from evicting many browsing thumbnails from RAM.
 
 ## App Loading Abstraction
 
-The app depends on the `RawImageLoading` protocol rather than calling vendor conformers directly:
+The app depends on the `RawImageLoading` protocol rather than calling vendor
+conformers directly:
 
-| Requirement | Use |
-|---|---|
-| `fileMetadata` / `exifMetadata` | Scan metadata and normalized focus evidence |
-| `thumbnailCGImage` / `thumbnailImage` | On-demand and preload thumbnail generation |
-| `previewCGImage` | Embedded/sidecar full-size preview loading |
+| Requirement                           | Use                                         |
+| ------------------------------------- | ------------------------------------------- |
+| `fileMetadata` / `exifMetadata`       | Scan metadata and normalized focus evidence |
+| `thumbnailCGImage` / `thumbnailImage` | On-demand and preload thumbnail generation  |
+| `previewCGImage`                      | Embedded/sidecar full-size preview loading  |
 
-`RawParserKitImageLoader` is the production adapter. Tests can inject alternate loaders without performing real RAW decoding.
+`RawParserKitImageLoader` is the production adapter. Tests can inject alternate
+loaders without performing real RAW decoding.
 
 Within RawParserKit, `RawFormat` provides vendor policy:
 
-| Requirement | Use |
-|---|---|
-| `extensions`, `displayName` | Registry lookup and diagnostics |
-| `extractThumbnail` | Vendor thumbnail fallback |
-| `extractEmbeddedPreview` | Largest usable embedded preview |
-| `focusLocation` | MakerNote AF location |
-| `rawFileTypeString` | Compression labels |
+| Requirement                           | Use                             |
+| ------------------------------------- | ------------------------------- |
+| `extensions`, `displayName`           | Registry lookup and diagnostics |
+| `extractThumbnail`                    | Vendor thumbnail fallback       |
+| `extractEmbeddedPreview`              | Largest usable embedded preview |
+| `focusLocation`                       | MakerNote AF location           |
+| `rawFileTypeString`                   | Compression labels              |
 | `sizeClassThresholds`, `rawSizeClass` | Body-specific S/M/L size labels |
 
-`extractFullJPEG` remains only as a deprecated compatibility requirement; new code uses `extractEmbeddedPreview`.
+`extractFullJPEG` remains only as a deprecated compatibility requirement; new
+code uses `extractEmbeddedPreview`.
 
 ## What To Check When Changing This Area
 
-- Preserve the rule that scan/preload does not admit disk or source results to preview RAM.
-- Check both the grid-cache fast path and configured preview-size path when changing thumbnail settings.
-- Keep `RawFormatRegistry.allExtensions` and `RawFormatRegistry.all` aligned when adding a format.
-- Keep expensive decode limits and cancellation behavior covered by concurrency tests.
+- Preserve the rule that scan/preload does not admit disk or source results to
+  preview RAM.
+- Keep `ThumbnailPreloadGate` scoped only to grid misses for the actively
+  preloading catalog.
+- Build memory, disk, and coalescing identity from the same complete
+  `ThumbnailCacheKey`.
+- Do not fall back to path-only reuse when source metadata is unavailable.
+- Check both the grid-cache fast path and configured preview-size path when
+  changing thumbnail settings.
+- Keep `RawFormatRegistry.allExtensions` and `RawFormatRegistry.all` aligned
+  when adding a format.
+- Keep expensive decode limits and cancellation behavior covered by concurrency
+  tests.
 - Convert actor-owned images to `Data` before detached cache writes.
 - Version cache keys when orientation or encoded-image semantics change.
-- Inspect `isActiveCatalogLoad(_:)` guards if stale results appear after switching folders.
+- Run cache-identity, scan-admission, contention, cancellation, and
+  replacement-at-same-path tests together after changing this pipeline.
+- Inspect `isActiveCatalogLoad(_:)` guards if stale results appear after
+  switching folders.
