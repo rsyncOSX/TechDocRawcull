@@ -1,163 +1,239 @@
 +++
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
-date = "2026-05-19"
+date = "2026-08-21"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
 mermaid = true
 +++
 
-# Focus Mask and Sharpness
+# Focus Mask And Sharpness
 
-RawCull's focus system does two related jobs:
+RawCull exposes four related results, but they are not interchangeable:
 
-1. produce a visible focus mask for image inspection,
-2. compute a scalar sharpness score for sorting, burst ranking, and saved scoring.
+| Result | Meaning | Main consumer |
+|---|---|---|
+| Scalar sharpness | A package-computed ranking value based on full-frame, salient-subject, AF, and local-patch detail | Sorting, burst ranking, persistence |
+| Saliency evidence | Vision candidates and an optional classification label/confidence | Subject selection and diagnostics |
+| Focus-point evidence | Camera AF position plus AF-center, neighborhood, and local scores | Region selection and diagnostics |
+| Rendered focus mask | A thresholded, colorized overlay clipped to selected evidence patches | Visual inspection only |
 
-Both jobs use the same core engine, but the UI overlay and the numeric score are not identical. The overlay tries to show useful focus evidence. The score tries to rank files fairly across a catalog or burst.
+The scalar score and the overlay share edge-energy and evidence machinery in
+PhotoAnalysisKit, but showing more red pixels does not increase a stored score.
+Mask presentation can be relaxed without changing scalar analysis.
 
-## Source Map
+RawCull pins **PhotoAnalysisKit 1.2.0**, revision
+**6e83ceebbca47a5dea0b1b2b4ee8b9132c281449**. The package owns sharpness,
+saliency, calibration, focus evidence, and mask algorithms. RawCull owns UI
+settings, file decoding/source selection, workflow lifetime, normalization, and
+persistence.
 
-| Area | Files |
-|---|---|
-| UI-facing model | `SharpnessScoringModel.swift`, `FocusMaskModel.swift` |
-| Engine | `FocusMaskEngine.swift`, `FocusMaskEngine+Scoring.swift`, `FocusMaskEngine+MaskGeneration.swift` |
-| Configuration | `FocusDetectorConfig.swift`, `SharpnessScoringOptions.swift`, `FocusMaskCalibration.swift` |
-| Data types | `FocusMaskTypes.swift`, `RawCullCore/SaliencyInfo.swift` |
-| UI controls | `SharpnessControlsView.swift`, `FocusMaskControlsView.swift`, `FocusSettingsTab.swift`, `FocusOverlayView.swift`, `ZoomOverlayView.swift` |
-| Metal kernel | `Kernels.ci.metal` |
-| Persistence integration | `RawCullViewModel+Sharpness.swift`, `CullingModel.swift`, `SavedFiles.swift` |
-
-## Scoring Flow
+## Ownership From Controls To Package
 
 ```mermaid
 flowchart TD
-    A["SharpnessScoringModel.scoreFiles"] --> B["Bounded task group"]
-    B --> C["Per-file FocusDetectorConfig"]
-    C --> D["FocusMaskEngine.computeSharpnessScore"]
-    D --> E{"Scoring source"}
-    E -->|"embeddedPreview"| F["Embedded JPEG or ImageIO thumbnail"]
-    E -->|"rawDemosaic"| G["CIRAWFilter demosaiced thumbnail"]
-    F --> H["Normalize to sRGB RGBA"]
-    G --> H
-    H --> I["Vision saliency and optional classification"]
-    I --> J["Laplacian/detail scoring"]
-    J --> K["SharpnessBreakdown"]
-    K --> L["scores, saliencyInfo, breakdowns"]
+    CONTROLS["SharpnessControlsView<br/>start, cancel, photo type"] --> VM["@MainActor RawCullViewModel<br/>target files and persistence"]
+    SHEET["ScoringParametersSheetView<br/>quality, source, size, config"] --> MODEL["@MainActor SharpnessScoringModel<br/>request, generation, progress, results"]
+    SETTINGS["FocusSettingsTab and FocusMaskControlsView"] --> FM["@MainActor FocusMaskModel<br/>presentation bridge"]
+    VM --> MODEL
+    MODEL --> ADAPTER["RawCullPhotoAnalysisAdapter<br/>host file/source adapter"]
+    ADAPTER --> LOAD{"RawCull-owned input source"}
+    LOAD -->|"embeddedPreview"| RPK["RawParserKitImageLoader"]
+    LOAD -->|"rawDemosaic"| RAW["CIRAWFilter concurrent worker"]
+    RPK --> INPUT["PhotoAnalysisInput<br/>CGImage + ISO + aperture + AF"]
+    RAW --> INPUT
+    INPUT --> ANALYZER["PhotoAnalysisKit.PhotoAnalyzer"]
+    ANALYZER --> RESULTS["PhotoAnalysisResult / batch result<br/>score, saliency, breakdown"]
+    ANALYZER --> MASK["CGImage focus mask"]
+    RESULTS --> MODEL
+    MASK --> FM
+    MODEL --> PERSIST["CullingModel and savedfiles.json"]
 ```
 
-`SharpnessScoringModel` is `@Observable @MainActor`. It owns progress, current options, scores, saliency info, and per-file breakdowns. It uses a bounded task group so multiple files can score in parallel without launching the whole catalog at once.
+`SharpnessScoringModel` and `FocusMaskModel` are
+`@Observable @MainActor` because they publish UI state. Their
+`PhotoAnalyzer` and adapter values are immutable, nonisolated boundaries.
+PhotoAnalysisKit's internal `FocusMaskEngine` is `@unchecked Sendable` only
+because Core Image does not declare `CIContext` Sendable; the documented
+invariant is an immutable engine with value snapshots for every operation.
 
-## Scoring Options
+## Configuration Resolution
 
-The main knobs are:
-
-| Setting | Meaning |
-|---|---|
-| `photoType` | Applies subject-specific config presets, with `.auto` as the general mode |
-| `scoringQuality` | Adjusts scoring config, scoring size, and concurrent task count |
-| `scoringSource` | Chooses embedded preview or demosaiced RAW thumbnail |
-| `thumbnailMaxPixelSize` | Requested scoring size, normalized by quality option |
-| `focusMaskModel.config` | The active `FocusDetectorConfig` |
-
-`effectiveFocusConfig` combines photo type and quality into the config used for scoring. Per file, the model also injects ISO and an aperture hint derived from EXIF.
-
-## Image Source Choices
-
-| Source | Strength | Cost |
-|---|---|---|
-| `embeddedPreview` | Fast and good for normal culling | Uses the camera-generated preview or ImageIO thumbnail |
-| `rawDemosaic` | More precise final check | Slower; concurrency is capped more aggressively |
-
-For Sony ARW files, `FocusMaskEngine` has a fallback that reads an embedded JPEG directly through `SonyMakerNoteParser` when ImageIO cannot produce the preview.
-
-## Saliency And AF Evidence
-
-The engine uses Vision saliency to find likely subject regions. When enabled, it also runs image classification and stores the best subject label in `SaliencyInfo`.
-
-The camera AF point comes from `FileItem.afFocusNormalized`, which is parsed during catalog scan. When present, it helps choose the relevant subject/patch and improves burst-ranking confidence.
-
-Region selection favors:
-
-1. saliency regions that contain or align with the AF point,
-2. regions closer to the AF point,
-3. higher Vision confidence,
-4. stronger local detail,
-5. larger region area as a final tie-breaker.
-
-## Sharpness Breakdown
-
-`SharpnessBreakdown` is the main debugging record for a scored file.
-
-| Field | Meaning |
-|---|---|
-| `finalScore` | Score used by sorting and burst ranking |
-| `globalScore` | Full-frame detail score when available |
-| `subjectScore` | Salient-subject detail score when available |
-| `afPointScore` | AF-region detail score when available |
-| `blurGateSigma` | Blur-gate measurement used to reduce weak subject scores |
-| `subjectLabel` / `subjectConfidence` | Classification result from Vision |
-| `focusFailureKind` | None, motion blur, or missed focus |
-| `focusMaskRegionSource` | Whether overlay evidence came from saliency, AF, both, or neither |
-| `focusEvidence` | Patch rankings, confidence, and explanation data |
-| `scoringSource` | Embedded preview or RAW demosaic |
-
-The breakdown is useful when a score looks wrong because it tells you whether the engine trusted subject detail, AF-local detail, global detail, or a fallback.
-
-## Normalization For UI
-
-Raw scores can vary by catalog and subject. `SharpnessScoringModel` keeps `maxScore` as an O(1) normalization denominator for UI badges:
+A scoring run snapshots one effective `SharpnessConfiguration`:
 
 ```text
-if score count < 2: use the only score or 1.0
-if score count < 10: use raw max score
-if score count >= 10: use 90th percentile
+focusMaskModel.config
+  -> SharpnessPhotoType.packagePreset.applying
+  -> SharpnessScoringQuality.packageQuality.applying
+  -> PhotoAnalyzer applies each input's ISO and aperture hint
 ```
 
-The 90th percentile avoids one extreme outlier compressing every other image badge.
+RawCull's default focus configuration is `.birdsInFlight`. Photo type maps to
+PhotoAnalysisKit presets: Automatic, Birds and Wildlife, Portrait, Landscape,
+or General Action. Quality maps to Fast, Balanced, or High Precision.
 
-## Calibration
+The selected thumbnail setting is normalized before decode:
 
-`calibrateFromBurst(_:)` samples a burst/catalog and calls `FocusMaskModel.calibrateAndApplyFromBurstParallel(...)`. The calibration updates the active focus config from measured detail distribution. It needs enough scoreable images; otherwise it logs a warning and leaves the current config in place.
+```text
+effective size = min(max(user value, quality minimum), 2048)
 
-This is used before burst scoring when sharpness data is missing.
+quality minimum:
+  Fast           512
+  Balanced       768
+  High Precision 1024
+```
 
-## Persistence
+The UI currently offers 1024, 1536, and 2048 px choices. The quality minimum
+still matters for old settings and programmatic values. Embedded previews use
+RawParserKit's thumbnail loader. RAW demosaic uses `CIRAWFilter`, disables
+added sharpness, and sets detail 0.6, contrast 1.0, and exposure 0 before scaling
+the longest side to the effective size.
 
-Sharpness data is persisted through `savedfiles.json`:
+## Analysis Descriptor And Cache Identity
 
-- raw sharpness score,
-- saliency subject label,
-- scoring signature,
-- source file size,
-- source modification date.
+`PhotoAnalyzer.sharpnessDescriptor(for:)` produces
+`SharpnessAnalysisDescriptor`, the package-owned identity for non-mask scalar
+analysis. At PhotoAnalysisKit 1.2.0 it has:
 
-On catalog load, RawCull restores persisted scores only when the file identity and scoring signature still match. This prevents old scores from being reused after changing quality/source/config or after a RAW file changes.
+- descriptor schema version 1;
+- scalar algorithm version 4;
+- ISO-scaling policy version 1;
+- aperture-hint policy version 1;
+- the scoring-affecting configuration values and the stable scoring gain 7.62.
 
-## Focus Mask Overlay
+It deliberately excludes per-image ISO and aperture, decoded image size, input
+source, source-file identity, and mask-only presentation settings. RawCull adds
+the missing host identity in `SharpnessScoringSignature`:
 
-The overlay path uses the same engine family but is tuned for visual inspection. `ZoomOverlayView` can regenerate masks for the current zoom image and stores the resulting breakdown/saliency back into `SharpnessScoringModel`.
-
-The visual mask can isolate to subject or AF evidence, and it has a "guarantee visible focus evidence" mode for making weak evidence inspectable. That visual relaxation should not be confused with the scalar score.
-
-## Tests
-
-The package tests cover supporting pure/package behavior:
-
-| Test area | Location |
+| Identity layer | Fields |
 |---|---|
-| Focus-point normalization | `RawCullCore/Tests/RawCullCoreTests/FocusPointParserTests.swift` |
-| Histogram calculation | `RawCullCore/Tests/RawCullCoreTests/HistogramCalculatorTests.swift` |
-| ImageIO cancellation bridge | `RawParserKit/Tests/RawParserKitTests/CancellableImageIOWorkTests.swift` |
-| MakerNote parsing | `RawParserKit/Tests/RawParserKitTests/SonyMakerNoteParserTests.swift`, `NikonMakerNoteParserTests.swift` |
+| Package descriptor | Algorithm/policy versions, scoring configuration, stable gain |
+| RawCull signature | Descriptor + embedded-preview/RAW source + effective maximum pixel size |
+| Per-file persistence validation | Signature + source file size + modification date |
 
-App-target focus scoring itself is still mainly verified through source review/manual behavior in this snapshot.
+Legacy signatures without a package descriptor still decode, but compare stale
+to every current signature. On catalog load, RawCull restores a score only when
+the full signature matches and the current file size and modification date
+match (date tolerance is 0.001 seconds). A config, quality, source, size,
+algorithm, or source-file change therefore forces recomputation.
 
-## What To Check When Changing This Area
+## Calibration Lifetime
 
-- If a scoring option changes score meaning, update `SharpnessScoringSignature`.
-- If you tune scoring weights, inspect both single-image badges and burst ranking.
-- Keep RAW demosaic concurrency low; it is much heavier than embedded-preview scoring.
-- Treat overlay visibility tweaks separately from scalar scoring tweaks.
-- When a score looks wrong, inspect `SharpnessBreakdown` before changing thresholds.
+Calibration is a **visual-threshold** operation, not catalog normalization of
+the scalar score. Before scoring, RawCull asks `FocusMaskModel` to load inputs
+and call `PhotoAnalyzer.calibrate`. PhotoAnalysisKit:
+
+1. loads inputs with the same bounded concurrency and source choice as scoring;
+2. applies each file's ISO and aperture;
+3. disables classification;
+4. samples up to about 4096 positive Laplacian energies per successful image;
+5. requires at least five successful images;
+6. chooses the requested percentile (RawCull uses 0.90) and clamps the threshold
+   to 0.01...0.95.
+
+Only `focusMaskModel.config.threshold` is updated. Scalar scoring uses the
+stable gain and package descriptor; it does not depend on the catalog's
+calibration distribution. The calibrated threshold remains in the shared focus
+model until settings, later calibration, or model reset changes it.
+
+## Scoring, Progress, Cancellation, And Publication
+
+`SharpnessScoringModel.scoreFiles` builds a request identity from ordered file
+IDs, the scoring signature, and the concurrency limit.
+
+- An identical request already in flight is coalesced and awaited.
+- A different request cancels the old task and installs a new generation UUID.
+- Fast, Balanced, and High Precision admit 6, 4, and 3 package tasks
+  respectively; RAW demosaic is capped at 2.
+- PhotoAnalysisKit keeps a sliding task-group window, reports completion-order
+  progress, and restores final results to request order.
+- RawCull publishes progress only while the generation matches.
+- Cancellation makes the package return nil and partial results are discarded.
+- Final score, saliency, and breakdown dictionaries are replaced only if the
+  task is not cancelled and the generation still matches.
+- A successful run enables sharpness sorting, then
+  `RawCullViewModel` merges the results into `CullingModel`.
+
+This is latest-wins state management. Cancelling work alone is insufficient;
+every progress and final commit also checks the generation.
+
+Mask tasks have the same presentation rule. SwiftUI views own stored mask tasks,
+cancel them on image/config replacement, and check cancellation before assigning
+the returned overlay or diagnostics.
+
+## Raw Score Versus UI Label
+
+PhotoAnalysisKit does not promise that the raw scalar is a percentage or clamp
+the final value to 0...1. It is a relative detail metric whose scale is kept
+stable by the package gain and descriptor.
+
+RawCull computes an O(1) UI denominator when the score dictionary changes:
+
+```text
+fewer than 2 scores -> lone score, or 1
+2 through 9         -> maximum
+10 or more          -> element at floor((n - 1) * 0.90) in sorted scores
+denominator floor   -> 1e-6
+```
+
+Badge consumers clamp `score / maxScore` to 0...1 before mapping it to
+presentation labels. That UI normalization is catalog-relative and is not
+persisted as the package score.
+
+## Focus Mask Presentation
+
+`FocusMaskModel` offers two package-backed paths:
+
+| Path | Package call | Use |
+|---|---|---|
+| Existing image, optional saved evidence | `PhotoAnalyzer.focusMask` | Render without repeating classification and, when evidence includes a winning saliency rectangle, without repeating saliency selection |
+| Image plus fresh diagnostics | `PhotoAnalyzer.analyzeWithFocusMask` | Compute scalar/saliency/evidence and render one aligned mask |
+
+Views pass a `CGImage`, ISO, aperture, normalized AF point, scale, and a
+configuration snapshot. RawCull adapts the package breakdown only to add
+`SharpnessScoringSource`; it does not reinterpret the numeric fields.
+
+Presentation-only controls include threshold, dilation, erosion, feathering,
+raw-Laplacian display, subject isolation, minimum visible coverage, and
+guaranteed-visible evidence. Some shared values such as pre-blur, border inset,
+AF radii, ISO, and aperture affect the evidence image or regions used by both
+paths. See [Detailed Focus Mask Computation](../detailsfocusmask/) for the exact
+stage classification.
+
+## Read These Files In Order
+
+1. **RawCull/Views/GridView/SharpnessControlsView.swift** and
+   **ScoringParametersSheetView.swift** — user entry and settings.
+2. **RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift** — target scope,
+   persistence handoff, and sort.
+3. **RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift** —
+   request identity, generation, bounds, progress, and publication.
+4. **RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringOptions.swift** —
+   RawCull-to-package preset, quality, source, and size mapping.
+5. **RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift**
+   — decode ownership and `PhotoAnalysisInput` construction.
+6. **RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift** and
+   **FocusMaskTypes.swift** — mask bridge and result adaptation.
+7. **PhotoAnalysisKit/Sources/PhotoAnalysisKit/PhotoAnalyzer.swift** and
+   **PhotoAnalysisBatch.swift** — public package facade and bounded batch.
+8. **SharpnessConfiguration.swift**, **SharpnessPresets.swift**, and
+   **SharpnessAnalysisDescriptor.swift** — defaults, policy, and identity.
+9. **FocusMaskEngine+Scoring.swift**, **FocusMaskEngine+MaskGeneration.swift**,
+   and **Resources/Kernels.ci.metal** — algorithm implementation.
+
+Continue with [Detailed Sharpness Scoring](../detailsharpnessscoring/) for the
+numeric algorithm, or [Detailed Focus Mask Computation](../detailsfocusmask/)
+for overlay rendering.
+
+## Protecting Tests
+
+| Boundary or invariant | Tests |
+|---|---|
+| RawCull/package Metal integration and scoring-source adaptation | `RawCullTests/PhotoAnalysisKitIntegrationTests.swift` |
+| Preset/quality mapping, descriptor signatures, legacy invalidation, coalesced runs, UI normalization | `RawCullTests/SharpnessScoringTests.swift` |
+| Persistence merge and file/signature validation behavior | `RawCullTests/CullingModelTests.swift` |
+| Batch bounds, ordering, progress, decode failure, cancellation | `PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift` |
+| Descriptor inclusions/exclusions and policy versions | `PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift` |
+| Numeric score helpers, aperture policy, ISO curve, focus-failure classification | `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` |
+| Analyze, mask, calibration, and cancellation facade | `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` |
