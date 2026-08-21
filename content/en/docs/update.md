@@ -45,6 +45,8 @@ not part of the immediate stale-document backlog below.
 
 ## P0 — Correct The Core Runtime Model
 
+Status: **Completed**
+
 ### 1. Concurrency
 
 Page: [Concurrency](../concurrency-revised/)
@@ -133,6 +135,8 @@ Required update:
   walkthrough.
 
 ## P1 — Complete The Architecture Learning Path
+
+Status: **Completed**
 
 ### 5. AI Section Overview
 

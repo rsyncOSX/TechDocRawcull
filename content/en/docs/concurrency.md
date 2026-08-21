@@ -89,7 +89,14 @@ flowchart TB
         A4 -->|"failure"| A6["reply false; keep app and scope alive"]
         A5 --> A7["reply true"]
     end
+
+    C7 ~~~ T1
+    T7 ~~~ B1
+    B6 ~~~ A1
 ```
+
+The invisible ordering links (`~~~`) make Mermaid place the four runtime paths
+below one another. They describe layout only; they are not runtime hops.
 
 The catalog path is latest-wins. `startCatalogLoad` first flushes pending
 culling data, then checks cancellation and the selected source before starting
