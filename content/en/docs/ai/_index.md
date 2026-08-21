@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
-date = "2026-07-18"
+date = "2026-08-21"
 description = "Learning guide to PhotoAIKit and RawCull's AI integration."
 tags = ["ai", "clip", "sam3", "photoaikit"]
 categories = ["technical details"]
@@ -22,15 +22,20 @@ The source for this section comes from the sibling `PhotoAIKit` and `RawCull` pr
 |---|---|---|
 | This overview | Where does AI belong in the system? | You need the vocabulary and responsibility split |
 | [How RawCull Enables and Uses CLIP](clip-in-rawcull/) | How does the CLIP preference become a running backend? | You are tracing model discovery, activation, RAW decoding, inference, fallback, distance calculation, or persistence |
-| [How RawCull Download Models](aimodeldownloads/) | How does RawCull download the models |
+| [AI Model Downloads](aimodeldownloads/) | Where do model assets come from? | You are changing download, acceptance, or installation behavior |
 
 
-PhotoAIKit currently contains two main AI families:
+PhotoAIKit contains three backend families used by RawCull:
 
-- **CLIP image embeddings** for visual similarity.
-- **SAM 3 subject segmentation** for subject masks.
+- **CLIP image embeddings** for visual similarity and semantic search.
+- **SAM 3 and EfficientSAM subject segmentation** for subject masks.
+- **Apple Vision feature prints** for always-available image similarity.
 
-It also contains an Apple Vision feature-print backend. In RawCull, Vision is both the always-available similarity implementation and the whole-batch fallback when CLIP indexing fails.
+Vision is the startup and service-selection fallback: RawCull uses it when CLIP
+is disabled or the selected CLIP bundle cannot produce a validated provider. A
+selected CLIP indexing pass keeps its valid per-file artifacts and records the
+files that fail; it does not mix Vision artifacts into that pass or
+automatically rerun the whole batch.
 
 The detailed CLIP document follows code that is connected to RawCull's similarity and burst-analysis features. The package architecture document also covers the SAM 3 contracts, workflows, and storage so that the complete package design is understandable. Not every reusable package capability is necessarily exposed as a finished RawCull user workflow.
 
@@ -82,7 +87,7 @@ The arrow direction matters: PhotoAIKit does not import RawCull. A reusable pack
 | Typed model, image, artifact, and segmentation contracts | PhotoAIKit | Backends and hosts need one stable language |
 | Core AI CLIP and SAM 3 inference | PhotoAIKit backend products | Framework-specific tensor and inference code is reusable |
 | Vision feature-print generation and native distance | PhotoAIKit backend product | The opaque Vision payload stays behind its backend boundary |
-| Bounded indexing, fallback, segmentation, and mask selection | PhotoAIKit workflows | These algorithms do not depend on RawCull UI or culling policy |
+| Bounded indexing, optional fallback mechanisms, segmentation, and mask selection | PhotoAIKit workflows | These mechanisms do not depend on RawCull UI or culling policy |
 | Optional embedding codecs and mask stores | PhotoAIKit storage | Persistence mechanics are reusable, but locations are not |
 | Model installation directories and candidate order | RawCull | Paths and sandbox policy belong to the host application |
 | RAW decoding | RawCull | PhotoAIKit should not depend on `RawParserKit` or camera formats |
@@ -92,15 +97,34 @@ The arrow direction matters: PhotoAIKit does not import RawCull. A reusable pack
 
 ## Current Runtime Shape
 
-RawCull deliberately has a safe startup path:
+`RawCullAIIntegration` is the AI composition root. It owns the resource
+managers, validated provider reuse, the always-available Vision backend, mask
+stores, the segmentation service and selector, and `DeepAIReviewFeature`. The
+app passes feature models narrow services instead of the composition root:
 
-1. `RawCullApp` creates one `RawCullAIIntegration` composition root.
-2. The main view model initially receives the Vision similarity service.
-3. `RawCullAISettingsModel.refresh()` asks the integration to validate the CLIP and SAM 3 model candidates.
-4. PhotoAIKit validates the selected model bundle and fingerprints its asset.
-5. If CLIP validation and provider construction succeed, the saved CLIP preference can select `RawCullCLIPSimilarityService`.
-6. If CLIP is disabled, missing, invalid, or cannot be constructed, RawCull continues with Vision.
-7. If CLIP starts a batch but any item fails, the complete requested batch is retried with Vision.
+| Consumer | Narrow dependency | Capability and persistence rule |
+|---|---|---|
+| `SimilarityScoringModel` through `RawCullViewModel` | `RawCullSimilarityServicing` | Uses Vision or the selected CLIP provider; hydrates and persists descriptor-validated per-file artifacts and burst-analysis state |
+| Semantic-search state in `RawCullViewModel` | `RawCullSemanticSearchServicing?` and `RawCullSemanticSearchCapability` | Exists only for a validated selected CLIP model; reuses compatible CLIP image artifacts, creates an ephemeral text embedding, and never persists the query |
+| Deep Review | `DeepAIReviewFeature` | Uses the active segmentation service and mask cache; it is independent of the CLIP toggle and semantic-search readiness |
+| AI settings | capability and service callbacks | Refreshes status, installs the selected similarity service, and updates semantic-search capability without rebuilding the app graph |
+
+The safe startup and refresh path is:
+
+1. `RawCullApp` creates one `RawCullAIIntegration`.
+2. `RawCullViewModel` initially receives `visionSimilarityService`, the saved
+   semantic capability snapshot, and `deepAIReviewFeature`.
+3. `RawCullAISettingsModel.refresh()` asks the integration to validate both
+   CLIP and both segmentation-model candidates.
+4. PhotoAIKit validates model bundles and derives model-asset fingerprints.
+5. A valid selected CLIP provider may replace the Vision burst-similarity
+   service and enable semantic search.
+6. Missing, invalid, or disabled CLIP leaves burst similarity on Vision and
+   semantic search unavailable.
+7. CLIP indexing retains valid files and logs per-file failures; Vision is not
+   inserted into that CLIP result set.
+8. Changing the segmentation selection immediately updates the active provider.
+   A full refresh rechecks every candidate and saved-evidence state.
 
 ```mermaid
 stateDiagram-v2
@@ -108,12 +132,17 @@ stateDiagram-v2
     VisionStartup --> CheckingModels: refresh capabilities
     CheckingModels --> VisionSelected: CLIP disabled, missing, or invalid
     CheckingModels --> CLIPSelected: preference enabled and provider ready
-    CLIPSelected --> CLIPArtifacts: all requested items succeed
-    CLIPSelected --> VisionFallbackArtifacts: any requested item fails
+    CLIPSelected --> CLIPArtifacts: keep valid per-file artifacts
+    CLIPSelected --> PartialCLIP: record and exclude failed files
     VisionSelected --> VisionArtifacts: index catalog
+    CheckingModels --> SegmentationSelected: activate SAM 3 or EfficientSAM
 ```
 
-The whole-batch fallback is an integrity rule, not only an error-recovery convenience. CLIP vectors and Vision feature prints have different representations and distance semantics. Recomputing the entire batch prevents a catalog from containing artifacts that cannot be compared with one another.
+Burst similarity, semantic search, and Deep Review are separate features even
+when they share package code. Burst similarity may use Vision or CLIP. Semantic
+search requires CLIP image artifacts whose descriptor exactly matches the text
+provider. Deep Review uses segmentation masks and has its own availability,
+selection, and storage lifecycle.
 
 ## Vocabulary
 
@@ -125,13 +154,18 @@ The whole-batch fallback is an integrity rule, not only an error-recovery conven
 | **Source fingerprint** | Standardized file path, size, and modification date used to detect changed source images |
 | **Model fingerprint** | Identity derived from the selected `.aimodel` or `.aimodelc`, cryptographically verified when the manifest provides a checksum |
 | **Composition root** | The one place where concrete providers, stores, paths, and app adapters are assembled |
-| **Whole-batch fallback** | Discard the primary pass after any failure and run every requested source through one fallback backend |
+| **Partial CLIP result** | Valid CLIP artifacts plus per-file failures; failed files remain unavailable to similarity and burst grouping until a later successful index |
 | **Host** | The application integrating PhotoAIKit; here, RawCull |
 
 ## Suggested Learning Order
 
-Read [How PhotoAIKit Is Constructed](packages/photoaikit/) first if dependency boundaries, protocols, or package products are unfamiliar. It builds the mental model from the bottom up.
+This section follows the main documentation index: first read the scan,
+concurrency, cache, focus/sharpness, and burst-group pages. Then read this
+overview and [RawCull Packages](../packages/) for the boundaries. Continue with
+[How PhotoAIKit Is Constructed](../packages/photoaikit/), then follow the live
+path in [How RawCull Loads and Uses CLIP](clip-in-rawcull/) and [AI Runtime Step
+by Step](stepbystepAI/).
 
-Then read [How RawCull Enables and Uses CLIP](clip-in-rawcull/). That document follows the runtime path and shows where the clean package abstractions meet app-specific concerns such as model locations, RAW files, settings, burst grouping, and cache validation.
-
-Finally, keep [AI Runtime Step by Step](stepbystepAI/) beside the source code. It expands the runtime path into exact function hops and branches, including what does and does not invoke CLIP when a developer indexes similarity, analyzes bursts, opens a burst, or enters the detailed comparison view.
+Installation and acceptance steps intentionally live only in [AI Model
+Downloads](aimodeldownloads/). The architecture pages describe managed
+locations and validation but do not duplicate download procedures.

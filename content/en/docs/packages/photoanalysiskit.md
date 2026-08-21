@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
-date = "2026-07-30"
+date = "2026-08-21"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -11,6 +11,11 @@ weight = 20
 +++
 
 # How PhotoAnalysisKit Is Constructed
+
+> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.2.0` at
+> `6e83ceebbca47a5dea0b1b2b4ee8b9132c281449`. The facade, descriptors,
+> presets, batch behavior, calibration, evidence, and mask APIs below describe
+> that revision.
 
 PhotoAnalysisKit is the reusable measurement layer extracted from RawCull. It
 turns a decoded `CGImage` plus neutral capture metadata into sharpness,
@@ -396,7 +401,52 @@ The package uses four complementary techniques:
 `@unchecked Sendable` is confined to the immutable Core Image facade and engine.
 Public transport values are `Sendable` value types.
 
-## 13. Testing The Public Contract
+## 13. RawCull Call Maps
+
+The app has two deliberate entry paths into the same `PhotoAnalyzer` facade.
+
+```mermaid
+flowchart LR
+    Settings["Settings + photo-type preset"] --> Sharp["SharpnessScoringModel"]
+    Sharp --> Adapter["RawCullPhotoAnalysisAdapter"]
+    Adapter --> Input["PhotoAnalysisInput: decoded CGImage + neutral metadata"]
+    Input --> Batch["PhotoAnalyzer.analyzeBatch"]
+    Batch --> Results["PhotoAnalysisResult per FileItem"]
+    Results --> Core["RawCullCore ranking evidence + BurstAnalysisCache"]
+```
+
+`SharpnessScoringModel` applies the selected package preset, builds requests
+through `RawCullPhotoAnalysisAdapter`, and calls the facade's bounded batch API.
+The adapter owns source loading and file-to-identifier mapping; the package owns
+measurement and its descriptor. `BurstAnalysisCache` records
+`PhotoAnalyzer.sharpnessDescriptor(for:)`, so a configuration-identity change
+invalidates incompatible cached scores.
+
+```mermaid
+flowchart LR
+    UI["Focus overlay or calibration action"] --> Model["FocusMaskModel"]
+    Model --> Analyze["PhotoAnalyzer.analyzeWithFocusMask / focusMask / calibrate"]
+    Analyze --> Evidence["FocusEvidence + FocusCalibrationResult + CGImage mask"]
+    Evidence --> Presentation["RawCull FocusMaskResult + overlay state"]
+```
+
+`FocusMaskTypes.swift` aliases neutral package types such as
+`FocusEvidence`, `FocusFailureKind`, and `FocusCalibrationResult`, then layers
+RawCull presentation metadata over `SharpnessBreakdown`. `FocusMaskModel`
+consumes the returned mask image on app-owned isolation; scoring and evidence
+remain package values.
+
+## 14. Testing The Public Contract
+
+The executable contracts are split by concern:
+
+| Package test | Required behavior |
+|---|---|
+| `Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift` | Scalar metric and normalized sharpness calculations |
+| `Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift` | Bounded batch completion, ordering, failure isolation, and cancellation |
+| `Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift` | Stable configuration identity and descriptor changes |
+| `Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` | Facade behavior, focus evidence, calibration, and mask rendering |
+| `Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift` | Opaque Vision feature-print creation and comparison |
 
 `Tests/PhotoAnalysisKitTests/` imports the library through
 `import PhotoAnalysisKit`, not `@testable import`. Tests therefore exercise the
@@ -417,7 +467,7 @@ The suite covers:
 Synthetic images keep the suite deterministic and independent of RAW files,
 model downloads, cache directories, and application state.
 
-## 14. How To Add Another Analysis
+## 15. How To Add Another Analysis
 
 Use the existing boundary as a checklist:
 

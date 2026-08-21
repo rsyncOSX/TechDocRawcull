@@ -2,8 +2,8 @@
 author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
-date = "2026-07-30"
-description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3, workflows, storage, concurrency, and model identity."
+date = "2026-08-21"
+description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
 mermaid = true
@@ -12,8 +12,12 @@ weight = 10
 
 # How PhotoAIKit Is Constructed
 
+> **Revision audited:** RawCull resolves PhotoAIKit at
+> `1e2eaccd00947fbadda300e4a617842479cae7b9`. Product names and behavior on
+> this page describe that commit, not a newer sibling checkout.
+
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
-important achievement is not merely that CLIP and SAM 3 run. It is that reusable
+important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It is that reusable
 AI behavior has been separated from RawCull's UI, RAW-file handling, paths,
 sandbox rules, and culling policy.
 
@@ -26,7 +30,7 @@ The package owns:
 
 - typed, `Sendable` contracts;
 - model-bundle validation and fingerprinted model identity;
-- Core AI CLIP image and text inference plus SAM 3 inference;
+- Core AI CLIP image and text inference plus SAM 3 and EfficientSAM inference;
 - validated image/text semantic comparison;
 - Apple Vision feature-print generation and comparison;
 - bounded similarity indexing and explicit fallback;
@@ -50,21 +54,24 @@ but it would silently encode application policy into the AI layer.
 ## 2. Read `Package.swift` As An Architecture Diagram
 
 `PhotoAIKit/Package.swift` declares Swift tools 6.4, macOS 27, Swift 6 language
-mode, six library products, and one test target. The only external package
+mode, seven library products, and one test target. The only external package
 dependency is a pinned revision of `apple/coreai-models`.
 
 ```mermaid
 flowchart TD
     Contracts["PhotoAIContracts\nvalues + protocols"]
     CLIP["CoreAICLIPBackend"] --> Contracts
+    Efficient["CoreAIEfficientSAMBackend"] --> Contracts
     SAM3["CoreAISAM3Backend"] --> Contracts
     Vision["VisionFeaturePrintBackend"] --> Contracts
     Workflows["PhotoAIWorkflows"] --> Contracts
     Storage["PhotoAIStorage"] --> Contracts
     CoreAI["apple/coreai-models\nCoreAISegmentation product"] --> CLIP
+    CoreAI --> Efficient
     CoreAI --> SAM3
     Tests["PhotoAIKitTests"] --> Contracts
     Tests --> CLIP
+    Tests --> Efficient
     Tests --> SAM3
     Tests --> Vision
     Tests --> Workflows
@@ -312,7 +319,16 @@ compatible image artifacts, isolates per-file failures, reports progress, and
 orders equal scores deterministically. It never decodes an image or persists a
 query embedding.
 
-### 5.2 `CoreAISAM3Backend`
+### 5.2 `CoreAIEfficientSAMBackend`
+
+`CoreAIEfficientSAMProvider` is an actor conforming to `SubjectSegmenting`. It
+validates the EfficientSAM bundle, lazily owns `ImageSegmenter`, uses the
+model's empty point query (center point or regular grid depending on the
+export), selects the highest-scoring mask, and adapts it to the same
+`SubjectSegmentationResult` contract used by SAM 3. The pinned provider uses a
+`0.5` mask threshold and at most one segment.
+
+### 5.3 `CoreAISAM3Backend`
 
 `CoreAISAM3Provider` conforms to `SubjectSegmenting`. It owns tokenizer setup,
 lazy model loading, request inference, query selection, confidence conversion,
@@ -322,7 +338,7 @@ The public contract speaks in `SubjectSegmentationRequest` and
 `SubjectSegmentationResult`, not Core AI tensors. This lets workflows and hosts
 work at the domain level while the backend handles framework details.
 
-### 5.3 `VisionFeaturePrintBackend`
+### 5.4 `VisionFeaturePrintBackend`
 
 This actor uses `VNGenerateImageFeaturePrintRequest`. The produced
 `VNFeaturePrintObservation` is securely archived into an opaque artifact
@@ -366,8 +382,11 @@ The fallback policies are:
 | `.perItem`    | Retry only a failed item                                                 | Primary and fallback results can safely coexist |
 | `.wholeBatch` | If any primary item fails, rerun every requested source through fallback | A batch must use one comparable representation  |
 
-The indexer does not decide which policy is correct for RawCull. The host
-selects `.wholeBatch` for CLIP-to-Vision fallback.
+The indexer does not decide which policy is correct for a host. RawCull's
+current CLIP service selects `.none`: it keeps successful CLIP artifacts and
+reports per-file failures. RawCull selects Vision before indexing when CLIP is
+disabled or no validated provider exists. The generic `.wholeBatch` mechanism
+remains available to other hosts, but is not the current RawCull CLIP path.
 
 ### 6.2 Segmentation Workflows
 
@@ -433,7 +452,26 @@ Actor isolation does not remove the need for a host policy. RawCull still owns
 generation tokens and catalog checks that prevent an older task from replacing
 results for a newer selection.
 
-## 9. Testing The Architecture, Not Only The Math
+## 9. RawCull Integration And Policy Boundary
+
+RawCull imports every product from this pinned revision and assembles them in
+`RawCullAIIntegration`:
+
+| Package contract or implementation | RawCull adapter/consumer | Policy that remains in RawCull |
+|---|---|---|
+| `CoreAICLIPProvider`, `ImageSimilarityArtifactProviding`, and `ImageSimilarityArtifactComparing` | `RawCullCLIPSimilarityService` and `SimilarityScoringModel` | managed model locations, selected CLIP model, RAW decoding, concurrency 1, retry/replacement recovery, per-file persistence, burst thresholds, and subject-mismatch adjustment |
+| `VisionFeaturePrintBackend` | `RawCullVisionSimilarityService` | always-available startup service, concurrency 4, service selection, cache admission, and UI state |
+| `TextEmbeddingProviding` and `ImageTextSimilarityComparing` | `RawCullCLIPSemanticSearchService` | query admission, progress, catalog/rating filters, deterministic ties, result count, and ephemeral query lifetime |
+| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector | `RawCullAIIntegration` and `DeepAIReviewFeature` | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, and culling decisions |
+
+The package owns validation, descriptors, backend actors, mathematical
+comparison, bounded generic workflows, and reusable codecs/stores. The app owns
+filesystem/security scope, camera decoding, settings, capability wording,
+generation tokens, catalog identity, cache policy, culling rules, and UI. In
+particular, PhotoAIKit does not know `FileItem`, a burst winner, or where RawCull
+installs a model.
+
+## 10. Testing The Architecture, Not Only The Math
 
 Most of `Tests/PhotoAIKitTests/` exercises the products through public APIs. The
 CLIP text suite also uses `@testable import` for deterministic tokenizer, batch,
@@ -447,7 +485,7 @@ Together the tests cover architectural promises such as:
 - model-declared CLIP preprocessing and legacy preprocessing remain compatible;
 - token batches, attention masks, text-output validation, and image/text
   compatibility checks reject malformed or mismatched data;
-- whole-batch fallback produces a homogeneous result set;
+- the generic whole-batch fallback policy produces a homogeneous result set (RawCull currently uses `.none` for CLIP);
 - Vision artifacts stay opaque and use the native metric;
 - segmentation caches by package-owned source values;
 - disk stores reject stale or corrupt entries;
@@ -458,7 +496,7 @@ Together the tests cover architectural promises such as:
 Fake decoders, providers, and stores make these tests possible. That testability
 is a direct consequence of putting protocols in the innermost target.
 
-## 10. Developer Tools And Model Assets
+## 11. Developer Tools And Model Assets
 
 The package includes tools under `Tools/` for exporting CLIP and SAM 3 assets,
 selecting a SAM 3 asset, generating fingerprints, and producing reference CLIP
@@ -476,7 +514,7 @@ deployment inputs with their own lifecycle; keeping them out of the library
 avoids coupling package source, application installation, and model
 distribution.
 
-## 11. How To Add Another Similarity Backend
+## 12. How To Add Another Similarity Backend
 
 Use the existing layering as a checklist:
 
@@ -509,6 +547,7 @@ it probably belongs in RawCull's adapter layer instead.
 | Text embeddings and image/text comparison | `Sources/PhotoAIContracts/TextEmbedding.swift`                                                                                    |
 | Segmentation contracts                    | `Sources/PhotoAIContracts/SubjectSegmentation.swift`, `SubjectMaskStorage.swift`                                                  |
 | CLIP runtime and backend                  | `Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift`, `CoreAICLIPProvider.swift`                                            |
+| EfficientSAM backend                      | `Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift`
 | SAM 3 backend                             | `Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift`                                                                              |
 | Vision backend                            | `Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift`                                                               |
 | Similarity orchestration                  | `Sources/PhotoAIWorkflows/EmbeddingIndexer.swift`, `SimilarityArtifactIndexer.swift`                                              |

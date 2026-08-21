@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "How RawCull Loads and Uses CLIP"
 linkTitle = "CLIP in RawCull"
-date = "2026-07-29"
+date = "2026-08-21"
 description = "A beginner-friendly source walk-through of RawCull's OpenAI and DataComp CLIP models, model loading, PhotoAIKit packages, image similarity, semantic search, recovery, and persistence."
 tags = ["ai", "clip", "openai", "datacomp", "photoaikit", "semantic-search", "similarity", "rawcull"]
 categories = ["technical details"]
@@ -528,6 +528,28 @@ This is different from the earlier whole-batch fallback design:
 When CLIP is disabled or its selected bundle is unavailable at service
 selection time, RawCull uses `RawCullVisionSimilarityService` instead. Vision
 currently indexes with a concurrency limit of 4.
+
+`RawCullCLIPFailureRecorder` logs the file and failing stage (`decode` or
+`inference`). `SimilarityScoringModel` also records a partial-CLIP diagnostics
+event with the successful and failed counts. The diagnostics schema can still
+represent a legacy `usedWholeBatchFallback` result, and PhotoAIKit's generic
+indexer still supports `.wholeBatch`; the current RawCull CLIP service selects
+`.none`, so that branch is not produced by current CLIP indexing.
+
+### Burst and semantic artifact boundaries
+
+`SimilarityScoringModel` deliberately keeps two maps:
+
+- `embeddings` is the active burst/image-similarity set and may contain Vision
+  or CLIP artifacts from the selected similarity service;
+- `semanticArtifacts` contains only CLIP artifacts compatible with the selected
+  semantic-search descriptor.
+
+A successful CLIP artifact may be admitted to both maps, but the maps are not
+interchangeable. Vision artifacts can drive burst grouping but cannot be
+compared with a CLIP text embedding. Semantic search never generates missing
+image artifacts; it searches the compatible set already hydrated or indexed by
+similarity work.
 
 ## 14. How RawCull Uses Image-To-Image Distance
 

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
-date = "2026-07-30"
+date = "2026-08-21"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -11,6 +11,9 @@ weight = 30
 +++
 
 # How RawCullCore Is Constructed
+
+> **Revision audited:** RawCull resolves RawCullCore `1.1.2` at
+> `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9`.
 
 RawCullCore is the small domain layer at the center of RawCull. It does not
 decode or analyze photos. Instead, it receives file metadata and measurements
@@ -100,6 +103,19 @@ It contains both strings and numbers because they serve different purposes:
 RawCull or an adapter constructs this value from RawParserKit's
 `RawImageMetadata`. RawCullCore does not know where the values came from.
 
+At the app boundary, `RawCull/Main/RawCullFileItem.swift` deliberately preserves
+familiar app names:
+
+```swift
+typealias FileItem = RawCullFileItem
+typealias ARWSourceCatalog = RawCullSourceCatalog
+typealias ExifMetadata = RawCullCore.ExifMetadata
+```
+
+These aliases are migration conveniences, not permission for the package to
+import application state. Feature code may say `FileItem`, while the stored
+value and package API remain `RawCullFileItem`.
+
 ### 3.2 `RawCullFileItem`
 
 `RawCullFileItem` contains an ID, URL, name, byte size, modification date,
@@ -171,17 +187,20 @@ This design avoids throwing away intermediate decisions. RawCull can show why a
 boundary was created, why a file won, and why automation is or is not considered
 safe.
 
-`BurstGroupingConfig.algorithmVersion` is currently 4 and gives hosts a version
-marker for persisted grouping output. Its configurable thresholds cover visual
-distance, EXIF and fallback time gaps, camera equality, focal-length similarity,
-and maximum shutter, aperture, ISO, and exposure-compensation changes in EV.
+`BurstGroupingConfig.algorithmVersion` is currently 4. Its defaults are visual
+distance `0.25`, EXIF gap 2 seconds, modification-date fallback gap 10 seconds,
+same camera required, similar focal length required within 3 mm, shutter/
+aperture/ISO change at most 0.5 EV, and exposure compensation at most 0.34 EV.
+The version gives hosts an identity marker for persisted grouping output.
 Custom decoding supplies defaults for fields that are absent from older saved
 configurations.
 
-`BurstReviewState` keeps historical states for cache compatibility. Unknown
-decoded raw values fall back to `.none`. `BurstWinnerOverride` also migrates
-older data by generating a missing ID and defaulting missing member filenames to
-an empty array.
+`BurstReviewState` has the current workflow states `.none`, `.needsReview`,
+`.reviewed`, and `.deferred`, plus compatibility states
+`.algorithmReviewed`, `.manualWinnerOverride`, and `.decisionApplied` retained
+for older caches. Unknown decoded raw values fall back to `.none`.
+`BurstWinnerOverride` likewise migrates older data by generating a missing ID
+and defaulting missing member filenames to an empty array.
 
 ## 6. `BurstGroupingEngine`: Decide Where A Burst Splits
 
@@ -422,11 +441,14 @@ Use these constraints when adding a rule:
 3. Keep scoring weights and confidence thresholds deterministic and testable.
 4. Decide whether a rule affects group membership, candidate ranking,
    confidence, or only a caution.
-5. Version persisted behavior when a changed rule can invalidate cached results.
-6. Maintain decoding fallbacks for existing review and override data.
-7. Leave framework observations and heavy image processing in the producing
+5. If evidence changes a grouping boundary or its meaning, bump
+   `BurstGroupingConfig.algorithmVersion` and add migration/engine tests.
+6. If the app's persisted result shape, validation, or pipeline identity changes,
+   bump `BurstAnalysisCache.schemaVersion` (currently 9) and update cache tests.
+7. Maintain decoding fallbacks for existing review and override data.
+8. Leave framework observations and heavy image processing in the producing
    package.
-8. Leave user actions and presentation state in RawCull.
+9. Leave user actions and presentation state in RawCull.
 
 ## Source Map
 
