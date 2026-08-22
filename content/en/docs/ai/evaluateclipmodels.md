@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Evaluating CLIP Models"
 linkTitle = "Evaluating CLIP Models"
-date = "2026-08-12"
+date = "2026-08-22"
 description = "Evaluating CLIP Models Against Source-Framework Cosine Values and RawCullFB"
 tags = ["ai", "models", "downloads", "clip", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -18,12 +18,19 @@ This document is the complete repeatable procedure for validating CLIP model bun
 
 SigLIP2 is outside the current evaluation scope.
 
-The procedure has two independent validation layers:
+Keep four evidence lanes separate. Each has different inputs, metrics, and
+failure meaning:
 
-1. **Numerical parity:** compare embeddings produced by the Core AI bundle with reference embeddings produced by the original Hugging Face Transformers or OpenCLIP implementation.
-2. **Product behavior:** use RawCullFB to build a real catalog index, execute the same 77 semantic queries, inspect image-similarity neighborhoods, and measure labeled retrieval quality.
+| Lane | Question | Required outputs | Release effect |
+|---|---|---|---|
+| Source-framework parity | Does the Core AI bundle reproduce the pinned source implementation? | Reference identity/hashes, CLIPBench inspection, per-image/text cosine and maximum-error report | Gating: text ≥ `0.999`; end-to-end fixture minimum ≥ `0.998` |
+| Semantic retrieval | Does the model retrieve relevant photographs for the frozen query/catalog set? | Fresh model-specific index, complete RawCullFB report, blind pooled labels, Precision@1/@5, MRR, nDCG@5 | Gating on approved labeled quality; collapse diagnostics alone are insufficient |
+| Image similarity | Does the model separate duplicates/edits/bursts from hard negatives? | Independently labeled pair set, ROC/PR curves, operating threshold, FPR/FNR/confusion matrix | Separate model-specific threshold; never reuse semantic or other-model thresholds |
+| Performance and integration | Is the exact RawCull build operationally acceptable? | App/package tests, activation and index invalidation checks, load/index/search timing, memory, energy, bundle/index sizes | Gating on product budgets and correct capability/fallback behavior |
 
-A model must pass both layers. Numerical parity proves that the conversion and integration reproduce the source model; it does not prove that the model retrieves useful photographs. Conversely, plausible search results do not prove that the converted model is correct.
+A model must pass all applicable lanes. Numerical parity proves conversion and
+integration equivalence, not retrieval usefulness. Plausible search results do
+not prove a correct conversion, and a fast query does not prove either.
 
 ## 1. What cosine parity means
 
@@ -61,7 +68,8 @@ Do not apply the parity threshold to semantic search or duplicate detection.
 
 ## 2. Current validated components
 
-Record the live values again whenever this procedure is run. As of 2026-08-12, the relevant local state is:
+Record the live values again whenever this procedure is run. The archived
+2026-08-12 evidence used these identities:
 
 | Component | Current identity/path |
 |---|---|
@@ -70,7 +78,7 @@ Record the live values again whenever this procedure is run. As of 2026-08-12, t
 | OpenAI source revision | `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268` |
 | DataComp bundle | `/Users/thomas/ModelAssets/Release/Models/CLIP-DataComp` |
 | DataComp preset | `ViT-B-32-256` / `datacomp_s34b_b86k` |
-| CLIPBench | `/Users/thomas/GitHubCLIPtests/CLIPBench` |
+| CLIPBench | historical checkout recorded by the run; current checkout is `/Users/thomas/GitHub/CLIPBench` |
 | RawCullFB | `/Users/thomas/GitHub/RawCull/RawCullFB` |
 | PhotoAIKit source tools | `/Users/thomas/GitHub/RawCull/PhotoAIKit` |
 | Fixture set | `/Users/thomas/Library/Mobile Documents/com~apple~CloudDocs/TestPhotos/CLIPParityFixtures` |
@@ -78,6 +86,15 @@ Record the live values again whenever this procedure is run. As of 2026-08-12, t
 | Canonical 77 queries | `/Users/thomas/GitHub/RawCull/RawCullFB/semantictest.txt` |
 
 The DataComp metadata now explicitly identifies `datacomp_s34b_b86k`; older bundles containing only a generic `open_clip_model.safetensors` label must not be reused without proving their weight identity.
+
+As of 2026-08-22, RawCull's production `Package.resolved` pins PhotoAIKit
+`1e2eaccd00947fbadda300e4a617842479cae7b9`, while RawCullFB still pins
+`6e3216027b267c27ccaf99d334807b18ea1aaec9`. The current CLIPBench checkout is
+`178585b6d28189137327dc6de001554e36bdbfc4` and uses local sibling
+`../PhotoAIKit` and `../RawParserKit` dependencies. Do not combine these values
+silently. Choose the product under test, make CLIPBench resolve the same exact
+PhotoAIKit revision, record every checkout, and treat the older run as dated
+evidence rather than proof for the newer RawCull pin.
 
 ## 3. Requirements
 
@@ -98,8 +115,13 @@ Open a new `zsh` terminal and define the paths once:
 ```sh
 RAW_CULL_ROOT=/Users/thomas/GitHub/RawCull/RawCull
 RAW_CULL_FB_ROOT=/Users/thomas/GitHub/RawCull/RawCullFB
-PHOTO_AI_KIT_ROOT=/Users/thomas/GitHub/RawCull/PhotoAIKit
-CLIP_BENCH_ROOT=/Users/thomas/GitHubCLIPtests/CLIPBench
+
+# CLIPBench declares ../PhotoAIKit and ../RawParserKit local dependencies.
+# Put three clean, detached checkouts under one evaluation source root.
+EVALUATION_SOURCE_ROOT=/path/to/CLIP-evaluation-sources
+CLIP_BENCH_ROOT="$EVALUATION_SOURCE_ROOT/CLIPBench"
+PHOTO_AI_KIT_ROOT="$EVALUATION_SOURCE_ROOT/PhotoAIKit"
+RAW_PARSER_KIT_ROOT="$EVALUATION_SOURCE_ROOT/RawParserKit"
 
 FIXTURE_ROOT='/Users/thomas/Library/Mobile Documents/com~apple~CloudDocs/TestPhotos/CLIPParityFixtures'
 REFERENCE_ROOT="$FIXTURE_ROOT/reference"
@@ -114,6 +136,14 @@ mkdir -p "$REFERENCE_ROOT" "$EVALUATION_ROOT"
 ```
 
 Keep these variables in the same terminal session. If a path changes, update it here rather than editing individual commands later.
+
+The canonical fixture manifest currently has SHA-256
+`8687bb47c43e3a0a573210bd8f1d548ac2482d958a8cb8cec20d9f9ddcedd6ff`,
+contains ten image/prompt records, and is dated 2026-08-09. The canonical
+77-query file has SHA-256
+`2dfc0f4c2ff83146bd36c5b99fa78a3e99bc843edc2c9602d816ff663f89c604`.
+These values identify the existing benchmark only; always recompute them and
+stop if they differ unless the run is explicitly a new benchmark version.
 
 Create a run identifier so reports are not overwritten:
 
@@ -134,10 +164,18 @@ Record source revisions before building or generating references:
   xcodebuild -version
   xcrun swift --version
   uv --version
+  uname -m
+  system_profiler SPHardwareDataType
   git -C "$RAW_CULL_FB_ROOT" rev-parse HEAD
+  git -C "$RAW_PARSER_KIT_ROOT" rev-parse HEAD
   git -C "$PHOTO_AI_KIT_ROOT" rev-parse HEAD
   git -C "$CLIP_BENCH_ROOT" rev-parse HEAD
 } > "$RUN_ROOT/environment.txt"
+
+cp "$RAW_CULL_ROOT/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" \
+  "$RUN_ROOT/rawcull-Package.resolved"
+cp "$RAW_CULL_FB_ROOT/RawCullFB.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved" \
+  "$RUN_ROOT/rawcullfb-Package.resolved"
 ```
 
 Save the model metadata and hashes:
@@ -231,12 +269,14 @@ rg -n -C 5 'PhotoAIKit|photoaikit' \
   "$RAW_CULL_FB_ROOT/RawCullFB.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 ```
 
-CLIPBench currently uses `/Users/thomas/GitHubCLIPtests/PhotoAIKit` through `../PhotoAIKit`. Confirm that checkout is the same revision and contains the Pillow-compatible preprocessing fix:
+CLIPBench uses the sibling `../PhotoAIKit` checkout. Confirm that checkout is
+the same revision resolved by the product under test and contains the
+Pillow-compatible preprocessing fix:
 
 ```sh
-git -C /Users/thomas/GitHubCLIPtests/PhotoAIKit rev-parse HEAD
+git -C "$PHOTO_AI_KIT_ROOT" rev-parse HEAD
 rg -n 'pillowBicubicPreprocessingVersion' \
-  /Users/thomas/GitHubCLIPtests/PhotoAIKit/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift
+  "$PHOTO_AI_KIT_ROOT/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift"
 ```
 
 The revision must equal the PhotoAIKit revision resolved by RawCullFB. If it does not, update the dependency or checkout before proceeding. Otherwise CLIPBench and RawCullFB would test different implementations.
@@ -268,6 +308,9 @@ Expected images:
 Compute and save their hashes:
 
 ```sh
+shasum -a 256 "$FIXTURE_ROOT/manifest.json" \
+  > "$RUN_ROOT/fixture-manifest-sha256.txt"
+
 shasum -a 256 "$FIXTURE_ROOT"/images/0*.* \
   "$FIXTURE_ROOT"/images/10-yellow-sunflower.jpg \
   > "$RUN_ROOT/fixture-sha256.txt"
@@ -448,7 +491,7 @@ swift build -c release --product clipbench
 Use the freshly built executable:
 
 ```text
-/Users/thomas/GitHubCLIPtests/CLIPBench/.build/release/clipbench
+$CLIP_BENCH_ROOT/.build/release/clipbench
 ```
 
 Inspect both bundles through the same runtime that will perform parity:
@@ -620,7 +663,9 @@ cmp "$QUERY_FILE" "$CATALOG_ROOT/semantictest.txt"
 
 Expected query count: 77 non-comment queries.
 
-Record catalog files without including RawCullFB's hidden index or generated reports:
+Record catalog files without including RawCullFB's hidden index or generated
+reports. A filename list is not enough: the per-file hashes and the hash of
+that sorted manifest are required evidence.
 
 ```sh
 find "$CATALOG_ROOT" -type f \
@@ -630,11 +675,21 @@ find "$CATALOG_ROOT" -type f \
   -print | sort > "$RUN_ROOT/catalog-files.txt"
 
 wc -l "$RUN_ROOT/catalog-files.txt"
+while IFS= read -r FILE; do
+  shasum -a 256 "$FILE"
+done < "$RUN_ROOT/catalog-files.txt" \
+  > "$RUN_ROOT/catalog-content-sha256.txt"
+
+shasum -a 256 "$RUN_ROOT/catalog-content-sha256.txt" \
+  > "$RUN_ROOT/catalog-manifest-sha256.txt"
+
 shasum -a 256 "$CATALOG_ROOT/semantictest.txt" \
   > "$RUN_ROOT/semantic-query-sha256.txt"
 ```
 
-For strict reproducibility, compute content hashes for the complete catalog and save them with the run. This can be slow for a large photo collection.
+The catalog hash pass can be slow, but it is mandatory for a comparable run.
+If catalog bytes change, create a new benchmark identity and do not combine its
+metrics with the old catalog.
 
 ## 17. RawCullFB test for OpenAI CLIP
 
@@ -886,13 +941,31 @@ Selection rules:
 
 ## 25. Archive the complete evidence package
 
+The authoritative executables and report boundaries are:
+
+| Evidence | Producer | Archived output |
+|---|---|---|
+| OpenAI source reference | `Scripts/generate_openai_clip_reference.py` in the immutable fixture package | reference JSON/details/tensors plus `openai-reference-sha256.txt` |
+| DataComp source reference | `PhotoAIKit/Tools/generate_clip_reference.py` | reference JSON plus `datacomp-reference-sha256.txt` |
+| Runtime inspection and parity | freshly built `CLIPBench` `inspect-model` and `parity` commands | inspection and threshold-specific parity text files |
+| Semantic and neighborhood run | the tested RawCullFB build using `semantictest.txt` | one complete model-specific results file per model |
+| Labeled retrieval/similarity analysis | versioned analysis script recorded in the decision | labels, metrics, script revision, and generated summary |
+
+Do not substitute a similarly named script or hand-calculated summary without
+recording that change as a new evaluation method.
+
 At minimum, `RUN_ROOT` should contain:
 
 ```text
 environment.txt
+rawcull-Package.resolved
+rawcullfb-Package.resolved
+fixture-manifest-sha256.txt
 fixture-sha256.txt
 semantic-query-sha256.txt
 catalog-files.txt
+catalog-content-sha256.txt
+catalog-manifest-sha256.txt
 openai-metadata.json
 datacomp-metadata.json
 model-metadata-sha256.txt
@@ -923,6 +996,12 @@ Also preserve the exact source reference JSON files or their immutable hashes. T
 - [ ] PhotoAIKit focused and full tests pass.
 - [ ] CLIPBench and RawCullFB use the same PhotoAIKit revision.
 - [ ] RawCullFB tests and Release build pass.
+- [ ] UTC run time, Mac model/RAM, architecture, macOS build, Xcode/Swift, and
+      `uv` version are archived.
+- [ ] RawCull, RawCullFB, CLIPBench, PhotoAIKit, and RawParserKit revisions and
+      both product lockfiles are archived.
+- [ ] Fixture-manifest, fixture-file, catalog-content, catalog-manifest, and
+      query-file digests are archived and match the named benchmark.
 - [ ] Model metadata and asset fingerprints are archived.
 
 ### OpenAI
@@ -975,6 +1054,8 @@ When repeating the evaluation later:
 14. Label the pooled top-five results.
 15. Calculate semantic and image-similarity metrics.
 16. Compare operational costs.
-17. Complete the decision table and release checklist.
+17. Verify every required artifact exists under `RUN_ROOT` and hash the final
+    evidence directory listing.
+18. Complete the decision table and release checklist.
 
 The result is defensible only when the archived evidence links the exact source checkpoint, converted asset, preprocessing implementation, fixture bytes, catalog, query file, RawCullFB build, and human relevance labels.

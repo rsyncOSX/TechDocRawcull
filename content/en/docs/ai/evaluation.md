@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "CLIP Model Evaluation Results"
 linkTitle = "CLIP Evaluation Results"
 date = "2026-08-12"
+lastmod = "2026-08-22"
 description = "Detailed comparison of OpenAI CLIP ViT-B/32 and OpenCLIP DataComp ViT-B/32-256 using RawCullFB semantic-search and image-similarity reports."
 tags = ["ai", "clip", "openai", "datacomp", "evaluation", "semantic-search", "image-similarity", "rawcullfb"]
 categories = ["technical details"]
@@ -12,6 +13,15 @@ weight = 32
 # CLIP Model Evaluation Results
 
 **Report date:** 2026-08-12
+
+**Evidence re-audited:** 2026-08-22
+
+**Immutable run directory:**
+`/Users/thomas/Library/Mobile Documents/com~apple~CloudDocs/TestPhotos/CLIPModelEvaluations/20260812T123105Z`
+
+This is a dated evidence report, not timeless architecture and not a current
+release approval. Later package, model, fixture, or catalog state must be
+evaluated in a new run.
 
 This report compares the product-behavior results produced by RawCullFB for:
 
@@ -24,17 +34,22 @@ The runs follow the product-behavior portion of
 semantic queries and a complete all-pairs image-similarity pass over 453 indexed
 images.
 
-The reports show that both integrations completed cleanly, neither model shows
-semantic collapse, and both produce coherent image-neighbourhood structures.
+The product reports show that both integrations completed their recorded
+workloads, neither shows semantic collapse, and both produce coherent
+image-neighbourhood structures.
 DataComp is modestly faster and more consistent across paraphrases. Those are
 promising sanity-check results, but they are not labeled accuracy metrics.
 
-No final release-model selection can be made from these two reports alone.
-Source-framework parity evidence, pooled relevance labels, a calibrated labeled
-similarity benchmark, and full operational measurements are still required by
-the evaluation procedure.
+No final release-model selection can be made from this evidence package. It
+contains parity artifacts, but DataComp fails the `0.998` end-to-end parity
+gate. It also combines product reports from 9–10 August with an environment and
+model inspection captured on 12 August, and the recorded fingerprints are not
+fully consistent. Pooled relevance labels, a calibrated similarity benchmark,
+and full operational measurements are also absent.
 
 ## 1. Evidence analyzed
+
+### 1.1 Product-report inputs
 
 | Evidence | OpenAI | DataComp |
 |---|---|---|
@@ -45,7 +60,37 @@ the evaluation procedure.
 | Catalog recorded by report | `/Users/thomas/Downloads/testphotos` | `/Users/thomas/Downloads/testphotos` |
 | Result limit | 50 | 50 |
 
-The complete model fingerprints recorded in the reports are:
+The canonical query bytes archived later have SHA-256
+`2dfc0f4c2ff83146bd36c5b99fa78a3e99bc843edc2c9602d816ff663f89c604`.
+The two reports say only that they used 77 queries; they do not embed that
+digest, so the association is documentary rather than cryptographically bound
+to each report. `catalog-files.txt` lists 453 paths, but no per-file catalog
+content hashes or aggregate catalog digest were archived. Exact catalog-byte
+identity therefore remains unproved.
+
+### 1.2 Environment and tool identities
+
+The 12 August archive records:
+
+| Field | Recorded value |
+|---|---|
+| Environment capture | 2026-08-12 12:31:16 UTC |
+| macOS | 27.0, build `26A5406e` |
+| Xcode | 27.0, build `27A5237l` |
+| Swift | 6.4, `swiftlang-6.4.0.30.4`, target `arm64-apple-macosx27.0.0` |
+| `uv` | 0.12.3, Homebrew 2026-08-07, aarch64 |
+| RawCullFB revision | `5f90688984672244b82b4d588567b4b68f159b18` |
+| PhotoAIKit revision | `6e3216027b267c27ccaf99d334807b18ea1aaec9` |
+| CLIPBench revision | `d7a2b11cfdc6e0d5d8ab37a51c61219dfe5b6766` |
+| Mac hardware model/RAM | Not recorded |
+| RawParserKit and complete package locks | Not archived |
+
+Because this capture post-dates both product reports, it cannot by itself prove
+the environment used on 9–10 August.
+
+### 1.3 Model and fingerprint records
+
+The complete model fingerprints recorded in the product reports are:
 
 ```text
 OpenAI
@@ -55,14 +100,44 @@ DataComp
 clip:ViT-B-32-256-datacomp_s34b_b86k_float16_static:mlfoundations/open_clip:ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel:0.4:directory-tree-sha256-v1:6a3639a2049b8a4ea23fe04c3083e199a4f505433f7c8bd0748b3c8d4fcb1572
 ```
 
-The fingerprints are distinct, as required. Each result set therefore
-identifies a separate model asset and embedding space.
+The 12 August metadata files have SHA-256
+`049fb9163608ee81b3a9e7fa49b29764958518ed8009e671e146ea3aeef6dbc0`
+for OpenAI and
+`d6ccb58bd7bfe2cbe917a9dd25addd20c17d3492a1581920c981b2ea6f650bdd`
+for DataComp. Their declared runtime fingerprints and CLIPBench's captured
+inspection fingerprints compare as follows:
 
-This analysis did not receive the run's environment record, catalog hashes,
-query hash, model metadata, parity outputs, or relevance-label CSV. Matching
-catalog paths and image counts support comparability, but do not independently
-prove that every catalog byte and software revision was unchanged between the
-two run times.
+| Identity source | OpenAI | DataComp |
+|---|---|---|
+| 9–10 August RawCullFB report | `a71ceca1…005f45b` | `6a3639a2…fcb1572` |
+| 12 August metadata `asset_fingerprints.main` | `24a20d7c…fc48f4914` | `6a3639a2…fcb1572` |
+| 12 August CLIPBench inspection | `2e285bb7…9bda32c` | `19a8acb3…3983f08` |
+
+Distinct report fingerprints prove that the two product reports used different
+embedding spaces, but the cross-artifact mismatch means the archived parity
+inspection cannot be assumed to identify the exact same bundle bytes used by
+each earlier product report. This is a reproducibility failure and blocks a
+release decision from this run.
+
+### 1.4 Adjacent parity evidence
+
+The archive also contains ten-image/ten-text parity outputs. The fixture file
+hashes are present, and the canonical fixture manifest currently has SHA-256
+`8687bb47c43e3a0a573210bd8f1d548ac2482d958a8cb8cec20d9f9ddcedd6ff`;
+that manifest digest was not itself written into the run directory.
+
+| Gate | OpenAI | DataComp |
+|---|---:|---:|
+| Minimum text cosine | `1.0000` | `1.0000` |
+| Minimum end-to-end fixture cosine | `0.9988` | `0.9908` |
+| Required minimum | `0.998` | `0.998` |
+| Archived result | Pass | **Fail** |
+
+The DataComp minimum occurs on `04-city-night.jpg`; several other DataComp
+image rows are also below `0.998`. These parity files were not inputs to the
+original product-report calculations and do not alter those measured retrieval
+metrics. They do change the overall gate decision: DataComp cannot be promoted
+from this archived run.
 
 ## 2. Report-integrity checks
 
@@ -82,9 +157,10 @@ For 453 images, the number of unique unordered pairs is:
 453 × 452 / 2 = 102,378
 ```
 
-The reported pair count is therefore complete for both models. There is no
-evidence of a partial query run, partial similarity run, incompatible vector,
-or accidental reuse of one model fingerprint for both reports.
+The reported pair count is therefore complete for both product reports. Within
+those files there is no evidence of a partial query run, partial similarity
+run, incompatible vector, or reuse of one fingerprint for both models. This
+does not resolve the cross-date fingerprint mismatch described in Section 1.
 
 ## 3. Semantic sanity-check methodology
 
@@ -273,7 +349,7 @@ hard negatives, and unrelated negatives.
 
 ## 7. What the reports establish
 
-The two reports establish that:
+The two product reports directly establish that:
 
 1. RawCullFB completed the same 77-query and 453-anchor workload for both
    distinct model fingerprints.
@@ -288,9 +364,10 @@ The two reports establish that:
 8. The models disagree most on composition, subjective photographic quality,
    counting, spatial relations, and negation.
 
-The reports do **not** establish that:
+The product reports do **not** establish that:
 
-- either converted bundle matches its source framework numerically;
+- the exact bundle bytes used for product behavior are the same bytes inspected
+  and parity-tested on 12 August;
 - one model has higher semantic Precision@1, Precision@5, MRR, or nDCG@5;
 - one model has a better duplicate-detection ROC-AUC or precision-recall AUC;
 - a shared image-similarity threshold is valid;
@@ -305,9 +382,9 @@ The reports do **not** establish that:
 |---|---:|---:|---|
 | Distinct model identity in report | Pass | Pass | Both fingerprints recorded |
 | Complete RawCullFB report | Pass | Pass | Both completed |
-| Source identity verified against archive | Not provided | Not provided | Open |
-| Minimum text parity | Not provided | Not provided | Open |
-| Minimum end-to-end image parity | Not provided | Not provided | Open |
+| Source identity verified against archive | Fingerprints conflict | Fingerprints conflict across inspection/report | **Blocked** |
+| Minimum text parity in adjacent 12 August artifact | `1.0000` | `1.0000` | Pass for inspected candidates only |
+| Minimum end-to-end parity in adjacent artifact | `0.9988` | `0.9908` | OpenAI pass; **DataComp fail** |
 | Semantic collapse diagnostic | Pass | Pass | Both healthy |
 | Distinct semantic rank-one images | 53 | **58** | DataComp signal |
 | Largest semantic hub | 4/77 | 4/77 | Tie |
@@ -324,7 +401,12 @@ The reports do **not** establish that:
 | Peak memory | Not provided | Not provided | Open |
 | Bundle and index size | Not provided | Not provided | Open |
 
-## 9. Recommendation and next steps
+## 9. Measured findings and recommendation
+
+The tables in Sections 2–6 are measured or directly derived from the two
+RawCullFB result files. Statements about relevance, release suitability, and
+which model to prefer are recommendations constrained by missing labels and the
+evidence-integrity issues above; they are not measured accuracy results.
 
 DataComp is the more promising candidate in this unlabeled RawCullFB run. It is
 more paraphrase-consistent, slightly more diverse, and modestly faster, while
@@ -336,12 +418,18 @@ improvement before replacing the established OpenAI control. If labeled quality
 is effectively tied, OpenAI remains the simpler established choice and DataComp
 may remain experimental.
 
+Independently of that product-quality comparison, DataComp fails the archived
+parity gate and both candidates have unresolved cross-artifact fingerprint
+binding. Those are hard blockers for using this run as release evidence.
+
 Complete the following work before making the model decision:
 
-1. Archive the environment, source revisions, model metadata, fingerprints,
-   catalog manifest, catalog hashes, and semantic-query hash for this run.
-2. Attach the OpenAI Hugging Face and DataComp OpenCLIP parity results, proving
-   text cosine of at least 0.999 and end-to-end fixture cosine of at least 0.998.
+1. Create a new run in which environment, source revisions, package locks,
+   model metadata, runtime fingerprints, catalog manifest/content hashes, and
+   query hash are captured before any evaluation command.
+2. Re-run OpenAI Hugging Face and DataComp OpenCLIP parity against the exact
+   bundle fingerprints used by RawCullFB. Investigate and fix DataComp's
+   `0.9908` minimum rather than lowering the `0.998` gate.
 3. Pool and blind-label the union of both models' top five results for every
    query using relevance grades 0, 1, and 2.
 4. Calculate Precision@1, Precision@5, MRR, and nDCG@5 overall and by query
@@ -358,5 +446,31 @@ Until those steps are complete, the defensible conclusion is:
 
 > Both models pass the RawCullFB report-integrity and semantic-collapse sanity
 > checks. DataComp shows better paraphrase consistency and small operational
-> advantages, but the release choice remains open pending parity evidence and
-> blinded relevance and similarity labels.
+> advantages, but this archived run is not release-qualifying: DataComp fails
+> parity, bundle identity is not consistently bound across artifacts, and
+> blinded relevance and similarity labels are missing.
+
+## 10. Artifact map and superseded-results policy
+
+The report's evidence files are the named artifacts under the immutable run
+directory shown at the top of this page. In particular:
+
+| Conclusion type | Generated artifacts |
+|---|---|
+| Environment and source identity | `environment.txt`, both `*-metadata.json`, `model-metadata-sha256.txt`, both `*-model-inspection.txt` |
+| Fixture and source parity | `fixture-sha256.txt`, both `*-reference-sha256.txt`, both normal and strict `*-parity*.txt` files |
+| Product behavior | `openai-rawcullfb-results.txt`, `datacomp-rawcullfb-results.txt`, `catalog-files.txt`, `semantic-query-sha256.txt` |
+| Missing required evidence | catalog content/aggregate digests, package locks, hardware model/RAM, blind relevance labels, calibrated similarity labels, complete operational measurements |
+
+Treat this directory and page as immutable historical evidence. A later
+evaluation must:
+
+1. create a new UTC-named run directory and a new dated report;
+2. record `supersedes` and `superseded_by` links in the two reports, without
+   replacing old artifacts;
+3. explain every changed model, source, package, fixture, catalog, query,
+   hardware, threshold, and analysis method;
+4. point the current release recommendation only at the newest run that passes
+   every applicable gate; and
+5. retain failed and incomplete runs so that a later result cannot silently
+   erase contrary evidence.

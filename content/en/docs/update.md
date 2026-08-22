@@ -4,7 +4,7 @@ description:
   Prioritized backlog for keeping RawCull technical documentation aligned with
   the code
 weight: 95
-lastmod: 2026-08-20
+lastmod: 2026-08-22
 ---
 
 # Documentation Update Plan
@@ -250,6 +250,8 @@ Required update:
 
 ## P1 — Operational Correctness References
 
+Status: **Completed**
+
 ### 13. Security-Scoped URLs
 
 Page: [Security-Scoped URLs](../security/)
@@ -293,6 +295,8 @@ Required update:
 - Remove types or paths that no longer exist.
 
 ## P2 — AI Distribution, Evidence, And Release Procedures
+
+Status: **Completed**
 
 ### 16. AI Model Downloads
 

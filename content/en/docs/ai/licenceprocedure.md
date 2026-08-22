@@ -1,9 +1,9 @@
 +++
 author = "Thomas Evensen"
-title = "AI Model Licence"
-linkTitle = "AI Model Licence"
-date = "2026-08-02"
-description = "AI Model Licence"
+title = "AI Model Licence and Provenance Clearance"
+linkTitle = "AI Licence and Provenance"
+date = "2026-08-22"
+description = "Current model-distribution evidence and the reusable RawCull clearance procedure."
 tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 30
@@ -11,37 +11,62 @@ weight = 30
 
 # AI model licence and provenance clearance procedure
 
-Status: publication hold  
-Last reviewed: 2026-08-03
+Status: mixed — two CLIP packs published; SAM 3 blocked
 
-## Purpose and current decision
+Evidence reviewed: 2026-08-22
+
+Evidence record owner: Thomas Evensen, RawCull maintainer
+
+## Current recorded distribution status
+
+This section is a dated status snapshot. It describes RawCull's current product
+and repository records; it is not a legal conclusion and must not be copied into
+a later release without a fresh evidence review.
+
+| Pack | Product/release record on 2026-08-22 | Evidence record | Expiring or unresolved point | Owner/action before next publication |
+|---|---|---|---|---|
+| DataComp CLIP | `.ready`, enabled, published in `v2` | `PROVENANCE.json` status `ready`; model page labels the checkpoint MIT; v2 archive evidence is recorded in the production catalog | Provenance still records the upstream revision as a reference and leaves `source_weight_sha256` null; the model card also contains deployment cautions | RawCull maintainer must recheck the official model page/licence and either bind the exact weight file or sign the residual provenance decision |
+| OpenAI CLIP | `.ready`, enabled, published in `v2` | `PROVENANCE.json` status `ready`; pinned source file/revision/SHA-256 and OpenAI CLIP MIT notice are recorded | The Hugging Face checkpoint page reviewed on 2026-08-22 does not itself display a weight-specific licence identifier; historical support/discussion evidence below did not establish one | Named release approver must preserve the exact legal basis for the trained weights and reassess it before republishing |
+| Meta SAM 3 | `.blocked`, excluded, absent from the public manifest | Complete SAM License and checksum are packaged; upstream source revision/SHA-256 are recorded | Official checkpoint remains gated; compatibility of an anonymous public converted download with that gate remains unresolved | Keep blocked unless Meta or qualified counsel resolves the exact delivery proposal; record responder authority, date, and scope |
+
+The application catalog and `ModelAssets` records are the authoritative account
+of what RawCull currently ships: DataComp and OpenAI have archive hashes and
+byte counts; SAM 3 has neither and remains blocked. A `.ready` value proves only
+that the product gate was opened. Model availability, a public archive, or a
+model-page licence badge must never be treated alone as permission for the
+specific conversion and redistribution.
+
+## Purpose of the reusable procedure
 
 This document defines how RawCull clears the DataComp CLIP, OpenAI CLIP, and
 Meta SAM 3 model packs for public download. It covers technical provenance,
 licence evidence, upstream contacts, questions to ask, acceptable answers, and
 the final release gate.
 
-No `.aar` model archive has been uploaded. Do not create a public GitHub
-Release, publish a download manifest, or change a production descriptor to
-`ready` until every model is either:
+For a new publication, do not upload a new archive, publish a new download
+manifest, or change a production descriptor to `ready` until every candidate is
+either:
 
 1. cleared under this procedure; or
 2. deliberately excluded from the release and manifest.
 
-The current AARs are unpublished development artifacts. The safest remedy for
-the recorded provenance gaps is to create new release candidates from pinned,
-hashed source files after the applicable licence has been cleared.
+Existing `v2` archives are immutable historical release evidence. The safest
+remedy for a recorded provenance gap is a new candidate and new release tag
+created from pinned, hashed source files after the applicable licence decision
+has been reviewed; do not rewrite history by silently replacing the old record.
 
 This is an engineering and evidence-preservation procedure, not legal advice.
 For an unresolved interpretation, obtain advice from a qualified lawyer who
 works with software copyright, open-source licensing, AI model weights, and
 commercial distribution in Norway and the EEA.
 
-## What “resolved” means
+## Reusable clearance standard
+
+### What “resolved” means
 
 There are two independent gates.
 
-### Provenance gate
+#### Provenance gate
 
 RawCull must be able to demonstrate this complete chain:
 
@@ -63,7 +88,7 @@ A filename, a local cache timestamp, or a likely upstream snapshot is not a
 cryptographic binding. Re-exporting from a deliberately selected and hashed
 source is preferable to trying to infer the origin of an old conversion.
 
-### Licence and distribution gate
+#### Licence and distribution gate
 
 RawCull must have a defensible basis for all of the following:
 
@@ -94,11 +119,11 @@ The canonical records are:
 
 The current relevant identifiers are:
 
-| Pack | Upstream revision presently recorded | Source-weight evidence | Converted runtime SHA-256 | Open issue |
+| Pack | Upstream revision presently recorded | Source-weight evidence | Converted runtime evidence | Open issue |
 | --- | --- | --- | --- | --- |
-| DataComp CLIP | `4afec35ffe57a943d569ff7ee888061830164da8` is a reference revision, not exporter-recorded proof | Exact selected file and SHA-256 are missing | `70b6a8b3502626dbfd4e228dff1e060e06606c93e7a19c8f260dba95b9a7d01e` | Rebuild from one explicitly selected upstream weight file and confirm its licence scope |
-| OpenAI CLIP | Local cache snapshot `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268` | `pytorch_model.bin`, SHA-256 `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f`; not exporter-bound | `34b1c3f2eccfac50e5c47eeb33029b8c488fb7f3712d50d6d46965625a6a3798` | Confirm the exact weights' licence and rebuild from the pinned source |
-| SAM 3 | Local cache snapshot `3c879f39826c281e95690f02c7821c4de09afae7` | `model.safetensors`, SHA-256 `6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a`; not exporter-bound | `43a9b88e40d193f5a6608a7fee536a78f4ba4ec5d95f1eb24db03031630f0a31` | Confirm whether an ungated public derivative download is compatible with Meta's gated access flow, then rebuild |
+| DataComp CLIP | `4afec35ffe57a943d569ff7ee888061830164da8` is a reference revision, not exporter-recorded proof | Exact selected source-weight SHA-256 remains null in provenance | runtime `main.mlirb` SHA-256 `41596f6f7a9f8f8d1171b0056f4e3a90902ef88d73303713ab3bed4847b6266d`; directory fingerprint `6a3639a2049b8a4ea23fe04c3083e199a4f505433f7c8bd0748b3c8d4fcb1572` | Bind the exact weight input on the next rebuild and recheck licence/model-card terms |
+| OpenAI CLIP | `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`, also recorded by the exporter | `pytorch_model.bin`, SHA-256 `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f` | runtime `main.mlirb` SHA-256 `828e6ef52700c48b9c72696d785f5b45bd01a06748c538eb284cf3a42f2530da`; directory fingerprint `24a20d7c5c88da2afe3ed81dca0ddf223450dd6afd1f3aff34be7acfc48f4914` | Preserve the named approval basis for weight redistribution; re-open the gate if that evidence is missing or changes |
+| SAM 3 | `3c879f39826c281e95690f02c7821c4de09afae7`; not exporter-bound | `model.safetensors`, SHA-256 `6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a` | runtime `main.mlirb` SHA-256 `43a9b88e40d193f5a6608a7fee536a78f4ba4ec5d95f1eb24db03031630f0a31` | Confirm whether an ungated public derivative download is compatible with Meta's gated access flow, then rebuild with the current exporter |
 
 These hashes identify current evidence; they do not themselves approve a
 release.
@@ -155,10 +180,12 @@ privileged legal advice.
 
 ### Current position
 
-The pinned DataComp repository page identifies the checkpoint as MIT licensed,
-which is positive evidence. The remaining technical problem is that the
-existing exporter record does not identify and hash the exact source-weight
-file it converted.
+RawCull currently records this pack as ready and publishes it in `v2`. The
+pinned DataComp repository page reviewed on 2026-08-22 identifies the checkpoint
+as MIT licensed, which is positive evidence. The remaining technical gap is
+that the packaged provenance does not identify and hash the exact source-weight
+file used by the exporter. That gap must remain visible in the decision record;
+the published state does not make it disappear.
 
 Official references:
 
@@ -331,11 +358,12 @@ the evidence and decision; it is not a legal opinion.
 
 ### Current position
 
-The OpenAI CLIP source repository contains an MIT licence covering the software
-and associated documentation. The Hugging Face checkpoint currently lacks a
-clear weight-level licence designation. A community discussion contains only
-an assumption that the repository licence covers the weights; that assumption
-is not authoritative evidence.
+RawCull currently records this pack as ready and publishes it in `v2`. The
+OpenAI CLIP source repository contains an MIT licence covering the software and
+associated documentation. The Hugging Face checkpoint page reviewed on
+2026-08-22 still does not display a clear weight-level licence designation. A
+community assumption that the repository licence covers the weights is not
+authoritative evidence.
 
 The model card also characterizes deployed uses as out of scope. Clarify
 whether this is safety guidance or an enforceable distribution/use condition,
@@ -380,7 +408,12 @@ licence permits RawCull's intended commercial redistribution. The response
 said that the applicable terms must be determined from the licence and notices
 shipped with the exact code and weights being used.
 
-This response does not clear the pack. Record the current conclusion as:
+This historical response did not by itself clear the pack. RawCull's later
+product record nevertheless marks the pack ready, so the private decision
+register must identify the subsequent evidence, responsible approver, date, and
+accepted scope. If it cannot, treat that as a blocker for the next publication
+rather than pretending the historical uncertainty was resolved. The conclusion
+at the time of the support exchange was:
 
 ```text
 CLIP source code: MIT licensed.
@@ -432,8 +465,10 @@ record?
 
 A maintainer comment may clarify intent, but the strongest resolution is a
 licence file, model-card licence declaration, or written statement from the
-rights holder that expressly covers the exact weights and proposed use. Until
-then, do not approve commercial redistribution of this pack.
+rights holder that expressly covers the exact weights and proposed use. Until a
+responsible approver records the basis that supersedes this historical finding,
+do not use existing `v2` availability as the sole basis for a new commercial
+redistribution decision.
 
 ### Questions to ask
 
@@ -713,9 +748,10 @@ If even one required item remains open, keep that pack blocked or omit it.
 
 ## Publication sequence after clearance
 
-RawCull's current policy is to wait until all three model decisions are
-resolved. A decision to omit or replace a model counts as resolution only when
-it is documented and the omitted asset is absent from the manifest.
+RawCull may publish a ready subset. Every candidate must still have an explicit
+ready, blocked, replaced, or omitted decision, and every blocked/omitted asset
+must be absent from that manifest. The current `v2` record follows this rule by
+publishing both CLIP packs and omitting SAM 3.
 
 After the decisions are complete:
 
@@ -737,7 +773,7 @@ After the decisions are complete:
 
 ## Official-source summary
 
-The following sources were checked on 2026-08-02:
+The following official sources were rechecked on 2026-08-22:
 
 - LAION publishes `contact@laion.ai` on its
   [legal contact page](https://laion.ai/impressum/).
@@ -751,6 +787,11 @@ The following sources were checked on 2026-08-02:
   [open-source guidance](https://opensource.fb.com/get-involved/).
 - Hugging Face explains that model authors control access to
   [gated models](https://huggingface.co/docs/hub/en/models-gated).
+
+At that review date the DataComp page displayed `License: mit`; the OpenAI
+checkpoint page did not display a corresponding weight-specific licence label;
+and the official SAM 3 checkpoint remained gated with the SAM License linked.
+These observations are evidence inputs, not legal conclusions.
 
 Recheck all licence text, model-card metadata, gates, contacts, and official
 links immediately before release because they can change.

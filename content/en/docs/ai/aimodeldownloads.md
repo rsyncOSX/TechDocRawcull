@@ -11,7 +11,7 @@ weight = 30
 
 # AI model download service
 
-RawCull supports exactly three optional model bundles:
+RawCull's managed-download schema recognizes exactly three optional model bundles:
 
 | Model | PhotoAIKit bundle | Runtime asset | Use |
 |---|---|---|---|
@@ -30,15 +30,83 @@ directory to PhotoAIKit for validation. RawCull does not unpack an AAR itself.
 The current production manifest is pinned to:
 
 ```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v1/manifest.json
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
 ```
 
-The current RawCull source enables DataComp only. OpenAI CLIP and SAM 3 remain
-hidden and release-blocked until their redistribution reviews and new archives
-are complete. The three-model release procedure is documented in
+The current RawCull source enables DataComp CLIP and OpenAI CLIP. Both are
+published in `v2`, have `.ready` production descriptors, and appear in Settings.
+SAM 3 remains excluded by `includeSAM3 = false` and release-blocked. The
+three-model release procedure is documented in
 [Publishing new RawCull AI models](../newmodels/).
 
-## Release gates
+## Runtime architecture
+
+`RawCullAIModelDownloadCatalog.production` is the application-owned authority
+for model identity, asset-pack ID, expected managed path, archive evidence,
+licence metadata, and release readiness. Inclusion switches filter that catalog
+before Settings sees it; a blocked or excluded model cannot become downloadable
+merely because a host manifest contains an asset with the same ID.
+
+For the self-hosted Developer ID build, `RawCullModelDownloader` is a
+`ManagedDownloaderExtension`. The app and extension are configured with the
+same `v2` `BAManifestURL` and App Group. The compile-time
+`RAWCULL_APPLE_HOSTED_MODEL_ASSETS` variant instead uses
+`StoreDownloaderExtension`; one product must not mix the two hosting modes.
+
+The app-facing service always uses `AssetPackManager`:
+
+1. `snapshot()` maps every included descriptor to a user-visible state.
+2. `ensureLocalAvailability(requireLatestVersion: true)` downloads or updates
+   the exact asset-pack ID and supplies progress events.
+3. `AssetPackManager.url(for:)` resolves the descriptor's managed destination.
+   The resulting URL is ephemeral and must be resolved again after relaunch;
+   RawCull never persists it as a stable filesystem path.
+4. `RawCullAISettingsModel` passes the snapshot's managed locations to
+   `RawCullAIIntegration.setManagedModelLocations`, refreshes capabilities, and
+   reapplies the selected similarity provider.
+5. After a download, the settings model enters `validating`, installs the new
+   managed location into the integration, and calls `refresh()` before showing
+   the final installed/capability state. Removal clears that location and runs
+   the same refresh path.
+
+The downloader installs the directory selected by `assetPackModelPath`, not an
+archive filename. The current contract is:
+
+| Model | Asset-pack ID | Managed destination | Published archive evidence |
+|---|---|---|---|
+| DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` | 282,966,632 bytes; SHA-256 `cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7` |
+| OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` | 282,866,068 bytes; SHA-256 `e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c` |
+| SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` | Not published; checksum and sizes remain `nil` |
+
+### User-visible states, failure, and retry
+
+| State | Meaning and available action |
+|---|---|
+| `checking` | Refresh is resolving release, licence, manifest, and local-install state. |
+| `unavailable(reason:)` | The descriptor is release-blocked. No download action is offered. |
+| `licenceRequired` | A ready descriptor requires acceptance of the verified bundled licence text before download. |
+| `notConfigured` | The selected hosting source is not valid; no Background Assets request is made. |
+| `ready` | The manifest contains the pack and Download is enabled. |
+| `downloading(progress:)` | Progress is shown and Cancel is enabled. |
+| `validating` | The pack is local; RawCull is refreshing the managed location and model capability. |
+| `installed(location:)` | The managed pack resolved and validated sufficiently to expose its current location; Remove is enabled. |
+| `removing` | Managed removal and capability refresh are in progress. |
+| `failed(message:)` | The exact manifest, Background Assets, path, licence, or validation error is shown and Retry is enabled. |
+
+Cancellation does not pretend the pack was removed. The task is cancelled, a
+fresh coordinator snapshot determines whether the pack is now `ready` or
+already `installed`, and the UI returns to that state. Retry starts a new
+`ensureLocalAvailability` request. A failed validation retains an explicit
+failure/capability reason; RawCull does not activate a provider from an
+unverified directory. Vision feature-print similarity remains available when
+neither CLIP capability is ready.
+
+## Release-operator procedure
+
+The commands below create and publish model artifacts. They are release-operator
+work and are not executed by RawCull at runtime.
+
+### Release gates
 
 A working local conversion is not automatically publishable. Every downloadable
 model must pass all of these gates:
@@ -52,12 +120,13 @@ model must pass all of these gates:
 5. Validate the generated bundle with PhotoAIKit and RawCull.
 6. Package only runtime files; never publish conversion intermediates.
 
-DataComp is currently the only `.ready` production descriptor. OpenAI CLIP is
-blocked pending weight-level redistribution clearance. SAM 3 is gated upstream
-and remains blocked until ungated redistribution of the converted derivative is
-confirmed. SAM 3 also requires explicit in-app licence acceptance.
+DataComp CLIP and OpenAI CLIP are the current `.ready` production descriptors
+and their `v2` archives are published. SAM 3 is gated upstream and remains
+blocked until ungated redistribution of the converted derivative is confirmed.
+Its descriptor also requires explicit in-app licence acceptance if it later
+becomes ready.
 
-## Use the reviewed PhotoAIKit revision
+### Use the reviewed PhotoAIKit revision
 
 The procedures below are verified against PhotoAIKit commit:
 
@@ -68,6 +137,10 @@ The procedures below are verified against PhotoAIKit commit:
 That revision exports CLIP metadata version `0.4`, SAM 3 metadata version `0.3`,
 separate CLIP `image_encoder` and `text_encoder` functions, normalized
 embeddings, and the corrected Pillow-compatible bicubic CLIP preprocessing.
+The checked-in blocked SAM 3 candidate still records metadata version `0.2`;
+it is evidence of the older conversion, not the output contract for a future
+rebuild. Any SAM 3 release candidate must be regenerated and revalidated with
+the actual exporter revision recorded for that candidate.
 
 Use a clean detached checkout for release evidence:
 
@@ -85,7 +158,7 @@ If a later PhotoAIKit revision is used, review changes to `Tools/export_clip.py`
 `Tools/export_sam3.py`, preprocessing, metadata, and runtime validation. Record
 the exact revision actually executed; do not silently reuse the value above.
 
-## Create the DataComp CLIP bundle
+### Create the DataComp CLIP bundle
 
 The release model is OpenCLIP `ViT-B-32-256` with the registered
 `datacomp_s34b_b86k` pretrained tag.
@@ -156,7 +229,7 @@ The `_source.aimodel` directory is private conversion evidence. Exclude it from
 the downloadable pack. `metadata.json` must select the optimized directory in
 `assets.main` and contain its `asset_fingerprints.main` value.
 
-## Create the OpenAI CLIP bundle
+### Create the OpenAI CLIP bundle
 
 | Field | Required value |
 |---|---|
@@ -220,7 +293,7 @@ CLIP-OpenAI/
 `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`. Exclude the `_source.aimodel`
 directory from the downloadable pack.
 
-## Create the Meta SAM 3 bundle
+### Create the Meta SAM 3 bundle
 
 | Field | Required value |
 |---|---|
@@ -283,7 +356,7 @@ Keep the verified source manifest and PhotoAIKit revision in `PROVENANCE.json`;
 do not claim that `metadata.json` alone binds the revision. Exclude
 `sam3_float16_source.aimodel` from the downloadable pack.
 
-## Validate every generated bundle
+### Validate every generated bundle
 
 Do not use `--dynamic` or `--overwrite` for a release conversion. Preserve the
 terminal log and record `uv --version`, `sw_vers`, `xcodebuild -version`, the
@@ -346,7 +419,7 @@ index created by another model or by an older conversion.
 For SAM 3, install the candidate in RawCull and verify text-prompt segmentation,
 mask dimensions, mask placement, licence acceptance, relaunch, and removal.
 
-## Prepare the release staging tree
+### Prepare the release staging tree
 
 Only the optimized runtime assets belong in the pack:
 
@@ -401,21 +474,26 @@ The three stable asset-pack IDs and installed paths are:
 | OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
 | SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
 
-Generate one `.aar` per manifest from the release staging root:
+Generate one `.aar` per cleared manifest from a clean release work tree. The
+current `v2` ready set contains the two CLIP packs, so its reproducibility
+record is:
 
 ```sh
-cd /Users/thomas/ModelAssets/Release
+RELEASE_WORK_ROOT=/Users/thomas/ModelAssets/Release
+cd "$RELEASE_WORK_ROOT"
 xcrun ba-package package Packaging/clip-datacomp.json --output-path Output/clip-datacomp.aar
 xcrun ba-package package Packaging/clip-openai.json --output-path Output/clip-openai.aar
-xcrun ba-package package Packaging/sam3.json --output-path Output/sam3.aar
 
-shasum -a 256 Output/*.aar
-stat -f '%N %z bytes' Output/*.aar
+shasum -a 256 Output/clip-datacomp.aar Output/clip-openai.aar
+stat -f '%N %z bytes' Output/clip-datacomp.aar Output/clip-openai.aar
 ```
 
-Treat published archives as immutable. Record each AAR checksum and byte count
-in provenance and the matching RawCull catalogue descriptor. Upload archives
-before uploading the generated download `manifest.json`.
+Generate `sam3.aar` only after its descriptor and dated clearance decision are
+ready. Treat published archives as immutable. Record each AAR checksum and byte
+count in the external release record and matching RawCull catalogue descriptor;
+do not place an archive checksum inside that same archive's provenance file.
+Upload approved archives before uploading the generated download
+`manifest.json`.
 
 ## Runtime download and activation
 
@@ -437,6 +515,28 @@ When the user selects **Download**, RawCull:
 Removing a model asks Managed Background Assets to remove its pack and then
 refreshes RawCull capabilities. Manually installed models and managed packs must
 not be merged into the same candidate directory.
+
+## Release metadata tests
+
+`RawCullTests/ReleaseMetadataTests.swift` is the executable consistency contract
+for distribution metadata. It checks:
+
+- application and downloader-extension versions, sandboxing, hardened runtime,
+  architecture, deployment target, and shared App Group;
+- `BAManifestURL`, `BAUsesAppleHosting`, Background Assets download restrictions,
+  allowed domains, and the downloader extension point;
+- the exact `ModelAssets/manifest.template.json` asset-pack IDs and managed
+  destinations against `RawCullAIModelDownloadCatalog.swift`;
+- one blocked descriptor with missing archive evidence (currently SAM 3);
+- ready/blocked `PROVENANCE.json` states and every notice-file SHA-256; and
+- the hashes of the bundled licence texts used by acceptance and review UI.
+
+`RawCullAIModelDownloadsTests.swift` additionally pins the enabled production
+set, both published CLIP archive hashes and byte counts, manifest configuration,
+release blocking before service invocation, verified licence acceptance,
+cancellation/retry state, and checksum-based invalidation of old acceptance.
+Run both focused suites for every manifest, catalog, notice, entitlement,
+hosting, archive, or inclusion change.
 
 ## Signing and provisioning
 

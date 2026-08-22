@@ -23,14 +23,52 @@ SigLIP2 and EfficientSAM are deliberately excluded. Do not add them to the
 release staging tree, packaging manifests, download manifest, production
 catalogue, settings UI, notices, or tests.
 
-The examples use the `v2` release in
+The published record described by this page is the `v2` release in
 [`RawCull-AI-Models`](https://github.com/rsyncOSX/RawCull-AI-Models/releases).
-Tag names and GitHub release URLs are case-sensitive. If another tag is chosen,
-replace `v2` everywhere and keep both RawCull manifest URLs identical.
+Tag names and GitHub release URLs are case-sensitive.
 
 The current `v2` manifest publishes DataComp CLIP and OpenAI CLIP only. Meta SAM
 3 remains blocked and must not be uploaded or added to the deployable manifest
 until its redistribution review is complete.
+
+The literal `v2` hashes, sizes, URLs, and commands below are a reproducibility
+record for that publication. They are not a reusable instruction to mutate the
+same tag. For a new release, define these variables once and use a new immutable
+tag and monotonically increasing per-pack versions:
+
+```sh
+MODEL_RELEASE_REPOSITORY='rsyncOSX/RawCull-AI-Models'
+MODEL_RELEASE_TAG='vNEXT'
+DATACOMP_PACK_VERSION='NEXT_INTEGER'
+OPENAI_PACK_VERSION='NEXT_INTEGER'
+SAM3_PACK_VERSION='NEXT_INTEGER'
+RELEASE_SOURCE_ROOT='/path/to/RawCull-AI-Models/ModelAssets/Release'
+RELEASE_WORK_ROOT='/path/to/private/release-work/ModelAssets/Release'
+RELEASE_OUTPUT_ROOT="$RELEASE_WORK_ROOT/Output"
+DOWNLOAD_BASE_URL="https://github.com/$MODEL_RELEASE_REPOSITORY/releases/download/$MODEL_RELEASE_TAG/"
+```
+
+Copy the reviewed `Models`, `Notices`, and `Packaging` directories from
+`RELEASE_SOURCE_ROOT` into a clean `RELEASE_WORK_ROOT`; generate archives and
+the manifest only under `RELEASE_OUTPUT_ROOT`. Never use a personal absolute
+path as release identity or paste it into provenance.
+
+## Release sources of truth
+
+| Location | Authority |
+|---|---|
+| `RawCull/ModelAssets/manifest.template.json` | Stable asset-pack IDs and managed destinations checked by `ReleaseMetadataTests` |
+| `RawCull/ModelAssets/Notices/<model>` | Application-side notice/provenance records and licence hashes |
+| `RawCull-AI-Models/ModelAssets/Release/Models` | Reviewed runtime bundle inputs |
+| `RawCull-AI-Models/ModelAssets/Release/Packaging` | Explicit `ba-package` selectors |
+| Private `RELEASE_WORK_ROOT/Output` | Generated `.aar` files and generated `manifest.json`; never the canonical source tree |
+| `RawCullAIModelDownloadCatalog.production` | Enabled product set, archive hashes/byte counts, release readiness, and runtime managed paths |
+
+The packaging manifest schema uses `assetPackID`, `downloadPolicy`,
+`fileSelectors`, and `platforms`. Each ready pack selects `metadata.json`,
+`tokenizer`, one optimized runtime `.aimodel`, and its `Notices` directory. The
+generated download manifest uses `id`, version, download size, and URL; do not
+copy the packaging key name `assetPackID` into generated-manifest assertions.
 
 ## 1. Build the three canonical bundles
 
@@ -59,7 +97,10 @@ Use PhotoAIKit revision `6e3216027b267c27ccaf99d334807b18ea1aaec9`, or document
 and review the exact later revision actually used. Release CLIP bundles must use
 Float16, static batch dimensions, metadata version `0.4`, separate
 `image_encoder` and `text_encoder` functions, and corrected bicubic
-preprocessing. The SAM 3 bundle currently uses metadata version `0.2`.
+preprocessing. The checked-in blocked SAM 3 candidate uses metadata version
+`0.2`, while the reviewed current exporter emits `0.3`. A future SAM 3 release
+must be rebuilt, and its metadata version must be taken from that rebuilt
+candidate rather than copied from this historical record.
 
 DataComp must be exported with:
 
@@ -113,21 +154,25 @@ runtime filename. Replace the existing archive checksum and byte count whenever
 the bundle or packaging changes. Update its notice and provenance records; do
 not reuse values from the old custom-named runtime.
 
+The published `v2` record is 282,966,632 bytes with SHA-256
+`cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7`.
+
 ### OpenAI CLIP
 
-Before enabling the OpenAI pack:
+The current engineering/release record marks OpenAI CLIP ready and publishes it
+in `v2`. Its pinned source revision is
+`3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`, the recorded source-weight
+SHA-256 is `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f`,
+and the archive is 282,866,068 bytes with SHA-256
+`e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c`.
 
-1. bind the pinned checkpoint revision and source SHA-256 to the conversion
-   evidence;
-2. confirm that the applicable terms cover the exact trained weights and their
-   redistribution, not only source code and tokenizer files;
-3. record the PhotoAIKit revision, command, tokenizer checksum, runtime
-   fingerprint, archive checksum, and byte count in the external release
-   catalogue;
-4. include the complete required notices in `Notices/CLIP-OpenAI`.
-
-Leave the descriptor blocked and omit its pack from a public manifest while
-weight-level redistribution clearance is unresolved.
+Before republishing or replacing it, re-evaluate the exact trained-weight
+licence basis recorded by the responsible approver; the current Hugging Face
+model page does not itself provide a weight-specific licence identifier. Record
+the PhotoAIKit revision, command, tokenizer checksum, runtime fingerprint,
+archive checksum, byte count, complete notices, evidence date, and approver.
+Published availability and a `.ready` enum value are product state, not legal
+evidence.
 
 ### Meta SAM 3
 
@@ -148,8 +193,9 @@ from the public manifest until that review is complete.
 
 ## 4. Prepare release staging
 
-The staging tree must contain only the three approved runtime bundles and their
-notice catalogues:
+The reviewed source tree may contain all three known candidates, but a generated
+release work tree and manifest must contain only the ready subset and its notice
+catalogues:
 
 ```text
 ModelAssets/Release/
@@ -231,13 +277,15 @@ inside that same archive; doing so creates a self-referential checksum.
 
 ## 6. Generate the download manifest
 
-The catalogue used in this chapter is the release staging directory:
+For the historical `v2` run, the operator used this private release work tree:
 
 ```text
 /Users/thomas/ModelAssets/Release
 ```
 
-Run every `ba-package` command in chapter 6 from that directory. Relative paths
+This path is a record, not a portable prerequisite. For a new release use
+`RELEASE_WORK_ROOT`. Run every `ba-package` command in chapter 6 from that
+directory. Relative paths
 such as `Output/clip-datacomp.aar` and `Packaging/clip-datacomp.json` are
 resolved from the current directory; running the commands from
 `/Users/thomas/ModelAssets` or a RawCull source checkout selects the wrong
@@ -363,6 +411,34 @@ no.blogspot.RawCull.models.clip-datacomp
 no.blogspot.RawCull.models.clip-openai
 no.blogspot.RawCull.models.sam3
 ```
+
+## Final reproducibility and licence gate
+
+Before creating or changing any public release, one named release owner must
+sign and date a single decision record that binds all of the following:
+
+- repository commits for RawCull, its exact `Package.resolved`, PhotoAIKit,
+  and the `RawCull-AI-Models` staging source;
+- OS build, Xcode/Swift, `uv`, Python dependencies, `coreai-core`,
+  `coreai-models`, and `ba-package` versions;
+- model repository, immutable upstream revision, exact source filename, byte
+  count, and SHA-256;
+- conversion command and environment, generated `metadata.json`, runtime
+  `main.mlirb` hash, and directory-tree model fingerprint;
+- immutable evaluation fixture digest, parity reports, RawCull integration
+  report, and the release decision produced from them;
+- every packaged notice/licence file and checksum, evidence date, responsible
+  approver, and an explicit ready/blocked/omitted conclusion for each candidate;
+- packaging-selector digest, AAR filename, byte count/SHA-256, asset-pack
+  version, release tag, remote asset name, and generated-manifest digest.
+
+The gate fails if an upstream licence, model card, access gate, or distribution
+term has changed since its evidence date; if the responsible owner is missing;
+if a required source or fixture digest cannot be reproduced; or if the manifest
+would contain a blocked/omitted pack. Do not infer permission from the ability
+to download, convert, package, or upload a model. Archive the signed record
+before uploading payloads, append anonymous remote verification afterward, and
+publish the manifest last.
 
 ## 7. Publish the GitHub release
 
@@ -528,7 +604,7 @@ If clients might already have consumed the release, never replace files under
 its tag. Publish a corrective tag, for example `v2.0.1`, and update both RawCull
 manifest URLs. If the release is confirmed unused, follow section 7.4 instead.
 
-### 7.4. Republish unused models on the same `v2` tag
+### 7.4. Historical emergency record: republishing unused `v2` assets
 
 Use this exception only when all of the following are true:
 
@@ -771,7 +847,9 @@ Before shipping:
 - [ ] Runtime fingerprints match `metadata.json`.
 - [ ] CLIP parity, semantic search, and image similarity are reviewed.
 - [ ] SAM 3 segmentation and licence acceptance are tested.
-- [ ] OpenAI redistribution blockers are resolved before its release.
+- [ ] OpenAI's current ready/published decision has a dated, named evidence
+      record covering the exact trained weights; any newly discovered blocker
+      removes it from the next manifest.
 - [ ] SAM 3 remains blocked and absent, or its redistribution review is
       complete.
 - [ ] Only optimized runtime assets are packaged.
@@ -781,6 +859,8 @@ Before shipping:
 - [ ] Both RawCull manifest URLs point to the same tag-pinned manifest.
 - [ ] Inclusion flags and readiness values match the published manifest.
 - [ ] Focused, full, and clean-machine tests pass.
+- [ ] The final reproducibility/licence decision record is signed, dated, and
+      archived before the manifest is published.
 
 ## Rollback
 
