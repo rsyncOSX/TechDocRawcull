@@ -2,8 +2,8 @@
 author = "Thomas Evensen"
 title = "Modular AI Integration"
 date = "2026-08-29"
-lastmod = "2026-08-29"
-description = "How RawCull's modular AI runtime, configuration, model management, semantic search, and similarity features were implemented through Phases 0–6, with the planned Phase 7 burst-analysis extraction."
+lastmod = "2026-08-30"
+description = "How RawCull's modular AI runtime now separates configuration, model management, similarity, semantic search, burst analysis, and optional Deep Review through completed Phases 0–8 and 10."
 weight = 58
 tags = ["ai", "architecture", "modularization", "semantic-search", "similarity", "burst-analysis"]
 categories = ["technical details"]
@@ -21,17 +21,16 @@ primarily about the second meaning.
 
 The implementation keeps PhotoAIKit as the reusable AI layer while RawCull owns
 application composition, settings, catalog identity, task lifetime, culling
-policy, and SwiftUI presentation. Phases 0–6 establish and migrate this
-architecture. Phase 7 is the next planned step: extracting burst-analysis
-computation and cache decisions from `RawCullViewModel` without moving culling
-commands or review policy out of the application model.
+policy, and SwiftUI presentation. Phases 0–8 establish and migrate this
+architecture. Phase 10 then organizes the established boundary physically under
+`RawCull/Intelligence` without changing symbols or runtime behavior.
 
-> **Implementation status, 2026-08-29:** Phases 0–6 are implemented. The
-> automated Phase 6 gates pass, while its interactive acceptance matrix remains
-> to be completed. Model downloads for the DataComp and OpenAI CLIP variants
-> were manually verified during Phase 4. Phase 7 has not started; its section
-> below records the intended boundary and acceptance criteria so this page can
-> be updated when the extraction is complete.
+> **Implementation status, 2026-08-30:** Phases 0–8 and 10 are implemented and
+> automatically verified. Phase 7's end-to-end burst qualification, Phase 8's
+> interactive acceptance matrix, and the broader manual regression matrix remain
+> pending. Phase 9 is intentionally deferred; Phases 11 and 12 have not started.
+> Model downloads for the DataComp and OpenAI CLIP variants were manually verified
+> during Phase 4.
 
 ## Why The Architecture Changed
 
@@ -52,7 +51,7 @@ slice at a time. Product behavior, cache formats, preference keys, backend
 selection, and user-visible workflows remain compatible while ownership becomes
 testable and easier to reason about.
 
-## Architecture At The Phase 6 Stopping Point
+## Architecture After Phases 7, 8, And 10
 
 ```mermaid
 flowchart TD
@@ -65,13 +64,18 @@ flowchart TD
     Runtime --> Management["RawCullAIModelManagementModel"]
     Runtime --> Similarity["RawCullSimilarityFeature"]
     Runtime --> Semantic["RawCullSemanticSearchFeature"]
-    Runtime --> DeepReview["DeepAIReviewFeature"]
+    Runtime --> DeepReview["DeepAIReviewController"]
     Runtime --> SharedModel["SimilarityScoringModel<br/>single shared state owner"]
+    VM --> Burst["BurstAnalysisCoordinator"]
 
     Similarity --> SharedModel
     Semantic --> SharedModel
+    Burst --> Similarity
+    DeepReview --> DeepFeature["DeepAIReviewFeature"]
     Semantic -. "weak app target" .-> VM
     Similarity -. "weak app context" .-> VM
+    Burst -. "typed results" .-> VM
+    DeepReview -. "immutable burst evidence" .-> VM
     Settings -. "weak configuration consumer" .-> Runtime
     Management -. "weak locations consumer" .-> Settings
 
@@ -90,14 +94,16 @@ creating a retain cycle.
 |---|---|
 | `RawCullApp` | Retains one `RawCullApplicationState` in `@State` and exposes stable models to SwiftUI. |
 | `RawCullApplicationState` | Assembles the live object graph in a deterministic order and asserts shared object identity. |
-| `RawCullIntelligenceRuntime` | Owns the intelligence integration and feature models, accepts complete revisioned configurations, and applies meaningful changes. |
+| `RawCullIntelligenceRuntime` | Owns the intelligence integration, focused similarity and semantic models, and Deep Review controller; accepts complete revisioned configurations and applies meaningful changes. |
 | `RawCullAIIntegration` | Composes concrete PhotoAIKit providers, validates model resources, reports capabilities, and provides narrow similarity, semantic, and segmentation services. |
 | `RawCullAISettingsModel` | Owns user choices and capability presentation, persists preferences, and publishes one complete configuration snapshot. |
 | `RawCullAIModelManagementModel` | Owns model-download presentation, licence state, managed locations, download tasks, validation, cancellation, and removal actions. |
 | `SimilarityScoringModel` | Remains the single observable state store for similarity artifacts, indexing, distances, and semantic-search state. |
 | `RawCullSimilarityFeature` | Provides the Phase 6 API for catalog hydration, indexing, image ranking, backend presentation, cancellation, and stale-result protection. |
 | `RawCullSemanticSearchFeature` | Provides semantic-search presentation and actions while projecting, rather than copying, state from the shared scoring model. |
-| `RawCullViewModel` | Still owns catalog, selection, navigation, culling, review policy, and the burst pipeline that Phase 7 will extract. |
+| `BurstAnalysisCoordinator` | Owns burst task lifetime, generation, progress, cache preparation and compatibility, missing compute, grouping, ranking, cancellation, and the primary derived-cache save. |
+| `DeepAIReviewController` | Builds Deep Review requests from immutable application evidence, projects capability and operation state, and delegates execution to `DeepAIReviewFeature`. |
+| `RawCullViewModel` | Retains the stable burst coordinator and owns catalog snapshots, typed result application, selection, navigation, ratings, culling, review policy, manual winner overrides, undo, and recommendation application. |
 
 ## Invariants Preserved Across Every Phase
 
@@ -402,16 +408,16 @@ marked as a Phases 7/9 compatibility reference, not as a second state owner.
 Removing it during Phase 6 would have mixed the similarity UI migration with a
 large burst-analysis rewrite.
 
-## Phase 7 — Planned Burst-Analysis Extraction
+## Phase 7 — Extract The Burst-Analysis Pipeline
 
-Phase 7 has not yet been implemented. It is divided into small subphases so
-cache compatibility, compute orchestration, and view-model reduction can be
-reviewed independently.
+Phase 7 was implemented on 2026-08-29 in four independently reviewable
+subphases. The extraction preserves cache formats and application policy while
+moving worker ownership out of `RawCullViewModel`.
 
 ### Phase 7A: immutable requests and results
 
-Introduce pure request and result values that capture everything needed to
-identify a burst run:
+Phase 7A introduced immutable, `Sendable` values that capture everything needed
+to identify a burst run:
 
 - catalog identity and ordered files;
 - sharpness and similarity configuration signatures;
@@ -419,14 +425,16 @@ identify a burst run:
 - selected backend and compatible artifact descriptors;
 - typed groups, rankings, restored review state, cache outcome, and diagnostics.
 
-The existing view-model pipeline should initially build and consume these
-values without moving behavior. This first step makes hidden inputs visible and
-creates test seams before ownership changes.
+The existing view-model pipeline first adopted these values without moving
+worker, cache, or persistence ownership. Equality and sendability tests verify
+that the snapshots match the previous inputs and cannot change beneath an
+asynchronous operation.
 
 ### Phase 7B: cache hydration and compatibility decisions
 
-Move per-file hydration, legacy import, derived cache loading, artifact digests,
-and cache-hit decisions behind a repository or coordinator boundary. Preserve:
+Phase 7B moved per-file hydration, legacy import, derived cache loading, artifact
+digests, and cache-hit decisions behind `BurstAnalysisCoordinator` and its narrow
+cache-repository boundary. It preserves:
 
 - current cache schemas and backend descriptors;
 - file-ID remapping when a saved catalog is reopened;
@@ -434,16 +442,20 @@ and cache-hit decisions behind a repository or coordinator boundary. Preserve:
 - migrate-once behavior for legacy data;
 - partial artifact reuse and invalid-entry rejection.
 
+The coordinator returns an immutable cache-preparation value. The view model
+validates and applies that value rather than making storage compatibility
+decisions itself.
+
 ### Phase 7C: compute orchestration
 
-Add a stable `BurstAnalysisCoordinator` that performs missing sharpness work,
-missing similarity indexing, grouping, ranking, and cache-save preparation.
-It should accept immutable snapshots, report progress explicitly, and expose
-cancellation checkpoints between expensive phases.
+Phase 7C extended the stable coordinator to perform missing sharpness work,
+missing similarity indexing, grouping, ranking, progress sequencing, and the
+primary derived-cache save. It accepts immutable snapshots and checks
+cancellation and stale generations between expensive phases.
 
 ```mermaid
 flowchart TD
-    Request["Immutable burst request"] --> Hydrate["Hydrate per-file artifacts and derived cache"]
+    Request["Immutable burst request"] --> Hydrate["Coordinator hydrates per-file artifacts and derived cache"]
     Hydrate --> Cache{"Compatible cache hit?"}
     Cache -->|"yes"| Restore["Return remapped typed result"]
     Cache -->|"no"| Sharpness{"Sharpness missing?"}
@@ -457,55 +469,145 @@ flowchart TD
     Rank --> Prepare["Prepare typed result and cache record"]
     Restore --> Validate["MainActor validates generation and catalog"]
     Prepare --> Validate
-    Validate --> Apply["RawCullViewModel applies result"]
+    Validate --> Apply["RawCullViewModel applies typed result"]
 ```
 
-Background computation must not mutate observable state directly. The
+Background computation does not mutate application results directly. The
 coordinator returns values; `RawCullViewModel` applies them on `MainActor` only
-after checking the current generation and catalog.
+after checking the current generation and catalog identity.
 
 ### Phase 7D: reduce the central view model
 
-Once callers and tests use the coordinator, `RawCullViewModel` should retain:
+Phase 7D made the stable, observable coordinator the owner of the task handle,
+generation, progress, cache compatibility, computation, and primary save
+lifecycle. `RawCullViewModel` retains:
 
 - one stable coordinator reference;
 - minimal progress and result projections needed by the UI;
 - ratings, selection, navigation, manual winner overrides, undo, review state,
   and other application commands.
 
-Transitional helpers and direct storage access can then be removed after call
-site, test, and unused-code audits. The final manual qualification must exercise
-analyze, cancel, restore, regroup, cached reopen, manual winner, and review flows
-end to end.
+Transitional helpers were removed after caller and unused-code audits. The final
+manual qualification still needs to exercise analyze, cancel, restore, regroup,
+cached reopen, manual winner, and review flows end to end.
 
-### Phase 7 completion criteria
+### Phase 7 validation
 
-Phase 7 is complete when:
+Focused coordinator and culling suites cover cache reuse, fresh computation,
+progress, persistence, legacy remapping, membership-based review restoration,
+cancellation, and stale-generation rejection. Exact-package Debug and Release
+builds, performance tests, the AI import-boundary check, and diff checks passed.
+The smoke plan passed 203 of 204 tests and the Thread Sanitizer plan passed 371
+of 372 without runtime warnings; each plan's only failure was the pre-existing
+release-metadata mismatch between 21 expected package pins and the 18 resolved
+pins. The interactive burst qualification remains pending.
 
-- burst computation and persistence decisions can be tested without creating
-  the full `RawCullViewModel`;
-- the view model applies typed results and continues to own app commands;
-- cache reuse, legacy compatibility, grouping, ranking, and partial-success
-  behavior match the baseline;
-- cancellation and stale-result rejection are explicit at each async boundary;
-- the temporary direct burst access to `SimilarityScoringModel` is reduced to
-  the narrowest downstream persistence compatibility required for Phase 9.
+## Phase 8 — Isolate Deep Review As An Optional Capability
+
+Phase 8 was implemented and automatically verified on 2026-08-30. The runtime
+now owns one stable `DeepAIReviewController`. The controller privately adapts
+immutable burst evidence into `DeepAIReviewRequest`, projects capability and
+operation state, and delegates execution to `DeepAIReviewFeature`.
+
+`DeepAIReviewSheetView` receives the controller rather than the application view
+model, raw feature, request-building closure, or concrete provider checks. Its
+typed presentation covers checking, unavailable, ready, preparing, running,
+completing, cancelled, failed, and completed outcomes.
+
+The boundary deliberately leaves product policy in the culling layer:
+
+- group-signature validation before applying a recommendation;
+- rating changes, winner overrides, review-state updates, and persistence;
+- candidate limits, prompt policy, subject-mask scoring, provider selection, and
+  cache behavior.
+
+Focused controller, feature, runtime-identity, integration, culling, and
+accessibility tests pass, as do exact-package Debug and Release builds and the AI
+import-boundary check. The smoke plan passed 205 of 206 tests and the full Thread
+Sanitizer plan passed 373 of 374 without runtime warnings; the only failure in
+each was the same pre-existing package-pin metadata mismatch. Interactive checks
+for unavailable providers, SAM 3 and EfficientSAM selection, cancellation,
+retry, failure, success, and applying a matching recommendation remain pending.
+
+## Phase 9 — Persistence Boundary Deferred
+
+Phase 9 is intentionally deferred until feature ownership has settled. The
+future work will hide artifact codecs and PhotoAIKit storage records behind
+feature-oriented repository operations while preserving the on-disk encoding,
+legacy migrations, corrupt-record isolation, and partial-write behavior.
+
+This phase is not a cache-schema redesign. Any schema change requires a separate
+migration, compatibility, rollback, and release-version plan.
+
+## Phase 10 — Organize The Established Boundary
+
+Phase 10 was implemented and automatically verified on 2026-08-30. Twenty-six
+existing source files moved byte-for-byte into ownership-oriented directories:
+
+```text
+RawCull/Intelligence/
+  Composition/
+  Contracts/
+  Similarity/
+  SemanticSearch/
+  BurstAnalysis/
+  DeepReview/
+  ModelManagement/
+  Persistence/
+  Presentation/
+```
+
+SwiftUI screens remain under `RawCull/Views`. The persistence actors moved
+physically, but their API remains unchanged because Phase 9 is deferred. The
+synchronized Xcode root group discovered the hierarchy without project-file
+membership edits.
+
+All destination blobs match their pre-move Git hashes. Exact-package Debug and
+Release builds, the AI import boundary, stale-path scan, combined Phase 7/8
+regression suites, and diff checks pass. Compiler-indexed unused-code scans found
+no unused code or imports in the moved boundary. Smoke passed 205 of 206 tests;
+the Thread Sanitizer plan passed 372 of 374 without runtime warnings. Besides the
+known package-pin mismatch, one cancellation timing assertion missed its window
+and passed immediately when its complete culling suite was rerun under Thread
+Sanitizer. No production concurrency behavior changed in this physical-only phase.
+
+## Remaining Architectural Work
+
+Phase 11 will record an explicit decision either to keep the intelligence
+boundary app-local or extract a `RawCullIntelligence` package. Extraction is
+justified only if it creates a clean compile-time boundary without importing
+SwiftUI, the complete application view model, Background Assets wiring, or
+implicit application paths.
+
+Phase 12 will remove any remaining compatibility forwarding after caller audits,
+tighten dependency enforcement, update contributor diagrams, run unused-code
+analysis, and complete the automated and manual gates. Keeping the boundary
+app-local is a valid Phase 11 outcome.
 
 ## End-To-End Configuration And Operation Flow
 
-The completed phases produce a consistent path from a user choice to a guarded
-operation:
+The completed phases produce consistent paths from configuration and user
+actions to guarded feature operations:
 
 ```mermaid
 flowchart LR
-    Choice["User setting or managed model change"] --> Settings["Settings builds revisioned configuration"]
+    Choice["Setting or managed model change"] --> Settings["Revisioned configuration"]
     Settings --> Runtime["Runtime compares identity"]
-    Runtime --> Feature["Feature replaces changed service"]
-    Feature --> Cancel["Cancel incompatible task generation"]
+    Runtime --> Feature["Replace changed service"]
+    Feature --> Cancel["Cancel incompatible generation"]
     Cancel --> Hydrate["Hydrate compatible artifacts"]
-    Hydrate --> Action["Explicit index, image-rank, or semantic-search action"]
+    Hydrate --> Action["Explicit index, rank, or search action"]
+
+    BurstAction["Analyze bursts"] --> Burst["BurstAnalysisCoordinator"]
+    Burst --> BurstCheck["Validate catalog + generation"]
+
+    ReviewAction["Open Deep Review"] --> Review["DeepAIReviewController"]
+    Review --> ReviewCheck["Validate capability + group signature"]
+
     Action --> Validate["Validate catalog + backend + generation"]
     Validate --> UI["Publish current presentation state"]
+    BurstCheck --> UI
+    ReviewCheck --> UI
 ```
 
 This flow prevents a settings change from reaching around the runtime, prevents
@@ -516,35 +618,29 @@ results to the wrong catalog.
 
 | Concern | Primary RawCull source |
 |---|---|
-| Composition and runtime | `RawCull/Model/AIIntegration/RawCullIntelligenceRuntime.swift` |
-| Concrete provider composition | `RawCull/Model/AIIntegration/RawCullAIIntegration.swift` |
-| Similarity feature API | `RawCull/Model/AIIntegration/RawCullSimilarityFeature.swift` |
-| Semantic-search feature API | `RawCull/Model/AIIntegration/RawCullSemanticSearchFeature.swift` |
-| Shared scoring state | `RawCull/Model/ViewModels/SimilarityScoringModel.swift` |
-| Settings and configuration publication | `RawCull/Model/ViewModels/RawCullAISettingsModel.swift` |
-| Download and installed-model lifecycle | `RawCull/Model/ViewModels/RawCullAIModelManagementModel.swift` |
-| Current burst orchestration | `RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift` |
+| Composition and runtime | `RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift` |
+| Concrete provider composition | `RawCull/Intelligence/Composition/RawCullAIIntegration.swift` |
+| Similarity feature API | `RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift` |
+| Semantic-search feature API | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift` |
+| Shared scoring state | `RawCull/Intelligence/Similarity/SimilarityScoringModel.swift` |
+| Settings and configuration publication | `RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift` |
+| Download and installed-model lifecycle | `RawCull/Intelligence/ModelManagement/RawCullAIModelManagementModel.swift` |
+| Burst values and orchestration | `RawCull/Intelligence/BurstAnalysis/BurstAnalysisModels.swift`, `BurstAnalysisCoordinator.swift`, and coordinator extensions |
+| Deep Review boundary | `RawCull/Intelligence/DeepReview/DeepAIReviewController.swift` and `DeepAIReviewFeature.swift` |
+| Persistence actors | `RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift` and `BurstAnalysisCache.swift` |
 | Dependency-boundary verification | `Scripts/VerifyAIImportBoundary.sh` |
 | Detailed migration record | `Docs/modularai.md` |
 
 For the reusable backend and contract design, continue with [Artificial
 Intelligence](ai/) and [How PhotoAIKit Is Constructed](packages/photoaikit/).
-For the existing burst algorithm and persistence behavior that Phase 7 must
-preserve, see [Burst Groups](burstgroup/).
+For the burst algorithm and persistence behavior preserved by the coordinator,
+see [Burst Groups](burstgroup/).
 
-## Updating This Page After Phase 7
+## Qualification Still Pending
 
-When Phase 7 is completed, update this page from the implementation rather than
-only from the plan:
-
-1. Replace the Phase 7 status note and planned wording with the completion date
-   and validation evidence.
-2. Replace proposed type names with their final names and add their actual
-   source paths to the source map.
-3. Update the runtime ownership diagram if the compatibility reference to
-   `SimilarityScoringModel` changes.
-4. Confirm the cache and compute diagram against the coordinator's real phases
-   and cancellation checkpoints.
-5. Record automated gates and the manual burst-analysis acceptance results.
-6. Run a caller and unused-code audit and document any intentionally retained
-   downstream compatibility seams.
+The remaining interactive acceptance work covers startup and settings, similarity
+and semantic search, burst analyze/cancel/restore/regroup flows, Deep Review across
+available and unavailable segmentation providers, cache clearing, saved-catalog
+reopen, and release termination behavior. Phase 9's persistence boundary and the
+Phase 11/12 architecture decision and cleanup are separate future implementation
+work; they should not be folded into the manual qualification pass.
