@@ -23,6 +23,10 @@ The source for this section comes from the sibling `PhotoAIKit` and `RawCull` pr
 | This overview | Where does AI belong in the system? | You need the vocabulary and responsibility split |
 | [How RawCull Enables and Uses CLIP](clip-in-rawcull/) | How does the CLIP preference become a running backend? | You are tracing model discovery, activation, RAW decoding, inference, fallback, distance calculation, or persistence |
 | [AI Model Downloads](aimodeldownloads/) | Where do model assets come from? | You are changing download, acceptance, or installation behavior |
+| [Evaluating CLIP Models](evaluateclipmodels/) | How are candidate CLIP models compared reproducibly? | You are preparing fixtures, running evaluations, or interpreting model-quality measurements |
+| [CLIP Model Evaluation Results](evaluation/) | How did the evaluated CLIP models perform? | You need the recorded comparison results and conclusions |
+| [AI Model Licence and Provenance Clearance](licenceprocedure/) | What evidence is required before a model can ship? | You are reviewing licences, provenance, redistribution, or release readiness |
+| [Publishing New RawCull AI Models](newmodels/) | How is an approved model packaged and published? | You are preparing a model release or updating the download manifest |
 
 
 PhotoAIKit contains three backend families used by RawCull:
@@ -169,3 +173,9 @@ by Step](stepbystepAI/).
 Installation and acceptance steps intentionally live only in [AI Model
 Downloads](aimodeldownloads/). The architecture pages describe managed
 locations and validation but do not duplicate download procedures.
+
+For model-selection work, continue with [Evaluating CLIP
+Models](evaluateclipmodels/) and the recorded [CLIP Model Evaluation
+Results](evaluation/). Release work then proceeds through [AI Model Licence and
+Provenance Clearance](licenceprocedure/) before [Publishing New RawCull AI
+Models](newmodels/).
