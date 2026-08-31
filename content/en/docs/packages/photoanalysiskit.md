@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -12,10 +13,10 @@ weight = 20
 
 # How PhotoAnalysisKit Is Constructed
 
-> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.2.0` at
-> `6e83ceebbca47a5dea0b1b2b4ee8b9132c281449`. The facade, descriptors,
-> presets, batch behavior, calibration, evidence, and mask APIs below describe
-> that revision.
+> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.2.2` at
+> `3bf462fab0d82f5e4c315273688933ace68fa737`. The facade, descriptors, presets,
+> batch behavior, calibration, evidence, and mask APIs below describe that
+> revision.
 
 PhotoAnalysisKit is the reusable measurement layer extracted from RawCull. It
 turns a decoded `CGImage` plus neutral capture metadata into sharpness,
@@ -430,23 +431,23 @@ flowchart LR
     Evidence --> Presentation["RawCull FocusMaskResult + overlay state"]
 ```
 
-`FocusMaskTypes.swift` aliases neutral package types such as
-`FocusEvidence`, `FocusFailureKind`, and `FocusCalibrationResult`, then layers
-RawCull presentation metadata over `SharpnessBreakdown`. `FocusMaskModel`
-consumes the returned mask image on app-owned isolation; scoring and evidence
-remain package values.
+`FocusMaskTypes.swift` aliases neutral package types such as `FocusEvidence`,
+`FocusFailureKind`, and `FocusCalibrationResult`, then layers RawCull
+presentation metadata over `SharpnessBreakdown`. `FocusMaskModel` consumes the
+returned mask image on app-owned isolation; scoring and evidence remain package
+values.
 
 ## 14. Testing The Public Contract
 
 The executable contracts are split by concern:
 
-| Package test | Required behavior |
-|---|---|
-| `Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift` | Scalar metric and normalized sharpness calculations |
-| `Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift` | Bounded batch completion, ordering, failure isolation, and cancellation |
-| `Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift` | Stable configuration identity and descriptor changes |
-| `Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` | Facade behavior, focus evidence, calibration, and mask rendering |
-| `Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift` | Opaque Vision feature-print creation and comparison |
+| Package test                                                         | Required behavior                                                       |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift`            | Scalar metric and normalized sharpness calculations                     |
+| `Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift`          | Bounded batch completion, ordering, failure isolation, and cancellation |
+| `Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift` | Stable configuration identity and descriptor changes                    |
+| `Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift`               | Facade behavior, focus evidence, calibration, and mask rendering        |
+| `Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift`          | Opaque Vision feature-print creation and comparison                     |
 
 `Tests/PhotoAnalysisKitTests/` imports the library through
 `import PhotoAnalysisKit`, not `@testable import`. Tests therefore exercise the

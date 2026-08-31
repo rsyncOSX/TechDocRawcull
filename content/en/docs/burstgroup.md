@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-08-20"
+lastmod = "2026-08-31"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
@@ -16,36 +16,39 @@ frames. It ranks each multi-frame group, presents review queues, and supports
 culling decisions such as keeping the best frame, keeping the top two, deferring
 a group, or setting a manual pick.
 
-The implementation separates main-actor orchestration, backend-selectable
-similarity indexing, pure grouping and ranking engines, two levels of artifact
-persistence, and the review UI. Vision feature prints are the safe default. A
-validated CLIP model can become the active burst-similarity backend when the
-user enables it; the rest of the burst pipeline works with typed
-`SimilarityArtifact` values rather than assuming one representation.
+The implementation separates application commands in `RawCullViewModel`, worker
+orchestration in `BurstAnalysisCoordinator`, backend-selectable similarity
+indexing behind `RawCullSimilarityFeature`, pure grouping and ranking engines,
+two levels of artifact persistence, and the review UI. Vision feature prints are
+the safe default. A validated CLIP model can become the active burst-similarity
+backend when the user enables it; the rest of the burst pipeline works with
+typed `SimilarityArtifact` values rather than assuming one representation.
 
 ## Source Map
 
-| Area                                    | Main files                                                                                                                    |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Analysis orchestration and user actions | `RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift`                                                               |
-| Similarity indexing and grouping state  | `RawCull/Model/ViewModels/SimilarityScoringModel.swift`                                                                       |
-| Backend composition and adapters        | `RawCull/Model/AIIntegration/RawCullAIIntegration.swift`, `RawCullVisionSimilarityService.swift`                              |
-| Per-file durable artifacts              | `RawCull/Actors/PerFileAnalysisArtifactStore.swift`                                                                           |
-| Pure grouping and ranking               | RawCullCore `Sources/RawCullCore/BurstGroupingEngine.swift`, `BurstRankingEngine.swift`                                       |
-| Shared models                           | RawCullCore `Sources/RawCullCore/BurstAnalysisModels.swift`; app `BurstAnalysisModels.swift`, `BurstReviewQueueModels.swift`  |
-| Cache                                   | `RawCull/Actors/BurstAnalysisCache.swift`                                                                                     |
-| Ratings and manual overrides            | `CullingModel.swift`, `SavedFiles.swift`                                                                                      |
-| Burst home and review list              | `BurstGroupsHomeView.swift`, `SimilarityGridSelectionView.swift`, `CullingGridView.swift`                                     |
-| Single-burst workspace and comparison   | `BurstCullingWorkspaceView.swift`, `ComparisonGridView.swift`                                                                 |
-| Tests                                   | `RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift`, `BurstRankingEngineTests.swift`, app burst/culling tests |
+| Area                                         | Main files                                                                                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Application commands and result publication  | `RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift`                                                                       |
+| Worker orchestration and cache compatibility | `RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift` and coordinator extensions                                        |
+| Similarity feature and shared state          | `RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`, `SimilarityScoringModel.swift`                                      |
+| Backend composition and adapters             | `RawCull/Intelligence/Composition/RawCullAIIntegration.swift`, `RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift` |
+| Per-file durable artifacts                   | `RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift`                                                                 |
+| Pure grouping and ranking                    | RawCullCore `Sources/RawCullCore/BurstGroupingEngine.swift`, `BurstRankingEngine.swift`                                               |
+| Shared models                                | RawCullCore `Sources/RawCullCore/BurstAnalysisModels.swift`; app `BurstAnalysisModels.swift`, `BurstReviewQueueModels.swift`          |
+| Cache and repository boundary                | `RawCull/Intelligence/Persistence/BurstAnalysisCache.swift`, `RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift`  |
+| Ratings and manual overrides                 | `CullingModel.swift`, `SavedFiles.swift`                                                                                              |
+| Burst home and review list                   | `BurstGroupsHomeView.swift`, `SimilarityGridSelectionView.swift`, `CullingGridView.swift`                                             |
+| Single-burst workspace and comparison        | `BurstCullingWorkspaceView.swift`, `ComparisonGridView.swift`                                                                         |
+| Tests                                        | `RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift`, `BurstRankingEngineTests.swift`, app burst/culling tests         |
 
 ## End-to-End Flow
 
 ```mermaid
 flowchart TD
-    A["Analyze Bursts"] --> B["RawCullViewModel.analyzeBursts"]
-    B --> C["Hydrate valid per-file similarity artifacts"]
-    C --> D{"Valid BurstAnalysisCache and matching artifact digest?"}
+    A["Analyze Bursts"] --> B["RawCullViewModel builds immutable request"]
+    B --> C["BurstAnalysisCoordinator owns generation and task"]
+    C --> H0["Hydrate valid per-file similarity artifacts"]
+    H0 --> D{"Valid BurstAnalysisCache and matching artifact digest?"}
     D -->|"yes"| E["Remap cached IDs and apply snapshot"]
     D -->|"no"| F{"Sharpness scores missing?"}
     F -->|"yes"| G["Calibrate and score target files"]
@@ -63,9 +66,12 @@ flowchart TD
     P --> Q["Show dashboard, queues, and workspace"]
 ```
 
-Every awaited phase is protected by the analysis generation and selected
-catalog. A cancelled or superseded run cannot publish late results into a newer
-catalog.
+The coordinator owns the worker generation, task, progress, cache preparation,
+missing sharpness/similarity work, grouping, ranking, and the primary cache
+save. It receives callbacks for the application-owned catalog validity check and
+final result publication. Every awaited phase is therefore protected by both the
+coordinator generation and selected catalog; a cancelled or superseded run
+cannot publish late results into a newer catalog.
 
 The target is normally every catalog file sorted by localized filename, which
 acts as shot order. If files are selected, visible selected files are followed
@@ -120,14 +126,14 @@ regrouping remains compatible.
 `BurstGroupingEngine.group(...)` makes one sequential pass. It starts a new
 group when any boundary rule fires.
 
-| Boundary reason             | Trigger                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| Visual distance changed     | Adjacent active-backend distance is at or above `visualDistanceThreshold`     |
-| Similarity evidence missing | No adjacent distance is available                                             |
-| Capture gap                 | Absolute modification-date gap is greater than `maxTimeGapSeconds`            |
-| Camera changed              | Normalized camera value changed and `requireSameCamera` is enabled            |
-| Focal length changed        | Parsed focal-length delta exceeds `maxFocalLengthDeltaMM`                     |
-| Exposure changed            | Aperture changes by more than 0.2, ISO changes, or shutter-speed text changes |
+| Boundary reason             | Trigger                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Visual distance changed     | Adjacent active-backend distance is at or above `visualDistanceThreshold`                                          |
+| Similarity evidence missing | No adjacent distance is available                                                                                  |
+| Capture gap                 | Absolute capture-date gap exceeds `maxTimeGapSeconds`; modification-date fallback uses `maxFallbackTimeGapSeconds` |
+| Camera changed              | Normalized camera value changed and `requireSameCamera` is enabled                                                 |
+| Focal length changed        | Parsed focal-length delta exceeds `maxFocalLengthDeltaMM`                                                          |
+| Exposure changed            | Aperture changes by more than 0.2, ISO changes, or shutter-speed text changes                                      |
 
 Lens changes are recorded as evidence but do not independently split a group.
 They do make group metadata unstable during ranking.
@@ -137,10 +143,11 @@ Default configuration:
 ```text
 visualDistanceThreshold = 0.25
 maxTimeGapSeconds = 2.0
+maxFallbackTimeGapSeconds = 10.0
 requireSameCamera = true
 requireSimilarFocalLength = true
 maxFocalLengthDeltaMM = 3.0
-algorithmVersion = 2
+algorithmVersion = 4
 ```
 
 The burst sensitivity control changes only the visual threshold.

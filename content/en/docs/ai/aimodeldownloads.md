@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "AI Model Download Service"
 linkTitle = "AI Model Downloads"
 date = "2026-08-10"
+lastmod = "2026-08-31"
 description = "Build, validate, package, and download the three optional RawCull AI models."
 tags = ["ai", "models", "downloads", "clip", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -11,13 +12,14 @@ weight = 30
 
 # AI model download service
 
-RawCull's managed-download schema recognizes exactly three optional model bundles:
+RawCull's managed-download schema recognizes exactly three optional model
+bundles:
 
-| Model | PhotoAIKit bundle | Runtime asset | Use |
-|---|---|---|---|
-| DataComp CLIP | `CLIP-DataComp` | `ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel` | Similarity and semantic search |
-| OpenAI CLIP | `CLIP-OpenAI` | `clip-vit-base-patch32_float16_static.aimodel` | Similarity and semantic search |
-| Meta SAM 3 | `SAM3` | `sam3_float16.aimodel` | Promptable segmentation |
+| Model         | PhotoAIKit bundle | Runtime asset                                            | Use                            |
+| ------------- | ----------------- | -------------------------------------------------------- | ------------------------------ |
+| DataComp CLIP | `CLIP-DataComp`   | `ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel` | Similarity and semantic search |
+| OpenAI CLIP   | `CLIP-OpenAI`     | `clip-vit-base-patch32_float16_static.aimodel`           | Similarity and semantic search |
+| Meta SAM 3    | `SAM3`            | `sam3_float16.aimodel`                                   | Promptable segmentation        |
 
 SigLIP2 and EfficientSAM are not part of the RawCull download catalogue or
 release manifest. Do not include their bundles, notices, archives, or asset-pack
@@ -48,8 +50,8 @@ before Settings sees it; a blocked or excluded model cannot become downloadable
 merely because a host manifest contains an asset with the same ID.
 
 For the self-hosted Developer ID build, `RawCullModelDownloader` is a
-`ManagedDownloaderExtension`. The app and extension are configured with the
-same `v2` `BAManifestURL` and App Group. The compile-time
+`ManagedDownloaderExtension`. The app and extension are configured with the same
+`v2` `BAManifestURL` and App Group. The compile-time
 `RAWCULL_APPLE_HOSTED_MODEL_ASSETS` variant instead uses
 `StoreDownloaderExtension`; one product must not mix the two hosting modes.
 
@@ -72,30 +74,60 @@ The app-facing service always uses `AssetPackManager`:
 The downloader installs the directory selected by `assetPackModelPath`, not an
 archive filename. The current contract is:
 
-| Model | Asset-pack ID | Managed destination | Published archive evidence |
-|---|---|---|---|
+| Model         | Asset-pack ID                              | Managed destination    | Published archive evidence                                                                    |
+| ------------- | ------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` | 282,966,632 bytes; SHA-256 `cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7` |
-| OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` | 282,866,068 bytes; SHA-256 `e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c` |
-| SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` | Not published; checksum and sizes remain `nil` |
+| OpenAI CLIP   | `no.blogspot.RawCull.models.clip-openai`   | `Models/CLIP-OpenAI`   | 282,866,068 bytes; SHA-256 `e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c` |
+| SAM 3         | `no.blogspot.RawCull.models.sam3`          | `Models/SAM3`          | Not published; checksum and sizes remain `nil`                                                |
+
+### macOS 27 development-build guard
+
+Two macOS 27 seed builds were observed to trap inside Background Assets while
+validating an Xcode development-signed application. Before obtaining
+`AssetPackManager.shared`, `RawCullBackgroundAssetsRuntime` checks both:
+
+- whether `ProcessInfo.operatingSystemVersionString` contains an exact build in
+  `affectedMacOS27Builds`; and
+- whether the running executable has the `com.apple.security.get-task-allow`
+  entitlement.
+
+Only that exact combination disables live downloads. A Developer ID distribution
+build on the same operating-system build remains eligible, and a new macOS build
+is allowed by default until it is independently confirmed affected. The UI uses
+`unavailable(reason:)` with the development-build explanation; it must not
+report the model as missing, release-blocked, or improperly licensed.
+
+XCTest is handled separately. Xcode relocates the test host bundle, so
+`liveManifestURL` uses the non-routable `example.invalid` manifest under XCTest
+and transfer tests inject a deterministic service. Do not add test-host failures
+to the operating-system build denylist.
+
+When Apple publishes another beta, RC, or public build, test the live download,
+cancellation, removal, and redownload paths before changing the denylist. A
+macOS update does not by itself require a RawCull version bump. The app and
+downloader extension must nevertheless retain matching RawCull marketing/build
+values, signing, App Group, sandbox, manifest, and hosting configuration. The
+complete release checklist lives in `Docs/macos-background-assets-release.md` in
+the RawCull repository.
 
 ### User-visible states, failure, and retry
 
-| State | Meaning and available action |
-|---|---|
-| `checking` | Refresh is resolving release, licence, manifest, and local-install state. |
-| `unavailable(reason:)` | The descriptor is release-blocked. No download action is offered. |
-| `licenceRequired` | A ready descriptor requires acceptance of the verified bundled licence text before download. |
-| `notConfigured` | The selected hosting source is not valid; no Background Assets request is made. |
-| `ready` | The manifest contains the pack and Download is enabled. |
-| `downloading(progress:)` | Progress is shown and Cancel is enabled. |
-| `validating` | The pack is local; RawCull is refreshing the managed location and model capability. |
-| `installed(location:)` | The managed pack resolved and validated sufficiently to expose its current location; Remove is enabled. |
-| `removing` | Managed removal and capability refresh are in progress. |
-| `failed(message:)` | The exact manifest, Background Assets, path, licence, or validation error is shown and Retry is enabled. |
+| State                    | Meaning and available action                                                                             |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `checking`               | Refresh is resolving release, licence, manifest, and local-install state.                                |
+| `unavailable(reason:)`   | The descriptor is release-blocked. No download action is offered.                                        |
+| `licenceRequired`        | A ready descriptor requires acceptance of the verified bundled licence text before download.             |
+| `notConfigured`          | The selected hosting source is not valid; no Background Assets request is made.                          |
+| `ready`                  | The manifest contains the pack and Download is enabled.                                                  |
+| `downloading(progress:)` | Progress is shown and Cancel is enabled.                                                                 |
+| `validating`             | The pack is local; RawCull is refreshing the managed location and model capability.                      |
+| `installed(location:)`   | The managed pack resolved and validated sufficiently to expose its current location; Remove is enabled.  |
+| `removing`               | Managed removal and capability refresh are in progress.                                                  |
+| `failed(message:)`       | The exact manifest, Background Assets, path, licence, or validation error is shown and Retry is enabled. |
 
 Cancellation does not pretend the pack was removed. The task is cancelled, a
-fresh coordinator snapshot determines whether the pack is now `ready` or
-already `installed`, and the UI returns to that state. Retry starts a new
+fresh coordinator snapshot determines whether the pack is now `ready` or already
+`installed`, and the UI returns to that state. Retry starts a new
 `ensureLocalAvailability` request. A failed validation retains an explicit
 failure/capability reason; RawCull does not activate a provider from an
 unverified directory. Vision feature-print similarity remains available when
@@ -112,8 +144,8 @@ A working local conversion is not automatically publishable. Every downloadable
 model must pass all of these gates:
 
 1. Pin and verify the exact upstream checkpoint.
-2. Record source file checksums, PhotoAIKit revision, conversion command, runtime
-   fingerprint, and archive checksum.
+2. Record source file checksums, PhotoAIKit revision, conversion command,
+   runtime fingerprint, and archive checksum.
 3. Confirm that the exact trained weights may be converted, used, and
    redistributed through the chosen hosting channel.
 4. Include the applicable complete licence and notice files in the pack.
@@ -136,11 +168,11 @@ The procedures below are verified against PhotoAIKit commit:
 
 That revision exports CLIP metadata version `0.4`, SAM 3 metadata version `0.3`,
 separate CLIP `image_encoder` and `text_encoder` functions, normalized
-embeddings, and the corrected Pillow-compatible bicubic CLIP preprocessing.
-The checked-in blocked SAM 3 candidate still records metadata version `0.2`;
-it is evidence of the older conversion, not the output contract for a future
-rebuild. Any SAM 3 release candidate must be regenerated and revalidated with
-the actual exporter revision recorded for that candidate.
+embeddings, and the corrected Pillow-compatible bicubic CLIP preprocessing. The
+checked-in blocked SAM 3 candidate still records metadata version `0.2`; it is
+evidence of the older conversion, not the output contract for a future rebuild.
+Any SAM 3 release candidate must be regenerated and revalidated with the actual
+exporter revision recorded for that candidate.
 
 Use a clean detached checkout for release evidence:
 
@@ -154,22 +186,23 @@ test "$(git -C "$PHOTOAIKIT_DIR" rev-parse HEAD)" = "$PHOTOAIKIT_REVISION"
 test -z "$(git -C "$PHOTOAIKIT_DIR" status --porcelain)"
 ```
 
-If a later PhotoAIKit revision is used, review changes to `Tools/export_clip.py`,
-`Tools/export_sam3.py`, preprocessing, metadata, and runtime validation. Record
-the exact revision actually executed; do not silently reuse the value above.
+If a later PhotoAIKit revision is used, review changes to
+`Tools/export_clip.py`, `Tools/export_sam3.py`, preprocessing, metadata, and
+runtime validation. Record the exact revision actually executed; do not silently
+reuse the value above.
 
 ### Create the DataComp CLIP bundle
 
 The release model is OpenCLIP `ViT-B-32-256` with the registered
 `datacomp_s34b_b86k` pretrained tag.
 
-| Field | Required value |
-|---|---|
-| Checkpoint repository | `laion/CLIP-ViT-B-32-256x256-DataComp-s34B-b86K` |
-| Revision | `4afec35ffe57a943d569ff7ee888061830164da8` |
-| Weight file | `open_clip_model.safetensors` |
-| Weight bytes | `605189364` |
-| Weight SHA-256 | `92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27` |
+| Field                 | Required value                                                     |
+| --------------------- | ------------------------------------------------------------------ |
+| Checkpoint repository | `laion/CLIP-ViT-B-32-256x256-DataComp-s34B-b86K`                   |
+| Revision              | `4afec35ffe57a943d569ff7ee888061830164da8`                         |
+| Weight file           | `open_clip_model.safetensors`                                      |
+| Weight bytes          | `605189364`                                                        |
+| Weight SHA-256        | `92c26d60d3200ed5ed040dff31a8d19f8140648da8007216c25744c478deef27` |
 
 Create an evidence-specific Hugging Face cache and verify that its `main`
 resolution is the pinned revision required by OpenCLIP:
@@ -231,13 +264,13 @@ the downloadable pack. `metadata.json` must select the optimized directory in
 
 ### Create the OpenAI CLIP bundle
 
-| Field | Required value |
-|---|---|
-| Checkpoint repository | `openai/clip-vit-base-patch32` |
-| Revision | `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268` |
-| Weight file | `pytorch_model.bin` |
-| Weight bytes | `605247071` |
-| Weight SHA-256 | `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f` |
+| Field                 | Required value                                                     |
+| --------------------- | ------------------------------------------------------------------ |
+| Checkpoint repository | `openai/clip-vit-base-patch32`                                     |
+| Revision              | `3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`                         |
+| Weight file           | `pytorch_model.bin`                                                |
+| Weight bytes          | `605247071`                                                        |
+| Weight SHA-256        | `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f` |
 
 The exporter loads the repository ID for both the model and tokenizer. Use an
 evidence-specific Hugging Face cache, require its `main` reference to resolve to
@@ -295,14 +328,14 @@ directory from the downloadable pack.
 
 ### Create the Meta SAM 3 bundle
 
-| Field | Required value |
-|---|---|
-| Checkpoint repository | `facebook/sam3` |
-| Revision | `3c879f39826c281e95690f02c7821c4de09afae7` |
-| Weight file | `model.safetensors` |
-| Weight bytes | `3439938512` |
-| Weight SHA-256 | `6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a` |
-| SAM License SHA-256 | `b08db9d32c687054e99cbd41eb1dad19c76936dfb9e2b58e186a01204d8be9ab` |
+| Field                 | Required value                                                     |
+| --------------------- | ------------------------------------------------------------------ |
+| Checkpoint repository | `facebook/sam3`                                                    |
+| Revision              | `3c879f39826c281e95690f02c7821c4de09afae7`                         |
+| Weight file           | `model.safetensors`                                                |
+| Weight bytes          | `3439938512`                                                       |
+| Weight SHA-256        | `6d06f0a5f84e435071fe6603e61d0b4cc7b40e0d39d487cfd4d67d8cc11cc14a` |
+| SAM License SHA-256   | `b08db9d32c687054e99cbd41eb1dad19c76936dfb9e2b58e186a01204d8be9ab` |
 
 SAM 3 is gated. Complete Meta's Hugging Face access flow and authenticate with
 `hf auth login`. Never put the token in a command transcript, provenance file,
@@ -360,7 +393,8 @@ do not claim that `metadata.json` alone binds the revision. Exclude
 
 Do not use `--dynamic` or `--overwrite` for a release conversion. Preserve the
 terminal log and record `uv --version`, `sw_vers`, `xcodebuild -version`, the
-PhotoAIKit commit, source checksums, generated metadata, and runtime fingerprint.
+PhotoAIKit commit, source checksums, generated metadata, and runtime
+fingerprint.
 
 For each runtime asset, compare the generated fingerprint with
 `asset_fingerprints.main`:
@@ -404,8 +438,9 @@ matching prompt with repeated `--image` and `--text` arguments. Investigate any
 result below the chosen threshold; do not lower the threshold merely to publish
 the pack.
 
-Finally, install each complete candidate in RawCullFB, rebuild its model-specific
-index, and run the same `semantictest.txt` for both CLIP models. Compare:
+Finally, install each complete candidate in RawCullFB, rebuild its
+model-specific index, and run the same `semantictest.txt` for both CLIP models.
+Compare:
 
 - query-by-query top results and scores;
 - image-to-image nearest-neighbour results;
@@ -459,7 +494,9 @@ optimized runtime directory, and the matching notice directory. Example:
   "fileSelectors": [
     { "file": "Models/CLIP-DataComp/metadata.json" },
     { "directory": "Models/CLIP-DataComp/tokenizer" },
-    { "directory": "Models/CLIP-DataComp/ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel" },
+    {
+      "directory": "Models/CLIP-DataComp/ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel"
+    },
     { "directory": "Notices/CLIP-DataComp" }
   ],
   "platforms": ["macOS"]
@@ -468,11 +505,11 @@ optimized runtime directory, and the matching notice directory. Example:
 
 The three stable asset-pack IDs and installed paths are:
 
-| Model | Asset-pack ID | Installed model path |
-|---|---|---|
+| Model         | Asset-pack ID                              | Installed model path   |
+| ------------- | ------------------------------------------ | ---------------------- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
-| OpenAI CLIP | `no.blogspot.RawCull.models.clip-openai` | `Models/CLIP-OpenAI` |
-| SAM 3 | `no.blogspot.RawCull.models.sam3` | `Models/SAM3` |
+| OpenAI CLIP   | `no.blogspot.RawCull.models.clip-openai`   | `Models/CLIP-OpenAI`   |
+| SAM 3         | `no.blogspot.RawCull.models.sam3`          | `Models/SAM3`          |
 
 Generate one `.aar` per cleared manifest from a clean release work tree. The
 current `v2` ready set contains the two CLIP packs, so its reproducibility
@@ -498,9 +535,9 @@ Upload approved archives before uploading the generated download
 ## Runtime download and activation
 
 Self-hosting is used for the Developer ID distribution. The app and downloader
-extension share `group.no.blogspot.RawCull.model-assets`. For an App Store build,
-the downloader can instead use Apple hosting; do not enable both hosting modes
-in one product.
+extension share `group.no.blogspot.RawCull.model-assets`. For an App Store
+build, the downloader can instead use Apple hosting; do not enable both hosting
+modes in one product.
 
 When the user selects **Download**, RawCull:
 
@@ -523,8 +560,8 @@ for distribution metadata. It checks:
 
 - application and downloader-extension versions, sandboxing, hardened runtime,
   architecture, deployment target, and shared App Group;
-- `BAManifestURL`, `BAUsesAppleHosting`, Background Assets download restrictions,
-  allowed domains, and the downloader extension point;
+- `BAManifestURL`, `BAUsesAppleHosting`, Background Assets download
+  restrictions, allowed domains, and the downloader extension point;
 - the exact `ModelAssets/manifest.template.json` asset-pack IDs and managed
   destinations against `RawCullAIModelDownloadCatalog.swift`;
 - one blocked descriptor with missing archive evidence (currently SAM 3);
@@ -534,19 +571,19 @@ for distribution metadata. It checks:
 `RawCullAIModelDownloadsTests.swift` additionally pins the enabled production
 set, both published CLIP archive hashes and byte counts, manifest configuration,
 release blocking before service invocation, verified licence acceptance,
-cancellation/retry state, and checksum-based invalidation of old acceptance.
-Run both focused suites for every manifest, catalog, notice, entitlement,
-hosting, archive, or inclusion change.
+cancellation/retry state, and checksum-based invalidation of old acceptance. Run
+both focused suites for every manifest, catalog, notice, entitlement, hosting,
+archive, or inclusion change.
 
 ## Signing and provisioning
 
 The application, downloader extension, and App Group identifiers are:
 
-| Purpose | Identifier |
-|---|---|
-| RawCull application | `no.blogspot.RawCull` |
-| Model downloader extension | `no.blogspot.RawCull.ModelDownloader` |
-| Shared App Group | `group.no.blogspot.RawCull.model-assets` |
+| Purpose                    | Identifier                               |
+| -------------------------- | ---------------------------------------- |
+| RawCull application        | `no.blogspot.RawCull`                    |
+| Model downloader extension | `no.blogspot.RawCull.ModelDownloader`    |
+| Shared App Group           | `group.no.blogspot.RawCull.model-assets` |
 
 Both App IDs must have the App Group capability. The app and extension use the
 same development team and provisioning setup. Verify the final archive contains

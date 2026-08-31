@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -13,13 +14,13 @@ weight = 10
 # How PhotoAIKit Is Constructed
 
 > **Revision audited:** RawCull resolves PhotoAIKit at
-> `1e2eaccd00947fbadda300e4a617842479cae7b9`. Product names and behavior on
-> this page describe that commit, not a newer sibling checkout.
+> `1e2eaccd00947fbadda300e4a617842479cae7b9`. Product names and behavior on this
+> page describe that commit, not a newer sibling checkout.
 
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
-important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It is that reusable
-AI behavior has been separated from RawCull's UI, RAW-file handling, paths,
-sandbox rules, and culling policy.
+important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It
+is that reusable AI behavior has been separated from RawCull's UI, RAW-file
+handling, paths, sandbox rules, and culling policy.
 
 This document explains the construction from the bottom up and gives the reason
 for each boundary.
@@ -457,19 +458,21 @@ results for a newer selection.
 RawCull imports every product from this pinned revision and assembles them in
 `RawCullAIIntegration`:
 
-| Package contract or implementation | RawCull adapter/consumer | Policy that remains in RawCull |
-|---|---|---|
-| `CoreAICLIPProvider`, `ImageSimilarityArtifactProviding`, and `ImageSimilarityArtifactComparing` | `RawCullCLIPSimilarityService` and `SimilarityScoringModel` | managed model locations, selected CLIP model, RAW decoding, concurrency 1, retry/replacement recovery, per-file persistence, burst thresholds, and subject-mismatch adjustment |
-| `VisionFeaturePrintBackend` | `RawCullVisionSimilarityService` | always-available startup service, concurrency 4, service selection, cache admission, and UI state |
-| `TextEmbeddingProviding` and `ImageTextSimilarityComparing` | `RawCullCLIPSemanticSearchService` | query admission, progress, catalog/rating filters, deterministic ties, result count, and ephemeral query lifetime |
-| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector | `RawCullAIIntegration` and `DeepAIReviewFeature` | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, and culling decisions |
+| Package contract or implementation                                                               | RawCull adapter/consumer                                                                 | Policy that remains in RawCull                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CoreAICLIPProvider`, `ImageSimilarityArtifactProviding`, and `ImageSimilarityArtifactComparing` | `RawCullCLIPSimilarityService`, `SimilarityScoringModel`, and `RawCullSimilarityFeature` | managed model locations, selected CLIP model, RAW decoding, concurrency 1, retry/replacement recovery, per-file persistence, burst thresholds, and subject-mismatch adjustment     |
+| `VisionFeaturePrintBackend`                                                                      | `RawCullVisionSimilarityService`                                                         | always-available startup service, concurrency 4, service selection, cache admission, and UI state                                                                                  |
+| `TextEmbeddingProviding` and `ImageTextSimilarityComparing`                                      | `RawCullCLIPSemanticSearchService` and `RawCullSemanticSearchFeature`                    | query admission, progress, catalog/rating filters, deterministic ties, result count, selection/navigation binding, and ephemeral query lifetime                                    |
+| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector                | `RawCullAIIntegration`, `DeepAIReviewFeature`, and `DeepAIReviewController`              | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, group-signature validation, and culling decisions |
 
 The package owns validation, descriptors, backend actors, mathematical
 comparison, bounded generic workflows, and reusable codecs/stores. The app owns
 filesystem/security scope, camera decoding, settings, capability wording,
 generation tokens, catalog identity, cache policy, culling rules, and UI. In
-particular, PhotoAIKit does not know `FileItem`, a burst winner, or where RawCull
-installs a model.
+particular, PhotoAIKit does not know `FileItem`, a burst winner, or where
+RawCull installs a model. `RawCullIntelligenceRuntime` owns stable feature
+lifetimes and applies revisioned configuration; views consume the focused
+features and controller rather than low-level package providers.
 
 ## 10. Testing The Architecture, Not Only The Math
 
@@ -485,7 +488,8 @@ Together the tests cover architectural promises such as:
 - model-declared CLIP preprocessing and legacy preprocessing remain compatible;
 - token batches, attention masks, text-output validation, and image/text
   compatibility checks reject malformed or mismatched data;
-- the generic whole-batch fallback policy produces a homogeneous result set (RawCull currently uses `.none` for CLIP);
+- the generic whole-batch fallback policy produces a homogeneous result set
+  (RawCull currently uses `.none` for CLIP);
 - Vision artifacts stay opaque and use the native metric;
 - segmentation caches by package-owned source values;
 - disk stores reject stale or corrupt entries;
@@ -538,24 +542,24 @@ it probably belongs in RawCull's adapter layer instead.
 
 ## Source Map
 
-| Topic                                     | PhotoAIKit source                                                                                                                 |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Products and dependency graph             | `Package.swift`                                                                                                                   |
-| Host-neutral image and decoder boundary   | `Sources/PhotoAIContracts/AIImageSource.swift`, `ImageEmbedding.swift`                                                            |
-| Model validation and identity             | `Sources/PhotoAIContracts/ModelBundleResolver.swift`, `ModelResource.swift`, `ModelIdentity.swift`, `ModelAssetFingerprint.swift` |
-| Similarity descriptors and protocols      | `Sources/PhotoAIContracts/SimilarityArtifact.swift`                                                                               |
-| Text embeddings and image/text comparison | `Sources/PhotoAIContracts/TextEmbedding.swift`                                                                                    |
-| Segmentation contracts                    | `Sources/PhotoAIContracts/SubjectSegmentation.swift`, `SubjectMaskStorage.swift`                                                  |
-| CLIP runtime and backend                  | `Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift`, `CoreAICLIPProvider.swift`                                            |
-| EfficientSAM backend                      | `Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift`
-| SAM 3 backend                             | `Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift`                                                                              |
-| Vision backend                            | `Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift`                                                               |
-| Similarity orchestration                  | `Sources/PhotoAIWorkflows/EmbeddingIndexer.swift`, `SimilarityArtifactIndexer.swift`                                              |
-| Segmentation orchestration                | `Sources/PhotoAIWorkflows/SegmentationService.swift`, `SegmentationBatchPipeline.swift`, `SubjectMask*.swift`                     |
-| Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                         |
-| Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                  |
-| Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                          |
-| RawCull semantic-search policy            | `RawCull/Model/AIIntegration/RawCullSemanticSearchService.swift`, `RawCull/Model/ViewModels/SimilarityScoringModel.swift`         |
+| Topic                                     | PhotoAIKit source                                                                                                                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Products and dependency graph             | `Package.swift`                                                                                                                                                                                                    |
+| Host-neutral image and decoder boundary   | `Sources/PhotoAIContracts/AIImageSource.swift`, `ImageEmbedding.swift`                                                                                                                                             |
+| Model validation and identity             | `Sources/PhotoAIContracts/ModelBundleResolver.swift`, `ModelResource.swift`, `ModelIdentity.swift`, `ModelAssetFingerprint.swift`                                                                                  |
+| Similarity descriptors and protocols      | `Sources/PhotoAIContracts/SimilarityArtifact.swift`                                                                                                                                                                |
+| Text embeddings and image/text comparison | `Sources/PhotoAIContracts/TextEmbedding.swift`                                                                                                                                                                     |
+| Segmentation contracts                    | `Sources/PhotoAIContracts/SubjectSegmentation.swift`, `SubjectMaskStorage.swift`                                                                                                                                   |
+| CLIP runtime and backend                  | `Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift`, `CoreAICLIPProvider.swift`                                                                                                                             |
+| EfficientSAM backend                      | `Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift`                                                                                                                                               |
+| SAM 3 backend                             | `Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift`                                                                                                                                                               |
+| Vision backend                            | `Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift`                                                                                                                                                |
+| Similarity orchestration                  | `Sources/PhotoAIWorkflows/EmbeddingIndexer.swift`, `SimilarityArtifactIndexer.swift`                                                                                                                               |
+| Segmentation orchestration                | `Sources/PhotoAIWorkflows/SegmentationService.swift`, `SegmentationBatchPipeline.swift`, `SubjectMask*.swift`                                                                                                      |
+| Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                                                                                                          |
+| Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                                                                                                   |
+| Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                                                                                                           |
+| RawCull semantic-search policy            | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift`, `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift`, `RawCull/Intelligence/Similarity/SimilarityScoringModel.swift` |
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](../../ai/clip-in-rawcull/).

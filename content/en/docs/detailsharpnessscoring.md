@@ -2,6 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -10,16 +11,16 @@ mermaid = true
 
 # Detailed Sharpness Scoring
 
-This is the algorithm-level reference for scalar sharpness at
-**PhotoAnalysisKit 1.2.0**, revision
-**6e83ceebbca47a5dea0b1b2b4ee8b9132c281449**. RawCull chooses files and image
-sources, maps UI settings, bounds work, publishes progress, normalizes badges,
-and persists results. PhotoAnalysisKit owns the analysis formula.
+This is the algorithm-level reference for scalar sharpness at **PhotoAnalysisKit
+1.2.2**, revision **3bf462fab0d82f5e4c315273688933ace68fa737**. RawCull chooses
+files and image sources, maps UI settings, bounds work, publishes progress,
+normalizes badges, and persists results. PhotoAnalysisKit owns the analysis
+formula.
 
 For ownership, cancellation, calibration, and UI flow, start with
-[Focus Mask And Sharpness](../focusmask/). This page concentrates on the
-package algorithm and names RawCull policy only where it changes package input
-or consumes package output.
+[Focus Mask And Sharpness](../focusmask/). This page concentrates on the package
+algorithm and names RawCull policy only where it changes package input or
+consumes package output.
 
 ## Compact Worked Example
 
@@ -101,8 +102,7 @@ Calibration and scoring use the same target array. After a non-cancelled,
 nonempty result, RawCull merges scores and subject labels into `CullingModel`
 and reapplies catalog sorting.
 
-Protected by:
-`RawCullTests/CullingModelTests.swift` target-scope and
+Protected by: `RawCullTests/CullingModelTests.swift` target-scope and
 `calibrateAndScoreCurrentCatalog` tests.
 
 ### Preset And Quality
@@ -110,22 +110,22 @@ Protected by:
 RawCull starts from the shared focus config, then applies the selected
 PhotoAnalysisKit preset and quality.
 
-| RawCull photo type | Package changes from the input config |
-|---|---|
-| Auto | No preset change |
-| Birds/Wildlife | pre-blur 2.2; border 0.05; salient weight and explicit override 0.85; size factor 0.05; silhouette strength 0.55; AF radius 0.06; classify and isolate |
-| Portrait | pre-blur at most 1.7; salient weight/override 0.80; size factor 0.08; silhouette 0.25; AF radius 0.10; classify and isolate |
-| Landscape | pre-blur at most 1.55; salient weight 0.35 with explicit override 0.35; size factor 0; silhouette 0.15; AF radius 0; do not isolate mask |
-| Action | pre-blur 2.0; salient weight/override 0.65; size factor 0.05; silhouette 0.40; AF radius 0.09; classify and isolate |
+| RawCull photo type | Package changes from the input config                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auto               | No preset change                                                                                                                                       |
+| Birds/Wildlife     | pre-blur 2.2; border 0.05; salient weight and explicit override 0.85; size factor 0.05; silhouette strength 0.55; AF radius 0.06; classify and isolate |
+| Portrait           | pre-blur at most 1.7; salient weight/override 0.80; size factor 0.08; silhouette 0.25; AF radius 0.10; classify and isolate                            |
+| Landscape          | pre-blur at most 1.55; salient weight 0.35 with explicit override 0.35; size factor 0; silhouette 0.15; AF radius 0; do not isolate mask               |
+| Action             | pre-blur 2.0; salient weight/override 0.65; size factor 0.05; silhouette 0.40; AF radius 0.09; classify and isolate                                    |
 
-| Quality | Package fine-detail weight | RawCull minimum size | RawCull concurrency |
-|---|---:|---:|---:|
-| Fast | 0 | 512 | 6 |
-| Balanced | at least 0.25 | 768 | 4 |
-| High Precision | at least 0.45 and classification enabled | 1024 | 3 |
+| Quality        |               Package fine-detail weight | RawCull minimum size | RawCull concurrency |
+| -------------- | ---------------------------------------: | -------------------: | ------------------: |
+| Fast           |                                        0 |                  512 |                   6 |
+| Balanced       |                            at least 0.25 |                  768 |                   4 |
+| High Precision | at least 0.45 and classification enabled |                 1024 |                   3 |
 
-The effective maximum pixel size is clamped between the quality minimum and
-2048. RAW demosaic further caps concurrency at 2.
+The effective maximum pixel size is clamped between the quality minimum
+and 2048. RAW demosaic further caps concurrency at 2.
 
 Protected by: `RawCullTests/SharpnessScoringTests.swift` preset, quality, size,
 and concurrency assertions; package policy also has
@@ -133,68 +133,66 @@ and concurrency assertions; package policy also has
 
 ### Image Source
 
-| Source | RawCull implementation |
-|---|---|
-| Embedded Preview | `RawParserKitImageLoader.shared.thumbnailCGImage` at the effective size |
-| RAW Demosaic | Concurrent `CIRAWFilter` decode; sharpness 0, detail 0.6, contrast 1.0, exposure 0; scale longest side to effective size |
+| Source           | RawCull implementation                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Embedded Preview | `RawParserKitImageLoader.shared.thumbnailCGImage` at the effective size                                                  |
+| RAW Demosaic     | Concurrent `CIRAWFilter` decode; sharpness 0, detail 0.6, contrast 1.0, exposure 0; scale longest side to effective size |
 
 The adapter returns `PhotoAnalysisInput(image:iso:aperture:normalizedAFPoint:)`.
 PhotoAnalysisKit never opens RawCull files and does not choose a source.
 
-Protected by:
-`RawCullTests/PhotoAnalysisKitIntegrationTests.swift` and adapter overrides in
-`RawCullTests/SharpnessScoringTests.swift`.
+Protected by: `RawCullTests/PhotoAnalysisKitIntegrationTests.swift` and adapter
+overrides in `RawCullTests/SharpnessScoringTests.swift`.
 
 ## 2. Package Defaults And Per-Image Resolution
 
 The default `SharpnessConfiguration` values at the pinned revision are:
 
-| Value | Default | Role |
-|---|---:|---|
-| `preBlurRadius` | 1.92 | Shared edge-energy input |
-| `iso` | 400 | Replaced from each input |
-| `threshold` | 0.46 | Mask presentation only |
-| `energyMultiplier` | 7.62 | Stable scoring and shared edge gain |
-| `borderInsetFraction` | 0.04 | Scalar full-frame border exclusion; also blackens mask border |
-| `salientWeight` | 0.75 | Scalar subject/full blend |
-| `subjectSizeFactor` | 0.10 | Scalar saliency-only size bonus |
-| `silhouettePenaltyStrength` | 0.55 | Scalar penalty maximum |
-| `fineDetailBlendWeight` | 0 | Scalar second pass |
-| `enableSubjectClassification` | true | Label only; saliency candidates are still analysis evidence |
-| `afRegionRadius` | 0.12 | Broad AF scoring region |
-| `afCenterRegionRadius` | 0.025 | Evidence diagnostic/local region |
-| `afNeighborhoodRegionRadius` | 0.075 | Evidence diagnostic/local-patch region |
-| `apertureHint` | mid | Replaced from each input |
+| Value                         | Default | Role                                                          |
+| ----------------------------- | ------: | ------------------------------------------------------------- |
+| `preBlurRadius`               |    1.92 | Shared edge-energy input                                      |
+| `iso`                         |     400 | Replaced from each input                                      |
+| `threshold`                   |    0.46 | Mask presentation only                                        |
+| `energyMultiplier`            |    7.62 | Stable scoring and shared edge gain                           |
+| `borderInsetFraction`         |    0.04 | Scalar full-frame border exclusion; also blackens mask border |
+| `salientWeight`               |    0.75 | Scalar subject/full blend                                     |
+| `subjectSizeFactor`           |    0.10 | Scalar saliency-only size bonus                               |
+| `silhouettePenaltyStrength`   |    0.55 | Scalar penalty maximum                                        |
+| `fineDetailBlendWeight`       |       0 | Scalar second pass                                            |
+| `enableSubjectClassification` |    true | Label only; saliency candidates are still analysis evidence   |
+| `afRegionRadius`              |    0.12 | Broad AF scoring region                                       |
+| `afCenterRegionRadius`        |   0.025 | Evidence diagnostic/local region                              |
+| `afNeighborhoodRegionRadius`  |   0.075 | Evidence diagnostic/local-patch region                        |
+| `apertureHint`                |     mid | Replaced from each input                                      |
 
 `PhotoAnalyzer.analyze` copies the config, sets the input ISO, and derives:
 
-| Aperture | Hint | Blur gate low/high | Blur damp | Fallback salient override |
-|---|---|---|---:|---:|
-| f/5.6 or wider | wide | 0.010 / 0.025 | 1.0 | none |
-| between f/5.6 and f/8 | mid | 0.008 / 0.022 | 1.0 | none |
-| f/8 or narrower | landscape | 0.006 / 0.018 | 0.8 | 0.55 |
-| missing | mid | 0.008 / 0.022 | 1.0 | none |
+| Aperture              | Hint      | Blur gate low/high | Blur damp | Fallback salient override |
+| --------------------- | --------- | ------------------ | --------: | ------------------------: |
+| f/5.6 or wider        | wide      | 0.010 / 0.025      |       1.0 |                      none |
+| between f/5.6 and f/8 | mid       | 0.008 / 0.022      |       1.0 |                      none |
+| f/8 or narrower       | landscape | 0.006 / 0.018      |       0.8 |                      0.55 |
+| missing               | mid       | 0.008 / 0.022      |       1.0 |                      none |
 
 An explicit preset override wins over the aperture fallback.
 
-Protected by:
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and
+Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and
 `RawCullTests/SharpnessScoringTests.swift`.
 
 ## 3. Normalization And Vision
 
-PhotoAnalysisKit normalizes the decoded `CGImage` to sRGB RGBA before
-analysis. Vision produces attention-based saliency candidates. Classification,
-when enabled, is additional metadata; it is not itself a score.
+PhotoAnalysisKit normalizes the decoded `CGImage` to sRGB RGBA before analysis.
+Vision produces attention-based saliency candidates. Classification, when
+enabled, is additional metadata; it is not itself a score.
 
 For each candidate, the engine computes a local detail score. Candidate
 selection favors AF containment/alignment when an AF point exists, then uses
-Vision confidence, detail, and area as tie-break evidence. Vision rectangles
-use a bottom-origin coordinate convention; the rendered bitmap is sampled with
-the Y coordinate inverted so the intended pixels are measured.
+Vision confidence, detail, and area as tie-break evidence. Vision rectangles use
+a bottom-origin coordinate convention; the rendered bitmap is sampled with the Y
+coordinate inverted so the intended pixels are measured.
 
-Protected by:
-`PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` and integration mask tests.
+Protected by: `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` and integration
+mask tests.
 
 ## 4. Edge-Energy Image
 
@@ -231,9 +229,9 @@ combined      = primary * (1 - w) + fine * w
 w             = clamped to 0...0.65
 ```
 
-Protected by:
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift` ISO and numeric helper
-tests, and `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift` end-to-end tests.
+Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` ISO and
+numeric helper tests, and `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift`
+end-to-end tests.
 
 ## 5. Region Samples And Robust Tail Score
 
@@ -266,9 +264,8 @@ is `max(0, p90 - p20)`. The density factor keeps a few isolated edges or noise
 spikes from scoring like dense detail. Micro-contrast is the standard deviation
 of finite Laplacian samples.
 
-Protected by:
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and the forwarding checks
-in `RawCullTests/SharpnessScoringTests.swift`.
+Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and the
+forwarding checks in `RawCullTests/SharpnessScoringTests.swift`.
 
 ## 6. Subject Construction
 
@@ -291,9 +288,8 @@ only one present        -> that score
 This prevents one tiny high-energy patch from replacing the broad subject
 measurement while still rewarding localized detail.
 
-Protected by package numeric/source tests around
-`conservativeSubjectScore` and focus evidence in
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift`.
+Protected by package numeric/source tests around `conservativeSubjectScore` and
+focus evidence in `PhotoAnalysisKitTests/SharpnessMetricsTests.swift`.
 
 ## 7. Full/Subject Blend And Adjustments
 
@@ -333,14 +329,13 @@ subject only -> subject
 neither      -> no analysis
 ```
 
-Protected by:
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift` preset and failure-policy
-tests, plus `PhotoAnalyzerTests.swift`.
+Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` preset and
+failure-policy tests, plus `PhotoAnalyzerTests.swift`.
 
 ## 8. Aperture-Aware Blur Gate
 
-The effective AF analysis is preferred over saliency for subject
-micro-contrast. With at least 64 samples:
+The effective AF analysis is preferred over saliency for subject micro-contrast.
+With at least 64 samples:
 
 ```text
 t = clamp((sigma - blurGateLow) / (blurGateHigh - blurGateLow), 0, 1)
@@ -354,12 +349,12 @@ Focus-failure classification is diagnostic:
 
 - **motion blur** when global, subject, and AF-or-subject are all below 0.08 and
   sigma is below 0.012;
-- **missed focus** when global is at least 0.12 and subject/global is below 0.55;
+- **missed focus** when global is at least 0.12 and subject/global is below
+  0.55;
 - otherwise **none**.
 
-Protected by:
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift` focus-failure and aperture
-tests.
+Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` focus-failure
+and aperture tests.
 
 ## 9. Score Range, UI Normalization, And Persistence
 
@@ -370,8 +365,8 @@ percentage or probability.
 
 RawCull stores the raw value. It computes a badge denominator from the lone
 score, small-set maximum, or large-set 90th-percentile element and clamps the UI
-ratio to 0...1. That presentation normalization does not change the stored
-score or burst-ranking input.
+ratio to 0...1. That presentation normalization does not change the stored score
+or burst-ranking input.
 
 `SharpnessAnalysisDescriptor` schema 1 / algorithm 4 identifies package
 behavior. It includes scoring-affecting config and policy versions, excludes

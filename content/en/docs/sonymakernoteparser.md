@@ -2,6 +2,7 @@
 author = "Thomas Evensen"
 title = "Sony/Nikon MakerNote Parser"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 tags = ["focus points", "sony", "nikon", "arw", "nef", "parser"]
 categories = ["technical details"]
 mermaid = true
@@ -9,22 +10,22 @@ mermaid = true
 
 # Sony/Nikon MakerNote Parser
 
-RawParserKit `1.2.8` provides one vendor-neutral result shape for Sony ARW and
+RawParserKit `1.2.9` provides one vendor-neutral result shape for Sony ARW and
 Nikon NEF autofocus metadata. RawCull normally enters through
 `RawImageLoader.metadata(for:)` or `RawFormatRegistry`; only diagnostics and
 package tests should call a vendor parser directly.
 
 ## Current Source Map
 
-| Area | RawParserKit file |
-|---|---|
-| Neutral format contract and registration | `Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift` |
-| Normalized focus value and metadata snapshot | `Sources/RawParserKit/BrowserFocusPoint.swift` (`RawFocusPoint`), `BrowserExifInfo.swift` (`RawImageMetadata`) |
-| Facade and EXIF fallback | `Sources/RawParserKit/RawImageLoader.swift` |
-| Sony implementation | `Sources/RawParserKit/SonyMakerNoteParser.swift`, `SonyRawFormat.swift`, `SonyThumbnailExtractor.swift`, `JPGSonyARWExtractor.swift` |
-| Nikon implementation | `Sources/RawParserKit/NikonMakerNoteParser.swift`, `NikonRawFormat.swift`, `NikonThumbnailExtractor.swift`, `JPGNikonNEFExtractor.swift` |
-| Parser diagnostics | `Sources/RawParserKit/RawParserDiagnostics.swift` |
-| RawCull adapter and consumer | `RawCull/Model/RawImageLoading.swift`, `RawCull/Actors/ScanFiles.swift`, `RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift` |
+| Area                                         | RawParserKit file                                                                                                                        |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Neutral format contract and registration     | `Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift`                                                                        |
+| Normalized focus value and metadata snapshot | `Sources/RawParserKit/BrowserFocusPoint.swift` (`RawFocusPoint`), `BrowserExifInfo.swift` (`RawImageMetadata`)                           |
+| Facade and EXIF fallback                     | `Sources/RawParserKit/RawImageLoader.swift`                                                                                              |
+| Sony implementation                          | `Sources/RawParserKit/SonyMakerNoteParser.swift`, `SonyRawFormat.swift`, `SonyThumbnailExtractor.swift`, `JPGSonyARWExtractor.swift`     |
+| Nikon implementation                         | `Sources/RawParserKit/NikonMakerNoteParser.swift`, `NikonRawFormat.swift`, `NikonThumbnailExtractor.swift`, `JPGNikonNEFExtractor.swift` |
+| Parser diagnostics                           | `Sources/RawParserKit/RawParserDiagnostics.swift`                                                                                        |
+| RawCull adapter and consumer                 | `RawCull/Model/RawImageLoading.swift`, `RawCull/Actors/ScanFiles.swift`, `RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift`       |
 
 `RawFormatRegistry.all` registers only `SonyRawFormat` for `.arw` and
 `NikonRawFormat` for `.nef`. Each conformer supplies focus-location parsing,
@@ -109,20 +110,20 @@ The same parser family also reports embedded JPEG candidates used by Sony
 thumbnail and preview fallbacks.
 
 Nikon follows the outer TIFF/EXIF MakerNote pointer, validates the Nikon Type-3
-signature and inner TIFF header, and reads supported AFInfo2 (`0x00B7`)
-layouts. Unsupported older layouts return nil instead of manufacturing a
-coordinate. Nikon preview extraction can walk TIFF SubIFDs when ImageIO does
-not expose the JPEG at the top level.
+signature and inner TIFF header, and reads supported AFInfo2 (`0x00B7`) layouts.
+Unsupported older layouts return nil instead of manufacturing a coordinate.
+Nikon preview extraction can walk TIFF SubIFDs when ImageIO does not expose the
+JPEG at the top level.
 
 ## Tests At The Pinned Revision
 
-| Test | Contract |
-|---|---|
-| `Tests/RawParserKitTests/SonyMakerNoteParserTests.swift` | Sony focus tags, offsets, malformed input, and embedded JPEG discovery |
-| `Tests/RawParserKitTests/NikonMakerNoteParserTests.swift` | Nikon Type-3/AFInfo2 layouts, byte order, unsupported layouts, and embedded JPEG discovery |
-| `Tests/RawParserKitTests/RawFormatRegistryTests.swift` | case-insensitive extension dispatch and unregistered formats |
-| `RawCullCore/Tests/RawCullCoreTests/FocusPointParserTests.swift` | compatibility four-number normalization used by app focus presentation |
-| RawCull scan/adapter tests | mapping metadata into `FileItem` and the catalog-wide JSON rule |
+| Test                                                             | Contract                                                                                   |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `Tests/RawParserKitTests/SonyMakerNoteParserTests.swift`         | Sony focus tags, offsets, malformed input, and embedded JPEG discovery                     |
+| `Tests/RawParserKitTests/NikonMakerNoteParserTests.swift`        | Nikon Type-3/AFInfo2 layouts, byte order, unsupported layouts, and embedded JPEG discovery |
+| `Tests/RawParserKitTests/RawFormatRegistryTests.swift`           | case-insensitive extension dispatch and unregistered formats                               |
+| `RawCullCore/Tests/RawCullCoreTests/FocusPointParserTests.swift` | compatibility four-number normalization used by app focus presentation                     |
+| RawCull scan/adapter tests                                       | mapping metadata into `FileItem` and the catalog-wide JSON rule                            |
 
 ## Checklist For Another RAW Format
 
@@ -137,8 +138,8 @@ not expose the JPEG at the top level.
 4. Add synthetic parser fixtures plus registry, metadata-fallback, thumbnail,
    preview, orientation, cancellation, and diagnostics tests.
 5. Add RawCull adapter/scan coverage showing `RawFocusPoint` becomes
-   `FileItem.afFocusNormalized` and the focus UI uses the same visual
-   coordinate system.
+   `FileItem.afFocusNormalized` and the focus UI uses the same visual coordinate
+   system.
 6. Verify EXIF SubjectArea fallback and both catalog cases: no native points
    loads `focuspoints.json`; any native point suppresses JSON for the catalog.
 7. Update supported-file UI, diagnostics wording, and these architecture pages

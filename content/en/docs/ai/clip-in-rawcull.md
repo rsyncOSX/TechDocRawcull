@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "How RawCull Loads and Uses CLIP"
 linkTitle = "CLIP in RawCull"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 description = "A beginner-friendly source walk-through of RawCull's OpenAI and DataComp CLIP models, model loading, PhotoAIKit packages, image similarity, semantic search, recovery, and persistence."
 tags = ["ai", "clip", "openai", "datacomp", "photoaikit", "semantic-search", "similarity", "rawcull"]
 categories = ["technical details"]
@@ -43,14 +44,14 @@ numbers to the user. It compares their directions:
 
 - two image vectors pointing in similar directions represent visually or
   semantically related images;
-- an image vector pointing in a similar direction to a text vector is a
-  possible match for that text;
+- an image vector pointing in a similar direction to a text vector is a possible
+  match for that text;
 - vectors produced by different CLIP models are not comparable, even when they
   contain the same number of values.
 
 CLIP does not write a caption, locate the exact pixels of an object, rate a
-photo, or decide which burst frame is sharpest. It provides similarity
-evidence. RawCull decides how to use that evidence.
+photo, or decide which burst frame is sharpest. It provides similarity evidence.
+RawCull decides how to use that evidence.
 
 The original [OpenAI CLIP introduction](https://openai.com/index/clip/) and
 [CLIP paper](https://arxiv.org/abs/2103.00020) explain the contrastive training
@@ -61,19 +62,19 @@ method in more depth.
 Both choices use the same general CLIP idea and the same size of output vector,
 but they use different learned weights and different image resolutions.
 
-| Property | OpenAI model | DataComp model |
-|---|---|---|
-| RawCull name | OpenAI | DataComp |
-| Bundle folder | `CLIP-OpenAI` | `CLIP-DataComp` |
-| Export source | `openai/clip-vit-base-patch32` | `mlfoundations/open_clip` |
-| Architecture | `ViT-B-32` | `ViT-B-32-256` |
-| Pretrained checkpoint | Original OpenAI weights | `datacomp_s34b_b86k` |
-| Model input | 224 × 224 RGB | 256 × 256 RGB |
-| Image patch size | 32 × 32 pixels | 32 × 32 pixels |
-| Embedding size | 512 floating-point values | 512 floating-point values |
-| Text context | 77 tokens | 77 tokens |
-| Token padding | End-of-text token `49407` | Zero |
-| Text attention mask | Supplied | Not required by the exported text encoder |
+| Property              | OpenAI model                   | DataComp model                            |
+| --------------------- | ------------------------------ | ----------------------------------------- |
+| RawCull name          | OpenAI                         | DataComp                                  |
+| Bundle folder         | `CLIP-OpenAI`                  | `CLIP-DataComp`                           |
+| Export source         | `openai/clip-vit-base-patch32` | `mlfoundations/open_clip`                 |
+| Architecture          | `ViT-B-32`                     | `ViT-B-32-256`                            |
+| Pretrained checkpoint | Original OpenAI weights        | `datacomp_s34b_b86k`                      |
+| Model input           | 224 × 224 RGB                  | 256 × 256 RGB                             |
+| Image patch size      | 32 × 32 pixels                 | 32 × 32 pixels                            |
+| Embedding size        | 512 floating-point values      | 512 floating-point values                 |
+| Text context          | 77 tokens                      | 77 tokens                                 |
+| Token padding         | End-of-text token `49407`      | Zero                                      |
+| Text attention mask   | Supplied                       | Not required by the exported text encoder |
 
 The model details do not come from hard-coded branches inside
 `CoreAICLIPProvider`. The exporter writes them into each bundle's
@@ -106,9 +107,8 @@ descriptions.
 
 The DataComp choice uses the open-source
 [OpenCLIP](https://github.com/mlfoundations/open_clip) implementation and the
-`datacomp_s34b_b86k` checkpoint. Its architecture is
-`ViT-B-32-256`: a base Vision Transformer with 32 × 32 patches and a 256 × 256
-image input.
+`datacomp_s34b_b86k` checkpoint. Its architecture is `ViT-B-32-256`: a base
+Vision Transformer with 32 × 32 patches and a 256 × 256 image input.
 
 This checkpoint was trained on the DataComp-1B dataset and its published name
 records that the training run saw approximately 34 billion samples. The
@@ -117,8 +117,8 @@ describes the released checkpoint.
 
 The DataComp model also produces 512-dimensional normalized vectors and uses a
 77-token CLIP BPE context. Its exported text graph follows OpenCLIP's input
-contract: token IDs are padded with zero and no separate attention-mask input
-is required.
+contract: token IDs are padded with zero and no separate attention-mask input is
+required.
 
 ### 2.3 What The Model Choice Means In RawCull
 
@@ -142,50 +142,49 @@ PhotoAIKit, while RAW decoding and culling policy remain in RawCull.
 
 ### 3.1 Swift Packages Used At Runtime
 
-| Package or product | How CLIP uses it |
-|---|---|
-| `PhotoAIContracts` | Defines model identities, bundle validation, backend descriptors, image and text embeddings, similarity artifacts, source fingerprints, and the small provider/decoder protocols shared by RawCull and the backends. |
-| `CoreAICLIPBackend` | Supplies `CoreAICLIPProvider`, the actor that reads CLIP metadata, tokenizes text, preprocesses images, lazily runs Core AI, creates artifacts, and compares compatible image and text vectors. |
-| `PhotoAIWorkflows` | Supplies `SimilarityArtifactIndexer`, which performs bounded asynchronous decode-and-inference work and reports per-source progress and failures. |
-| `PhotoAIStorage` | Supplies the descriptor-complete artifact codec used by RawCull's per-file similarity store. |
-| `VisionFeaturePrintBackend` | Supplies the always-available Apple Vision similarity backend used when CLIP is disabled, missing, invalid, or cannot create a provider. It is not a per-image fallback during a selected CLIP indexing pass. |
-| `RawParserKit` | Extracts a bounded thumbnail `CGImage` from supported camera RAW files before PhotoAIKit sees the image. |
-| `RawCullCore` | Groups adjacent photos using the distances RawCull computed from CLIP artifacts and owns shared burst-domain types. |
+| Package or product          | How CLIP uses it                                                                                                                                                                                                     |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PhotoAIContracts`          | Defines model identities, bundle validation, backend descriptors, image and text embeddings, similarity artifacts, source fingerprints, and the small provider/decoder protocols shared by RawCull and the backends. |
+| `CoreAICLIPBackend`         | Supplies `CoreAICLIPProvider`, the actor that reads CLIP metadata, tokenizes text, preprocesses images, lazily runs Core AI, creates artifacts, and compares compatible image and text vectors.                      |
+| `PhotoAIWorkflows`          | Supplies `SimilarityArtifactIndexer`, which performs bounded asynchronous decode-and-inference work and reports per-source progress and failures.                                                                    |
+| `PhotoAIStorage`            | Supplies the descriptor-complete artifact codec used by RawCull's per-file similarity store.                                                                                                                         |
+| `VisionFeaturePrintBackend` | Supplies the always-available Apple Vision similarity backend used when CLIP is disabled, missing, invalid, or cannot create a provider. It is not a per-image fallback during a selected CLIP indexing pass.        |
+| `RawParserKit`              | Extracts a bounded thumbnail `CGImage` from supported camera RAW files before PhotoAIKit sees the image.                                                                                                             |
+| `RawCullCore`               | Groups adjacent photos using the distances RawCull computed from CLIP artifacts and owns shared burst-domain types.                                                                                                  |
 
 RawCull also links `CoreAISAM3Backend`, but SAM 3 is a separate segmentation
 model. Its resource check happens alongside the two CLIP checks; it is not used
 to calculate CLIP vectors.
 
-PhotoAIKit has one external Swift package dependency:
-`apple/coreai-models`, pinned to an exact revision. Its
-`CoreAISegmentation` product makes the Core AI runtime APIs available to the
-CLIP and SAM 3 backend targets.
+PhotoAIKit has one external Swift package dependency: `apple/coreai-models`,
+pinned to an exact revision. Its `CoreAISegmentation` product makes the Core AI
+runtime APIs available to the CLIP and SAM 3 backend targets.
 
 ### 3.2 Apple Frameworks Used Around The Packages
 
-| Framework | Role |
-|---|---|
-| Core AI | Loads the `.aimodel` or `.aimodelc`, specializes it for the Mac, creates NDArrays, and runs the named image and text functions. |
-| Core Graphics | Converts a decoded `CGImage` into the model's sRGB pixel input. |
-| ImageIO | Provides RawCull's secondary thumbnail-decoding path when `RawParserKit` cannot return an image. |
-| Vision | Produces feature prints when RawCull selects its non-CLIP similarity service. |
-| Foundation | Provides URLs, JSON coding, file metadata, `UserDefaults`, tasks, and application-support paths. |
-| CryptoKit | Supports stable cache keys and model/artifact fingerprinting code. |
-| SwiftUI and Observation | Present the model picker, CLIP toggle, capability state, indexing progress, and semantic-search controls. |
-| OSLog | Records backend selection, model fingerprints, failures, and diagnostics. |
+| Framework               | Role                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Core AI                 | Loads the `.aimodel` or `.aimodelc`, specializes it for the Mac, creates NDArrays, and runs the named image and text functions. |
+| Core Graphics           | Converts a decoded `CGImage` into the model's sRGB pixel input.                                                                 |
+| ImageIO                 | Provides RawCull's secondary thumbnail-decoding path when `RawParserKit` cannot return an image.                                |
+| Vision                  | Produces feature prints when RawCull selects its non-CLIP similarity service.                                                   |
+| Foundation              | Provides URLs, JSON coding, file metadata, `UserDefaults`, tasks, and application-support paths.                                |
+| CryptoKit               | Supports stable cache keys and model/artifact fingerprinting code.                                                              |
+| SwiftUI and Observation | Present the model picker, CLIP toggle, capability state, indexing progress, and semantic-search controls.                       |
+| OSLog                   | Records backend selection, model fingerprints, failures, and diagnostics.                                                       |
 
 ### 3.3 Python Packages Used Only To Export Models
 
 The model bundle is created before RawCull runs. PhotoAIKit's
 `Tools/export_clip.py` declares these build-time tools:
 
-| Python package | Export-time job |
-|---|---|
-| `transformers` | Loads the OpenAI CLIP checkpoint and saves its tokenizer. |
-| `open_clip_torch` | Loads the OpenCLIP DataComp architecture and checkpoint. |
-| `torch` and `torchvision` | Hold the source model and tensors used during export. |
-| `coreai-torch` | Converts the PyTorch image and text encoders into Core AI functions. |
-| `coreai-core` | Saves and optimizes the portable Core AI model asset. |
+| Python package            | Export-time job                                                      |
+| ------------------------- | -------------------------------------------------------------------- |
+| `transformers`            | Loads the OpenAI CLIP checkpoint and saves its tokenizer.            |
+| `open_clip_torch`         | Loads the OpenCLIP DataComp architecture and checkpoint.             |
+| `torch` and `torchvision` | Hold the source model and tensors used during export.                |
+| `coreai-torch`            | Converts the PyTorch image and text encoders into Core AI functions. |
+| `coreai-core`             | Saves and optimizes the portable Core AI model asset.                |
 
 These Python packages are not shipped as part of RawCull's Swift runtime.
 
@@ -195,15 +194,17 @@ The main path is:
 
 ```mermaid
 flowchart TD
-    Settings["Settings: choose OpenAI or DataComp"] --> Integration["RawCullAIIntegration"]
+    App["RawCullApplicationState"] --> Runtime["RawCullIntelligenceRuntime"]
+    Settings["Settings: choose OpenAI or DataComp"] --> Runtime
+    Runtime --> Integration["RawCullAIIntegration"]
     Integration --> Managers["Two CLIP resource managers"]
     Managers --> Validate["PhotoAIKit validates both bundles"]
     Validate --> Providers["One provider per valid bundle"]
     Providers --> Selected{"Which model is selected?"}
     Selected -->|OpenAI| OpenAI["OpenAI CoreAICLIPProvider"]
     Selected -->|DataComp| DataComp["DataComp CoreAICLIPProvider"]
-    OpenAI --> Similarity["Image similarity and burst grouping"]
-    OpenAI --> Search["Text-to-image semantic search"]
+    OpenAI --> Similarity["RawCullSimilarityFeature"]
+    OpenAI --> Search["RawCullSemanticSearchFeature"]
     DataComp --> Similarity
     DataComp --> Search
 ```
@@ -213,25 +214,28 @@ selected provider to the active similarity and semantic-search features.
 
 ## 5. Startup Uses Vision First
 
-`Main/RawCullApp.swift` creates the object graph synchronously:
+`RawCull/Main/RawCullApp.swift` creates the object graph synchronously through
+`RawCullApplicationState.live()`:
 
 ```swift
-let integration = RawCullAIIntegration()
-let viewModel = RawCullViewModel(
-    similarityService: integration.visionSimilarityService,
-    semanticSearchCapability: integration.capabilities()
-        .semanticSearchStatus(for: .defaultSelection),
-    deepAIReviewFeature: integration.deepAIReviewFeature
+let applicationState = RawCullApplicationState.live()
+_viewModel = State(initialValue: applicationState.viewModel)
+_intelligenceRuntime = State(
+    initialValue: applicationState.intelligenceRuntime
 )
 ```
 
-Vision is installed first because it needs no downloaded model bundle. The app
+Assembly creates one integration, one shared `SimilarityScoringModel`, focused
+similarity and semantic-search features, a `DeepAIReviewController`, the main
+view model, settings/model-management models, and the stable runtime. Vision is
+the initial similarity service because it needs no downloaded bundle, so the app
 can open even when both CLIP folders are absent.
 
-`RawCullAISettingsModel` then receives two callbacks:
-
-- one installs a new `RawCullSimilarityServicing` value in the main view model;
-- one installs the selected model's semantic-search capability and service.
+`RawCullAISettingsModel` binds weakly to the runtime as a
+`RawCullIntelligenceConfigurationApplying` consumer. Each refresh publishes one
+complete, monotonically revisioned configuration containing similarity,
+semantic-search, and segmentation choices. The runtime rejects stale revisions
+and changes only services whose descriptor identity differs.
 
 The asynchronous `.task` attached to the main window calls
 `aiSettingsModel.refresh()`. Model directory inspection, fingerprinting, and
@@ -239,7 +243,8 @@ provider construction therefore do not block `RawCullApp.init()`.
 
 ## 6. Preferences And The Selected Model
 
-`Model/ViewModels/RawCullAISettingsModel.swift` stores two values:
+`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift` stores two
+CLIP preference values:
 
 ```text
 RawCullAI.useCLIPForSimilarity
@@ -251,16 +256,16 @@ When no values have been saved:
 - CLIP similarity defaults to enabled;
 - the OpenAI model is the default selection.
 
-The model picker is mutually exclusive. Choosing DataComp replaces OpenAI as
-the selected model; it does not combine their results.
+The model picker is mutually exclusive. Choosing DataComp replaces OpenAI as the
+selected model; it does not combine their results.
 
 The CLIP toggle is a request, not proof that a model is usable:
 
-| CLIP toggle | Selected bundle valid | Similarity backend |
-|---|---:|---|
-| Off | No or yes | Vision feature print |
-| On | No | Vision feature print |
-| On | Yes | Selected CLIP model |
+| CLIP toggle | Selected bundle valid | Similarity backend   |
+| ----------- | --------------------: | -------------------- |
+| Off         |             No or yes | Vision feature print |
+| On          |                    No | Vision feature print |
+| On          |                   Yes | Selected CLIP model  |
 
 Semantic-search readiness is tracked separately because Vision can compare two
 images but cannot compare an image with text. A valid selected CLIP provider is
@@ -295,9 +300,9 @@ A sandboxed build resolves the same relative folders inside its container:
 **Settings > AI** shows the exact paths for the running build.
 
 `RawCullAIModelCandidates.urls(...)` puts the installed directory first. Debug
-builds may add app-bundle resource candidates such as
-`Models/CLIP-OpenAI`; release builds do not use bundled fallback unless it is
-explicitly enabled during construction.
+builds may add app-bundle resource candidates such as `Models/CLIP-OpenAI`;
+release builds do not use bundled fallback unless it is explicitly enabled
+during construction.
 
 PhotoAIKit does not search these paths. RawCull owns path policy and passes an
 ordered URL list into the package.
@@ -397,8 +402,8 @@ The provider then:
 7. accepts `attention_mask` when the text function declares it;
 8. validates tensor ranks, dimensions, scalar types, resolution, and token
    context length;
-9. caches the functions, descriptors, tokenizer, and compatibility inputs
-   inside the provider actor.
+9. caches the functions, descriptors, tokenizer, and compatibility inputs inside
+   the provider actor.
 
 New bundles use two named functions in one asset:
 
@@ -433,8 +438,7 @@ For each `AIImageSource`, the decoder:
 4. reports `imageDecodeFailed` if neither path returns a `CGImage`.
 
 The 512-pixel value belongs to RawCull's embedding pipeline. It gives the model
-provider a bounded image instead of decoding an unnecessarily large RAW
-preview.
+provider a bounded image instead of decoding an unnecessarily large RAW preview.
 
 The selected provider then applies the exact preprocessing declared by that
 model:
@@ -454,8 +458,7 @@ intentional: preprocessing must match the model's training and export contract.
 
 ## 12. Creating A CLIP Image Artifact
 
-After preprocessing, the provider runs `image_encoder` and reads
-`image_embeds`.
+After preprocessing, the provider runs `image_encoder` and reads `image_embeds`.
 
 Both current graphs export an L2-normalized vector. PhotoAIKit wraps the result
 in `ImageEmbedding`, which also applies safe L2 normalization:
@@ -488,8 +491,8 @@ because it can be decoded.
 
 ## 13. Indexing, Concurrency, And Failure Recovery
 
-`RawCullCLIPSimilarityService` creates a PhotoAIKit
-`SimilarityArtifactIndexer` with:
+`RawCullCLIPSimilarityService` creates a PhotoAIKit `SimilarityArtifactIndexer`
+with:
 
 - the selected CLIP provider;
 - RawCull's diagnosing RAW decoder;
@@ -519,15 +522,14 @@ valid CLIP artifacts already created for other images.
 
 This is different from the earlier whole-batch fallback design:
 
-- RawCull no longer throws away a successful CLIP pass because one image
-  failed;
+- RawCull no longer throws away a successful CLIP pass because one image failed;
 - it does not mix Vision artifacts into a selected CLIP indexing pass;
 - a failed image has no current artifact and is excluded from similarity
   comparisons and burst grouping until it can be indexed successfully.
 
-When CLIP is disabled or its selected bundle is unavailable at service
-selection time, RawCull uses `RawCullVisionSimilarityService` instead. Vision
-currently indexes with a concurrency limit of 4.
+When CLIP is disabled or its selected bundle is unavailable at service selection
+time, RawCull uses `RawCullVisionSimilarityService` instead. Vision currently
+indexes with a concurrency limit of 4.
 
 `RawCullCLIPFailureRecorder` logs the file and failing stage (`decode` or
 `inference`). `SimilarityScoringModel` also records a partial-CLIP diagnostics
@@ -682,19 +684,21 @@ grouping policy changed   -> burst signature mismatch
 
 ## 17. Switching Between OpenAI And DataComp
 
-When the selected model changes, `RawCullAISettingsModel` asks the composition
-root for new similarity and semantic-search services.
+When the selected model changes, `RawCullAISettingsModel` publishes a newer
+complete configuration. `RawCullIntelligenceRuntime.apply(configuration:)`
+compares its identity with the last accepted configuration.
 
-`RawCullViewModel.setSimilarityService(_:)` then:
+If the similarity identity changed, `RawCullSimilarityFeature`:
 
-1. cancels and resets active burst analysis;
-2. resets image indexing, distances, grouping, ranking, progress, and
-   diagnostics;
-3. installs the new backend;
-4. tries to hydrate only artifacts compatible with the new descriptor.
+1. cancels incompatible similarity work through its bound application context;
+2. installs the new service in the shared scoring model;
+3. invalidates superseded hydration/indexing generations;
+4. hydrates only artifacts compatible with the new descriptor and current
+   catalog.
 
-The semantic-search service performs a similar reset and compatible-artifact
-hydration.
+The semantic-search configuration is replaced independently through the focused
+feature. Both features deliberately project the same scoring-model identity;
+views do not reach through them to that low-level model.
 
 This reset is required even though both models return 512 values. Keeping an
 OpenAI vector while labeling the active service DataComp would make every
@@ -731,16 +735,15 @@ Use this order because it follows the runtime path:
 5. **Check the bundle structure.** Confirm `metadata.json`,
    `tokenizer/tokenizer.json`, and the `.aimodel` or `.aimodelc` selected by
    `assets.main`.
-6. **Check the fingerprint.** A declared checksum must match the selected
-   asset.
+6. **Check the fingerprint.** A declared checksum must match the selected asset.
 7. **Check metadata compatibility.** Resolution, crop policy, token context,
-   function names, tensor names, shapes, and scalar types must match the Core
-   AI asset.
+   function names, tensor names, shapes, and scalar types must match the Core AI
+   asset.
 8. **Remove or repair an invalid higher-priority install.** Resolution stops at
    an invalid installed directory instead of silently using a debug-bundled
    copy.
-9. **Expect the first inference to be slower.** Core AI may specialize the
-   model for the Mac.
+9. **Expect the first inference to be slower.** Core AI may specialize the model
+   for the Mac.
 10. **Inspect similarity diagnostics.** A partial CLIP result identifies decode
     or inference failures by image. It does not mean that the complete catalog
     switched to Vision.
@@ -752,25 +755,26 @@ Use this order because it follows the runtime path:
 
 ## 20. Source Map
 
-| Concern | Current source |
-|---|---|
-| App construction and callbacks | `RawCull/Main/RawCullApp.swift` |
-| CLIP choices and application-support paths | `RawCull/Model/AIIntegration/RawCullAIModels.swift` |
-| Candidate URLs and cached resource checks | `RawCull/Model/AIIntegration/RawCullAIModelResourceManager.swift` |
-| Provider dictionaries, selection, and refresh | `RawCull/Model/AIIntegration/RawCullAIIntegration.swift` |
-| Saved preference and selected model | `RawCull/Model/ViewModels/RawCullAISettingsModel.swift` |
-| Settings model picker and capability status | `RawCull/Views/Settings/AISettingsTab.swift` |
-| RAW decoding, CLIP retry, Vision service, and distance routing | `RawCull/Model/AIIntegration/RawCullVisionSimilarityService.swift` |
-| Image indexing, ranking, grouping, and semantic-search state | `RawCull/Model/ViewModels/SimilarityScoringModel.swift` |
-| Literal query ranking service | `RawCull/Model/AIIntegration/RawCullSemanticSearchService.swift` |
-| Semantic-search controls and coverage | `RawCull/Views/SimilarityGridView/SemanticSearchViews.swift` |
-| Per-file artifact persistence | `RawCull/Actors/PerFileAnalysisArtifactStore.swift` |
-| Catalog-wide burst persistence | `RawCull/Actors/BurstAnalysisCache.swift` |
-| PhotoAIKit package products | `PhotoAIKit/Package.swift` |
-| Metadata-driven runtime configuration | `PhotoAIKit/Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift` |
-| Image and text inference | `PhotoAIKit/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift` |
-| Bundle resolution and fingerprint identity | `PhotoAIKit/Sources/PhotoAIContracts/ModelBundleResolver.swift`, `ModelIdentity.swift`, and `ModelAssetFingerprint.swift` |
-| Model exporter and exact model specifications | `PhotoAIKit/Tools/export_clip.py` |
+| Concern                                                        | Current source                                                                                                                             |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| App construction and stable runtime                            | `RawCull/Main/RawCullApp.swift`, `RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`                                       |
+| CLIP choices and application-support paths                     | `RawCull/Intelligence/Contracts/RawCullAIModels.swift`                                                                                     |
+| Candidate URLs and cached resource checks                      | `RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`                                                                 |
+| Provider dictionaries, selection, and refresh                  | `RawCull/Intelligence/Composition/RawCullAIIntegration.swift`                                                                              |
+| Saved preference and selected model                            | `RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`                                                                        |
+| Settings model picker and capability status                    | `RawCull/Views/Settings/AISettingsTab.swift`                                                                                               |
+| Focused similarity and semantic-search boundaries              | `RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`, `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift` |
+| RAW decoding, CLIP retry, Vision service, and distance routing | `RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift`                                                                     |
+| Image indexing, ranking, grouping, and semantic-search state   | `RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`                                                                             |
+| Literal query ranking service                                  | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift`                                                                   |
+| Semantic-search controls and coverage                          | `RawCull/Views/SimilarityGridView/SemanticSearchViews.swift`                                                                               |
+| Per-file artifact persistence                                  | `RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift`                                                                      |
+| Catalog-wide burst persistence                                 | `RawCull/Intelligence/Persistence/BurstAnalysisCache.swift`                                                                                |
+| PhotoAIKit package products                                    | `PhotoAIKit/Package.swift`                                                                                                                 |
+| Metadata-driven runtime configuration                          | `PhotoAIKit/Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift`                                                                      |
+| Image and text inference                                       | `PhotoAIKit/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift`                                                                            |
+| Bundle resolution and fingerprint identity                     | `PhotoAIKit/Sources/PhotoAIContracts/ModelBundleResolver.swift`, `ModelIdentity.swift`, and `ModelAssetFingerprint.swift`                  |
+| Model exporter and exact model specifications                  | `PhotoAIKit/Tools/export_clip.py`                                                                                                          |
 
 For the package layering behind these types, continue with
 [How PhotoAIKit Is Constructed](../../packages/photoaikit/).

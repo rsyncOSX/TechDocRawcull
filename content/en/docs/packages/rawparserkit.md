@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
+lastmod = "2026-08-31"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
 tags = ["raw", "arw", "nef", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -12,8 +13,8 @@ weight = 40
 
 # How RawParserKit Is Constructed
 
-> **Revision audited:** RawCull resolves RawParserKit `1.2.8` at
-> `0576a7cfbbdb48a5e0cd34569f2fce53e6d72a54`.
+> **Revision audited:** RawCull resolves RawParserKit `1.2.9` at
+> `26327d983a3f0216c460684ad91944b9543af420`.
 
 RawParserKit is RawCull's camera-file boundary. It knows how Sony ARW and Nikon
 NEF files are structured, how to locate their embedded JPEGs and AF metadata,
@@ -417,20 +418,20 @@ RawCull depends on its own `RawImageLoading: Sendable` protocol. The
 `RawParserKitImageLoader` value forwards to `RawImageLoader.shared` and performs
 the package-to-app translation:
 
-| RawCull request | Package facade call | Boundary result |
-|---|---|---|
-| `fileMetadata(for:)` | `metadata(for:)` | `RawImageMetadata` becomes app `ExifMetadata`, capture date/offset, legacy focus string, and normalized `CGPoint` |
-| `thumbnailCGImage(for:maxPixelSize:)` | `thumbnailCGImage(for:maxPixelSize:)` | `CGImage` for cache and analysis paths |
-| `thumbnailImage(for:maxPixelSize:)` | `thumbnail(for:maxPixelSize:)` | `NSImage` consumed by app/UI-isolated code |
-| `previewCGImage(for:)` | `previewImage(for:)` | `CGImage` for the preview and analysis pipeline |
+| RawCull request                       | Package facade call                   | Boundary result                                                                                                   |
+| ------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `fileMetadata(for:)`                  | `metadata(for:)`                      | `RawImageMetadata` becomes app `ExifMetadata`, capture date/offset, legacy focus string, and normalized `CGPoint` |
+| `thumbnailCGImage(for:maxPixelSize:)` | `thumbnailCGImage(for:maxPixelSize:)` | `CGImage` for cache and analysis paths                                                                            |
+| `thumbnailImage(for:maxPixelSize:)`   | `thumbnail(for:maxPixelSize:)`        | `NSImage` consumed by app/UI-isolated code                                                                        |
+| `previewCGImage(for:)`                | `previewImage(for:)`                  | `CGImage` for the preview and analysis pipeline                                                                   |
 
 App code should enter through this facade or the vendor-neutral registry. Sony
 and Nikon conformers remain implementation details except in diagnostics and
 package tests.
 
 `NSImage` and `CGImage` are framework reference objects rather than ordinary
-`Sendable` values. RawCull therefore keeps their lifetime inside the actor or
-UI operation that needs them. `RequestThumbnail` converts a `CGImage` to JPEG
+`Sendable` values. RawCull therefore keeps their lifetime inside the actor or UI
+operation that needs them. `RequestThumbnail` converts a `CGImage` to JPEG
 `Data` inside its actor before starting the detached disk save; the value
 crossing that task boundary is `Data`, not the image object. Prefer the
 `CGImage` facade methods for background analysis and convert to presentation
