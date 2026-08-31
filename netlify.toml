@@ -2,11 +2,22 @@
 # (https://gohugo.io/hosting-and-deployment/hosting-on-netlify/#configure-hugo-version-in-netlify)
 
 [build]
-command = "npm run build:preview"
+command = """
+  curl -sfLO "https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz" &&
+  tar -C "${HOME}/.local" -xf "dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz" &&
+  export PATH="${HOME}/.local/dart-sass:${PATH}" &&
+  npm run build:preview
+  """
 publish = "public"
 
 [build.environment]
+DART_SASS_VERSION = "1.102.0"
 GO_VERSION = "1.22.2"
 
 [context.production]
-command = "npm run build:production"
+command = """
+  curl -sfLO "https://github.com/sass/dart-sass/releases/download/${DART_SASS_VERSION}/dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz" &&
+  tar -C "${HOME}/.local" -xf "dart-sass-${DART_SASS_VERSION}-linux-x64.tar.gz" &&
+  export PATH="${HOME}/.local/dart-sass:${PATH}" &&
+  npm run build:production
+  """
