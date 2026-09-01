@@ -3,25 +3,27 @@ author = "Thomas Evensen"
 title = "New RawCull AI models"
 linkTitle = "New RawCull AI models"
 date = "2026-08-10"
-description = "Release runbook for publishing DataComp CLIP, OpenAI CLIP, and Meta SAM 3."
-tags = ["ai", "models", "downloads", "clip", "sam3", "background-assets", "self-hosting", "apple-hosting"]
+lastmod = "2026-09-01"
+description = "Release runbook for publishing DataComp CLIP, OpenAI CLIP, EfficientSAM, and Meta SAM 3."
+tags = ["ai", "models", "downloads", "clip", "efficient-sam", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 31
 +++
 
 # Publishing new RawCull AI models
 
-This runbook publishes exactly three optional models:
+This runbook publishes four optional models:
 
 | Model         | Asset-pack ID                              | Installed destination  |
 | ------------- | ------------------------------------------ | ---------------------- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
 | OpenAI CLIP   | `no.blogspot.RawCull.models.clip-openai`   | `Models/CLIP-OpenAI`   |
+| EfficientSAM  | `no.blogspot.RawCull.models.efficient-sam` | `Models/EfficientSAM`  |
 | Meta SAM 3    | `no.blogspot.RawCull.models.sam3`          | `Models/SAM3`          |
 
-SigLIP2 and EfficientSAM are deliberately excluded. Do not add them to the
-release staging tree, packaging manifests, download manifest, production
-catalogue, settings UI, notices, or tests.
+SigLIP2 remains deliberately excluded. EfficientSAM is planned for RawCull
+3.3.0 and must be prepared as a new pack; do not mutate the published `v2`
+release to add it.
 
 The published record described by this page is the `v2` release in
 [`RawCull-AI-Models`](https://github.com/rsyncOSX/RawCull-AI-Models/releases).
@@ -29,7 +31,9 @@ Tag names and GitHub release URLs are case-sensitive.
 
 The current `v2` manifest publishes DataComp CLIP and OpenAI CLIP only. Meta SAM
 3 remains blocked and must not be uploaded or added to the deployable manifest
-until its redistribution review is complete.
+until its redistribution review is complete. The RawCull 3.3.0 release should
+add EfficientSAM under a new immutable model-release tag after its technical and
+licence gates pass.
 
 The literal `v2` hashes, sizes, URLs, and commands below are a reproducibility
 record for that publication. They are not a reusable instruction to mutate the
@@ -41,6 +45,7 @@ MODEL_RELEASE_REPOSITORY='rsyncOSX/RawCull-AI-Models'
 MODEL_RELEASE_TAG='vNEXT'
 DATACOMP_PACK_VERSION='NEXT_INTEGER'
 OPENAI_PACK_VERSION='NEXT_INTEGER'
+EFFICIENTSAM_PACK_VERSION='NEXT_INTEGER'
 SAM3_PACK_VERSION='NEXT_INTEGER'
 RELEASE_SOURCE_ROOT='/path/to/RawCull-AI-Models/ModelAssets/Release'
 RELEASE_WORK_ROOT='/path/to/private/release-work/ModelAssets/Release'
@@ -70,7 +75,7 @@ The packaging manifest schema uses `assetPackID`, `downloadPolicy`,
 generated download manifest uses `id`, version, download size, and URL; do not
 copy the packaging key name `assetPackID` into generated-manifest assertions.
 
-## 1. Build the three canonical bundles
+## 1. Build the four canonical bundles
 
 Follow [AI Model Download Service](../aimodeldownloads/) for the pinned source
 checks, exact PhotoAIKit commands, runtime validation, and packaging layout. The
@@ -86,6 +91,10 @@ CLIP-OpenAI/
 ├── metadata.json
 ├── tokenizer/
 └── clip-vit-base-patch32_float16_static.aimodel/
+
+EfficientSAM/
+├── metadata.json
+└── efficient_sam_vitt_float16_static_q64.aimodel/
 
 SAM3/
 ├── metadata.json
@@ -122,6 +131,12 @@ semantic rankings. The corrected tested bundle uses the registered
 Keep every `*_source.aimodel` as private conversion evidence. Never select it in
 a packaging manifest or place it in a downloadable pack.
 
+EfficientSAM is exported separately with Apple's pinned `coreai-models`
+EfficientSAM recipe. It uses Float16, static batch dimensions, 64 one-point
+queries, and no tokenizer. Follow the pinned checkpoint, lockfile, conversion,
+and validation procedure in [AI Model Download Service](../aimodeldownloads/);
+do not reuse an output from the older beta converter toolchain.
+
 ## 2. Validate model behavior before packaging
 
 For each bundle:
@@ -139,6 +154,14 @@ For both CLIP models, run PyTorch/Core AI parity and then the same RawCullFB
 image-to-image similarity comparisons. Review rankings, score spread, repeated
 results, failures, and elapsed time. Do not compare models against a reused
 index.
+
+For EfficientSAM, verify PhotoAIKit resolves the complete bundle, compiles the
+portable Core AI program, and produces correctly placed masks in RawCull. Test
+the 8 × 8 point grid on portraits, groups, animals, sports, landscapes,
+low-light scenes, off-centre subjects, and scenes with no clear subject. Record
+mask quality, subject-selection success, latency, peak memory, and errors.
+EfficientSAM is not text-guided; do not describe its target label as a language
+prompt.
 
 For SAM 3, test text prompts, mask dimensions and placement, licence acceptance,
 relaunch, and removal.
@@ -174,6 +197,29 @@ archive checksum, byte count, complete notices, evidence date, and approver.
 Published availability and a `.ready` enum value are product state, not legal
 evidence.
 
+### EfficientSAM
+
+EfficientSAM is the segmentation model planned for RawCull 3.3.0. Before
+enabling its pack:
+
+1. verify the pinned `yformer/EfficientSAM` implementation revision and
+   `merve/EfficientSAM` checkpoint revision, byte count, and SHA-256;
+2. use the pinned Apple `coreai-models` converter revision and locked Python
+   dependency resolution documented in the download-service page;
+3. record the conversion command, exporter and lock checksums, runtime
+   fingerprint, `main.mlirb` checksum, archive checksum, and byte count;
+4. include the complete Apache License 2.0, applicable Apple BSD 3-Clause
+   notice, and any notices required by the locked dependencies in
+   `Notices/EfficientSAM`;
+5. validate the q64 runtime through PhotoAIKit and RawCull on the supported
+   macOS/Xcode toolchain; and
+6. publish the pack and generated manifest under a new immutable tag before
+   changing the production descriptor to `.ready`.
+
+The stable pack identity is `no.blogspot.RawCull.models.efficient-sam`, its
+managed destination is `Models/EfficientSAM`, and its runtime selector is
+`efficient_sam_vitt_float16_static_q64.aimodel`. It has no tokenizer directory.
+
 ### Meta SAM 3
 
 Before enabling the SAM 3 pack:
@@ -193,7 +239,7 @@ from the public manifest until that review is complete.
 
 ## 4. Prepare release staging
 
-The reviewed source tree may contain all three known candidates, but a generated
+The reviewed source tree may contain all four known candidates, but a generated
 release work tree and manifest must contain only the ready subset and its notice
 catalogues:
 
@@ -202,14 +248,17 @@ ModelAssets/Release/
 ├── Models/
 │   ├── CLIP-DataComp/
 │   ├── CLIP-OpenAI/
+│   ├── EfficientSAM/
 │   └── SAM3/
 ├── Notices/
 │   ├── CLIP-DataComp/
 │   ├── CLIP-OpenAI/
+│   ├── EfficientSAM/
 │   └── SAM3/
 ├── Packaging/
 │   ├── clip-datacomp.json
 │   ├── clip-openai.json
+│   ├── efficient-sam.json
 │   └── sam3.json
 └── Output/
 ```
@@ -217,7 +266,7 @@ ModelAssets/Release/
 Each packaging manifest selects only:
 
 - the bundle's `metadata.json`;
-- its `tokenizer` directory;
+- its `tokenizer` directory when required (CLIP and SAM 3 only);
 - its optimized runtime `.aimodel` directory;
 - its matching notice directory.
 
@@ -264,6 +313,14 @@ xcrun ba-package package Packaging/sam3.json \
   --output-path Output/sam3.aar
 ```
 
+For RawCull 3.3.0, package EfficientSAM after its technical and licence gates
+pass:
+
+```sh
+xcrun ba-package package Packaging/efficient-sam.json \
+  --output-path Output/efficient-sam.aar
+```
+
 The `.aar` suffix here means an Apple Archive produced for Managed Background
 Assets; it is not an Android library.
 
@@ -294,8 +351,8 @@ paths.
 Create a self-hosted manifest from the exact approved AAR files in
 `/Users/thomas/ModelAssets/Release/Output`. The generated manifest must contain
 only packs that have passed both technical and legal release gates. It may
-contain one, two, or all three packs while reviews are in progress; RawCull must
-expose only the same ready set.
+contain any ready subset of the four packs while reviews are in progress;
+RawCull must expose only the same ready set.
 
 Verify every entry before publishing:
 
@@ -388,17 +445,21 @@ no.blogspot.RawCull.models.clip-datacomp
 no.blogspot.RawCull.models.clip-openai
 ```
 
-### 6.3. Manifest for all three models
+### 6.3. RawCull 3.3.0 manifest with EfficientSAM
 
-Use this manifest only after both CLIP models and SAM 3 have passed all release
-gates:
+Use this manifest for RawCull 3.3.0 after EfficientSAM and both CLIP models have
+passed all release gates. SAM 3 remains omitted while its redistribution review
+is blocked:
 
 ```sh
 xcrun ba-package download-manifest create \
   Output/clip-datacomp.aar \
   Output/clip-openai.aar \
-  Output/sam3.aar \
-  --asset-pack-versions 2 2 2 \
+  Output/efficient-sam.aar \
+  --asset-pack-versions \
+    "$DATACOMP_PACK_VERSION" \
+    "$OPENAI_PACK_VERSION" \
+    "$EFFICIENTSAM_PACK_VERSION" \
   --macos \
   --download-base-url "$DOWNLOAD_BASE_URL" \
   --output-path Output/manifest.json
@@ -409,6 +470,35 @@ The result must contain exactly these asset-pack IDs:
 ```text
 no.blogspot.RawCull.models.clip-datacomp
 no.blogspot.RawCull.models.clip-openai
+no.blogspot.RawCull.models.efficient-sam
+```
+
+### 6.4. Manifest for all four models
+
+Use this manifest only after SAM 3 has independently passed all release gates:
+
+```sh
+xcrun ba-package download-manifest create \
+  Output/clip-datacomp.aar \
+  Output/clip-openai.aar \
+  Output/efficient-sam.aar \
+  Output/sam3.aar \
+  --asset-pack-versions \
+    "$DATACOMP_PACK_VERSION" \
+    "$OPENAI_PACK_VERSION" \
+    "$EFFICIENTSAM_PACK_VERSION" \
+    "$SAM3_PACK_VERSION" \
+  --macos \
+  --download-base-url "$DOWNLOAD_BASE_URL" \
+  --output-path Output/manifest.json
+```
+
+The result must contain exactly these asset-pack IDs:
+
+```text
+no.blogspot.RawCull.models.clip-datacomp
+no.blogspot.RawCull.models.clip-openai
+no.blogspot.RawCull.models.efficient-sam
 no.blogspot.RawCull.models.sam3
 ```
 
@@ -525,6 +615,9 @@ cp Output/clip-datacomp.aar \
   Output/Upload/no.blogspot.RawCull.models.clip-datacomp
 cp Output/clip-openai.aar \
   Output/Upload/no.blogspot.RawCull.models.clip-openai
+# RawCull 3.3.0, when EfficientSAM is present in Output/manifest.json:
+cp Output/efficient-sam.aar \
+  Output/Upload/no.blogspot.RawCull.models.efficient-sam
 # Only when SAM 3 is present in Output/manifest.json:
 cp Output/sam3.aar \
   Output/Upload/no.blogspot.RawCull.models.sam3
@@ -559,6 +652,11 @@ gh release upload v2 \
   Output/Upload/no.blogspot.RawCull.models.clip-openai \
   --repo rsyncOSX/RawCull-AI-Models
 ```
+
+For RawCull 3.3.0, use its new tag and add
+`Output/Upload/no.blogspot.RawCull.models.efficient-sam` to the same upload
+command. Verify all three payloads anonymously before uploading that release's
+generated `manifest.json`.
 
 Do not use `--clobber` during a normal new-tag publication. Verify the remote
 filenames:
@@ -739,13 +837,25 @@ static let includeDataCompCLIP = true
 static let includeSAM3 = false
 ```
 
+For RawCull 3.3.0, add the EfficientSAM descriptor and inclusion switch, then
+enable it only after its archive is present in the new published manifest and
+all release gates are complete:
+
+```swift
+static let includeOpenAICLIP = true
+static let includeDataCompCLIP = true
+static let includeEfficientSAM = true
+static let includeSAM3 = false
+```
+
 SAM 3 remains blocked. Change its switch only after its redistribution review
-and all technical release gates are complete. The eventual three-model
+and all technical release gates are complete. The eventual four-model
 configuration is:
 
 ```swift
 static let includeOpenAICLIP = true
 static let includeDataCompCLIP = true
+static let includeEfficientSAM = true
 static let includeSAM3 = true
 ```
 
@@ -764,13 +874,23 @@ the published manifest and every release gate is complete. Keep the verified SAM
 3 licence resource, SHA-256, and `requiresExplicitAcceptance: true` synchronized
 with its notice catalogue.
 
+The EfficientSAM descriptor must use resource name `EfficientSAM`, asset-pack ID
+`no.blogspot.RawCull.models.efficient-sam`, managed path `Models/EfficientSAM`,
+the verified checkpoint revision, and the actual 3.3.0 archive evidence. Its
+segmentation inclusion must also add `.efficientSAM` to the enabled download-ID
+and segmentation-model sets.
+
 ## 9. Point both configurations to the release
 
 Update both locations to the same exact URL:
 
 ```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/<3.3.0-model-release-tag>/manifest.json
 ```
+
+The literal `v2` URL remains the production value until the new EfficientSAM
+release is published and anonymously verified. Replace the placeholder above
+with that immutable tag; do not use a floating `latest` URL.
 
 The locations are:
 
@@ -799,7 +919,8 @@ Tests must verify:
 - bundled licence texts match their recorded checksums;
 - both manifest URL locations use the same tag;
 - provenance and notice records describe the generated archives;
-- excluded models do not appear in settings or the production catalogue.
+- excluded models do not appear in settings or the production catalogue, while
+  EfficientSAM appears in both for RawCull 3.3.0.
 
 Run the focused download and release-metadata tests, then the full suite:
 
