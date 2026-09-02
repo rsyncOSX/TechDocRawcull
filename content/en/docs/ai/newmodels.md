@@ -677,37 +677,23 @@ manifest URLs. Treat `v3` as immutable after publication.
 
 ## 8. Update RawCull's production catalogue
 
-The current two-CLIP `v2` release uses:
+Configure the production catalogue for exactly the two models published in
+`v3`: DataComp CLIP and SAM 3. Disable OpenAI CLIP and EfficientSAM:
 
 ```swift
-static let includeOpenAICLIP = true
+static let includeOpenAICLIP = false
 static let includeDataCompCLIP = true
-static let includeSAM3 = false
-```
-
-For RawCull 3.3.0, add the EfficientSAM descriptor and inclusion switch, then
-enable it only after its archive is present in the new published manifest and
-all release gates are complete:
-
-```swift
-static let includeOpenAICLIP = true
-static let includeDataCompCLIP = true
-static let includeEfficientSAM = true
-static let includeSAM3 = false
-```
-
-SAM 3 remains blocked. Change its switch only after its redistribution review
-and all technical release gates are complete. The eventual four-model
-configuration is:
-
-```swift
-static let includeOpenAICLIP = true
-static let includeDataCompCLIP = true
-static let includeEfficientSAM = true
+static let includeEfficientSAM = false
 static let includeSAM3 = true
 ```
 
-For every rebuilt archive, update its production descriptor with actual values:
+The enabled download-ID and model-selection sets must likewise contain only
+DataComp CLIP and SAM 3. OpenAI CLIP and EfficientSAM must not appear in the
+production settings UI or the deployable catalogue, even if their descriptors
+remain in source for future development.
+
+Update the DataComp CLIP and SAM 3 production descriptors with the actual `v3`
+archive values:
 
 ```swift
 upstreamRevision: "<verified immutable source revision>",
@@ -717,28 +703,24 @@ installedByteCount: <exact installed bytes or nil>,
 releaseReadiness: .ready,
 ```
 
-Do not change `.blocked` to `.ready` until the corresponding pack is present in
-the published manifest and every release gate is complete. Keep the verified SAM
-3 licence resource, SHA-256, and `requiresExplicitAcceptance: true` synchronized
-with its notice catalogue.
-
-The EfficientSAM descriptor must use resource name `EfficientSAM`, asset-pack ID
-`no.blogspot.RawCull.models.efficient-sam`, managed path `Models/EfficientSAM`,
-the verified checkpoint revision, and the actual 3.3.0 archive evidence. Its
-segmentation inclusion must also add `.efficientSAM` to the enabled download-ID
-and segmentation-model sets.
+Both enabled descriptors must match the archive SHA-256 values and byte counts
+verified in chapter 7. SAM 3 must not change from `.blocked` to `.ready` until
+its technical, licence, and redistribution gates are complete and its pack is
+present in the published `v3` manifest. Keep its verified licence resource,
+SHA-256, and `requiresExplicitAcceptance: true` synchronized with its notice
+catalogue.
 
 ## 9. Point both configurations to the release
 
 Update both locations to the same exact URL:
 
 ```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/<3.3.0-model-release-tag>/manifest.json
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v3/manifest.json
 ```
 
-The literal `v2` URL remains the production value until the new EfficientSAM
-release is published and anonymously verified. Replace the placeholder above
-with that immutable tag; do not use a floating `latest` URL.
+Do not use a floating `latest` URL. Keep the existing production URL unchanged
+until the `v3` DataComp CLIP and SAM 3 payloads and manifest have been published
+and anonymously verified as described in chapter 7.
 
 The locations are:
 
@@ -747,8 +729,9 @@ The locations are:
 - `BAManifestURL` in `RawCull-Info.plist`.
 
 Keep `BAUsesAppleHosting` false for GitHub self-hosting. Do not point RawCull to
-the new manifest until every referenced archive is anonymously downloadable and
-verified.
+the new manifest until both referenced archives are anonymously downloadable
+and verified. The published manifest and both configuration locations must all
+use the same exact `v3` URL.
 
 ## 10. Update provenance, documentation, and tests
 
