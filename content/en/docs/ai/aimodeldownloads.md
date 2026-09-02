@@ -181,8 +181,11 @@ checkout and a new evidence directory. Generate a script-specific lock, inspect
 the resolved dependency tree, and retain the results with the conversion logs:
 
 ```sh
-EXPORT_SCRIPT='/absolute/path/to/pinned/coreai-models/models/efficient-sam/export.py'
-TOOLCHAIN_EVIDENCE_DIR='/absolute/path/to/new/evidence/toolchain'
+EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
+EXPORT_SCRIPT="$EFFICIENTSAM_ROOT/coreai-models/models/efficient-sam/export.py"
+TOOLCHAIN_EVIDENCE_DIR="$EFFICIENTSAM_ROOT/toolchain"
+
+test -f "$EXPORT_SCRIPT"
 mkdir -p "$TOOLCHAIN_EVIDENCE_DIR"
 
 uv lock --refresh --script "$EXPORT_SCRIPT"
@@ -192,6 +195,7 @@ uv tree --locked --script "$EXPORT_SCRIPT" \
 
 rg 'coreai-core v1\.0\.0b2' "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
 rg 'coreai-torch v0\.4\.1' "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
+
 shasum -a 256 "$EXPORT_SCRIPT" "$EXPORT_SCRIPT.lock" \
   | tee "$TOOLCHAIN_EVIDENCE_DIR/exporter-input-sha256.txt"
 ```
