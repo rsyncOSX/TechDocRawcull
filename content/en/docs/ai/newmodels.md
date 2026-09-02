@@ -81,6 +81,13 @@ Follow [AI Model Download Service](../aimodeldownloads/) for the pinned source
 checks, exact PhotoAIKit commands, runtime validation, and packaging layout. The
 canonical release outputs are:
 
+Before running any exporter, complete
+[Prepare a clean, pinned conversion toolchain](../aimodeldownloads/#prepare-a-clean-pinned-conversion-toolchain).
+Refresh host tools only before freezing the evidence workspace, then use the
+reviewed exporter revision and lock unchanged for the entire run. Do not
+interpret a newer package being available as permission to change a release
+toolchain, and do not reuse output made by an earlier lock.
+
 ```text
 CLIP-DataComp/
 ├── metadata.json

@@ -146,6 +146,64 @@ neither CLIP capability is ready.
 The commands below create and publish model artifacts. They are release-operator
 work and are not executed by RawCull at runtime.
 
+### Prepare a clean, pinned conversion toolchain
+
+Refresh host tools before creating the release evidence workspace, not during a
+conversion run. "Latest" is only a candidate for review: the release input is
+the exact Xcode, `uv`, exporter revision, script lock, and resolved package set
+that were reviewed and recorded together. A newer package must not silently
+replace a pinned version.
+
+Install the current supported Xcode release through Apple, select it, and update
+the Homebrew-managed `uv` installation before freezing the evidence record:
+
+```sh
+brew update
+brew upgrade uv
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+
+xcode-select --print-path
+xcodebuild -version
+uv --version
+python3 --version
+xcrun --find coreai-build
+xcrun coreai-build compile --help
+```
+
+If `brew upgrade uv` reports that `uv` is already current, continue. If Xcode,
+`uv`, Python, an exporter revision, or an exporter dependency changes after the
+record is frozen, discard the unvalidated generated output and begin a new
+evidence run. Never repair a release candidate by installing packages into the
+ambient Python environment.
+
+For a PEP 723 exporter such as EfficientSAM, point to the script in the pinned
+checkout and a new evidence directory. Generate a script-specific lock, inspect
+the resolved dependency tree, and retain the results with the conversion logs:
+
+```sh
+EXPORT_SCRIPT='/absolute/path/to/pinned/coreai-models/models/efficient-sam/export.py'
+TOOLCHAIN_EVIDENCE_DIR='/absolute/path/to/new/evidence/toolchain'
+mkdir -p "$TOOLCHAIN_EVIDENCE_DIR"
+
+uv lock --refresh --script "$EXPORT_SCRIPT"
+uv lock --check --script "$EXPORT_SCRIPT"
+uv tree --locked --script "$EXPORT_SCRIPT" \
+  | tee "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
+
+rg 'coreai-core v1\.0\.0b2' "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
+rg 'coreai-torch v0\.4\.1' "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
+shasum -a 256 "$EXPORT_SCRIPT" "$EXPORT_SCRIPT.lock" \
+  | tee "$TOOLCHAIN_EVIDENCE_DIR/exporter-input-sha256.txt"
+```
+
+Those two version assertions are part of the reviewed EfficientSAM recipe, not
+a general instruction to keep those versions forever. If Apple updates the
+recipe or fixes the converter again, pin a reviewed exporter commit, regenerate
+the lock, update the assertions and provenance together, and rerun checkpoint,
+conversion, compilation, runtime, and packaging validation from the beginning.
+Run the exporter with `uv run --locked --script`; do not add `--upgrade`, reuse
+an old `.aimodel`, or export into a directory containing an earlier candidate.
+
 ### Release gates
 
 A working local conversion is not automatically publishable. Every downloadable
