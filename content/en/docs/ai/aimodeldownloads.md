@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Model Download Service"
 linkTitle = "AI Model Downloads"
 date = "2026-08-10"
-lastmod = "2026-09-01"
+lastmod = "2026-09-02"
 description = "Build, validate, package, and download the four optional RawCull AI models."
 tags = ["ai", "models", "downloads", "clip", "efficient-sam", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -19,7 +19,7 @@ bundles:
 | ------------- | ----------------- | -------------------------------------------------------- | ------------------------------ |
 | DataComp CLIP | `CLIP-DataComp`   | `ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel` | Similarity and semantic search |
 | OpenAI CLIP   | `CLIP-OpenAI`     | `clip-vit-base-patch32_float16_static.aimodel`           | Similarity and semantic search |
-| EfficientSAM  | `EfficientSAM`     | `efficient_sam_vitt_float16_static_q64.aimodel`          | Point-prompted segmentation    |
+| EfficientSAM  | `EfficientSAM`     | `efficient_sam_vitt_float16_static_q16.aimodel`          | Point-prompted segmentation    |
 | Meta SAM 3    | `SAM3`            | `sam3_float16.aimodel`                                   | Promptable segmentation        |
 
 SigLIP2 is not part of the RawCull download catalogue or release manifest. Do
@@ -344,8 +344,8 @@ directory from the downloadable pack.
 
 RawCull uses EfficientSAM ViT-Tiny through PhotoAIKit's
 `CoreAIEfficientSAMBackend`. It is point-prompted rather than text-prompted. The
-release configuration uses 64 one-point queries; the runtime places them on an
-8 × 8 grid and returns the highest-confidence mask. EfficientSAM does not need
+release configuration uses 16 one-point queries; the runtime places them on a
+4 × 4 grid and returns the highest-confidence mask. EfficientSAM does not need
 a tokenizer.
 
 | Field                      | Required value                                                     |
@@ -359,7 +359,7 @@ a tokenizer.
 | Source SHA-256             | `dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a` |
 | Apple converter revision   | `c2a0274af289bf481e2d6fd292a86a5bff038f12`                         |
 | Python conversion packages | `coreai-core 1.0.0b2`, `coreai-torch 0.4.1`                        |
-| Export configuration       | Float16, static batch, 64 queries, one point per query             |
+| Export configuration       | Float16, static batch, 16 queries, one point per query             |
 
 Do not reuse the earlier output produced with `coreai-core 1.0.0b1` and
 `coreai-torch 0.4.0`; that output can fail portable Core AI compilation. Create
@@ -416,7 +416,7 @@ TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
 uv run --locked --script models/efficient-sam/export.py \
   --model efficient_sam_vitt \
   --dtype float16 \
-  --num-queries 64 \
+  --num-queries 16 \
   --num-pts 1 \
   --output-dir "$EFFICIENTSAM_EXPORT_DIR"
 ```
@@ -425,18 +425,35 @@ Do not add `--dynamic` or `--overwrite` to the release conversion. The result
 must contain:
 
 ```text
-efficient_sam_vitt_float16_static_q64/
+efficient_sam_vitt_float16_static_q16/
 ├── metadata.json
-└── efficient_sam_vitt_float16_static_q64.aimodel/
+└── efficient_sam_vitt_float16_static_q16.aimodel/
 ```
+
+Q16 is the RawCull release shape. The earlier Q64 export produced an 8 × 8
+discovery grid, but it also emitted 64 queries × 3 candidates × 1024 × 1024
+mask logits for every inference. Before Core AI graph intermediates are counted,
+that is approximately 384 MiB as native Float16 output; the current Swift
+adapter expands the complete tensor to approximately 768 MiB of `Float` values
+and creates another approximately 256 MiB best-per-query array. Q16 reduces
+those query-dependent allocations by four while preserving a regular discovery
+grid. Do not package a Q64 runtime under the Q16 filename or retain the Q64
+selector in `metadata.json`.
+
+The command above compiles the changed graph. `--num-queries` is part of the
+static tensor shape and therefore changes the runtime fingerprint, installed
+size, archive checksum, and performance evidence. Renaming an existing Q64
+directory does not produce a Q16 model. If a Q4 diagnostic build is useful for
+memory scaling, compile it separately with `--num-queries 4`; it is not the
+release candidate.
 
 Verify that `metadata.json` identifies a `segmenter` and selects the runtime in
 `assets.main`. Recompute its fingerprint with the exact PhotoAIKit revision,
 run that checkout's tests, and exercise the complete bundle in RawCull 3.3.0:
 
 ```sh
-EFFICIENTSAM_BUNDLE="$EFFICIENTSAM_EXPORT_DIR/efficient_sam_vitt_float16_static_q64"
-EFFICIENTSAM_RUNTIME="$EFFICIENTSAM_BUNDLE/efficient_sam_vitt_float16_static_q64.aimodel"
+EFFICIENTSAM_BUNDLE="$EFFICIENTSAM_EXPORT_DIR/efficient_sam_vitt_float16_static_q16"
+EFFICIENTSAM_RUNTIME="$EFFICIENTSAM_BUNDLE/efficient_sam_vitt_float16_static_q16.aimodel"
 
 test -f "$EFFICIENTSAM_BUNDLE/metadata.json"
 test -d "$EFFICIENTSAM_RUNTIME"
@@ -596,7 +613,7 @@ ModelAssets/Release/
 │   │   └── clip-vit-base-patch32_float16_static.aimodel/
 │   ├── EfficientSAM/
 │   │   ├── metadata.json
-│   │   └── efficient_sam_vitt_float16_static_q64.aimodel/
+│   │   └── efficient_sam_vitt_float16_static_q16.aimodel/
 │   └── SAM3/
 │       ├── metadata.json
 │       ├── tokenizer/

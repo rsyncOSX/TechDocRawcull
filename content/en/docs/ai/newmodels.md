@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "New RawCull AI models"
 linkTitle = "New RawCull AI models"
 date = "2026-08-10"
-lastmod = "2026-09-01"
+lastmod = "2026-09-02"
 description = "Release runbook for publishing DataComp CLIP, OpenAI CLIP, EfficientSAM, and Meta SAM 3."
 tags = ["ai", "models", "downloads", "clip", "efficient-sam", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -94,7 +94,7 @@ CLIP-OpenAI/
 
 EfficientSAM/
 ├── metadata.json
-└── efficient_sam_vitt_float16_static_q64.aimodel/
+└── efficient_sam_vitt_float16_static_q16.aimodel/
 
 SAM3/
 ├── metadata.json
@@ -132,10 +132,30 @@ Keep every `*_source.aimodel` as private conversion evidence. Never select it in
 a packaging manifest or place it in a downloadable pack.
 
 EfficientSAM is exported separately with Apple's pinned `coreai-models`
-EfficientSAM recipe. It uses Float16, static batch dimensions, 64 one-point
-queries, and no tokenizer. Follow the pinned checkpoint, lockfile, conversion,
-and validation procedure in [AI Model Download Service](../aimodeldownloads/);
-do not reuse an output from the older beta converter toolchain.
+EfficientSAM recipe. The changed release graph uses Float16, static batch
+dimensions, 16 one-point queries, and no tokenizer. From the pinned clean
+`coreai-models` checkout described in
+[AI Model Download Service](../aimodeldownloads/), compile it with:
+
+```sh
+cd "$EFFICIENTSAM_COREAI_DIR"
+uv lock --script models/efficient-sam/export.py
+rg "$EFFICIENTSAM_IMPLEMENTATION_REVISION" models/efficient-sam/export.py.lock
+
+TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
+uv run --locked --script models/efficient-sam/export.py \
+  --model efficient_sam_vitt \
+  --dtype float16 \
+  --num-queries 16 \
+  --num-pts 1 \
+  --output-dir "$EFFICIENTSAM_EXPORT_DIR"
+```
+
+This must create
+`efficient_sam_vitt_float16_static_q16/efficient_sam_vitt_float16_static_q16.aimodel`.
+The query count is compiled into the static graph; renaming the old Q64 asset is
+not a conversion. Do not add `--dynamic` or package an output from the older
+beta converter toolchain.
 
 ## 2. Validate model behavior before packaging
 
@@ -157,9 +177,13 @@ index.
 
 For EfficientSAM, verify PhotoAIKit resolves the complete bundle, compiles the
 portable Core AI program, and produces correctly placed masks in RawCull. Test
-the 8 × 8 point grid on portraits, groups, animals, sports, landscapes,
+the Q16 4 × 4 point grid on portraits, groups, animals, sports, landscapes,
 low-light scenes, off-centre subjects, and scenes with no clear subject. Record
-mask quality, subject-selection success, latency, peak memory, and errors.
+mask quality, subject-selection success, latency, peak `phys_footprint`, wired
+memory, swap growth, and errors. Compare the first inference, later inferences,
+and memory after Deep Review closes. Reject the candidate if its memory remains
+close to the previous Q64 baseline or pressure becomes warning/critical on a
+16 GB supported Mac.
 EfficientSAM is not text-guided; do not describe its target label as a language
 prompt.
 
@@ -211,14 +235,14 @@ enabling its pack:
 4. include the complete Apache License 2.0, applicable Apple BSD 3-Clause
    notice, and any notices required by the locked dependencies in
    `Notices/EfficientSAM`;
-5. validate the q64 runtime through PhotoAIKit and RawCull on the supported
+5. validate the Q16 runtime through PhotoAIKit and RawCull on the supported
    macOS/Xcode toolchain; and
 6. publish the pack and generated manifest under a new immutable tag before
    changing the production descriptor to `.ready`.
 
 The stable pack identity is `no.blogspot.RawCull.models.efficient-sam`, its
 managed destination is `Models/EfficientSAM`, and its runtime selector is
-`efficient_sam_vitt_float16_static_q64.aimodel`. It has no tokenizer directory.
+`efficient_sam_vitt_float16_static_q16.aimodel`. It has no tokenizer directory.
 
 ### Meta SAM 3
 
