@@ -145,18 +145,39 @@ dimensions, 16 one-point queries, and no tokenizer. From the pinned clean
 [AI Model Download Service](../aimodeldownloads/), compile it with:
 
 ```sh
-cd "$EFFICIENTSAM_COREAI_DIR"
-uv lock --script models/efficient-sam/export.py
-rg "$EFFICIENTSAM_IMPLEMENTATION_REVISION" models/efficient-sam/export.py.lock
+set -euo pipefail
 
+EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
+EFFICIENTSAM_COREAI_DIR="$EFFICIENTSAM_ROOT/coreai-models"
+EFFICIENTSAM_EXPORT_DIR="$EFFICIENTSAM_ROOT/export"
+EFFICIENTSAM_TORCH_HOME="$EFFICIENTSAM_ROOT/torch"
+EFFICIENTSAM_SOURCE_FILENAME='efficient_sam_vitt.pt'
+EFFICIENTSAM_EXPECTED_SHA256='dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a'
+EXPORT_SCRIPT="$EFFICIENTSAM_COREAI_DIR/models/efficient-sam/export.py"
+
+test -f "$EXPORT_SCRIPT"
+test -f "$EXPORT_SCRIPT.lock"
+uv lock --check --script "$EXPORT_SCRIPT"
+rg 'coreai-core v1\.0\.0b2' "$EFFICIENTSAM_ROOT/toolchain/uv-tree.txt"
+rg 'coreai-torch v0\.4\.1' "$EFFICIENTSAM_ROOT/toolchain/uv-tree.txt"
+test -f "$EFFICIENTSAM_ROOT/toolchain/exporter-help.txt"
+test "$(shasum -a 256 "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints/$EFFICIENTSAM_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
+  "$EFFICIENTSAM_EXPECTED_SHA256"
+
+UV_OFFLINE=1 \
 TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
-uv run --locked --script models/efficient-sam/export.py \
+uv run --locked --script "$EXPORT_SCRIPT" \
   --model efficient_sam_vitt \
   --dtype float16 \
   --num-queries 16 \
   --num-pts 1 \
   --output-dir "$EFFICIENTSAM_EXPORT_DIR"
 ```
+
+This command runs offline with the verified checkpoint copied into the isolated
+`TORCH_HOME` and the exact converter dependencies installed by the locked
+preflight. It does not use an ambient `pip` installation, re-resolve packages,
+or reuse an earlier generated `.aimodel`.
 
 This must create
 `efficient_sam_vitt_float16_static_q16/efficient_sam_vitt_float16_static_q16.aimodel`.

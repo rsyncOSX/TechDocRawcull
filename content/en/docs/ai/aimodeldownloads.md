@@ -176,17 +176,35 @@ record is frozen, discard the unvalidated generated output and begin a new
 evidence run. Never repair a release candidate by installing packages into the
 ambient Python environment.
 
-For a PEP 723 exporter such as EfficientSAM, point to the script in the pinned
-checkout and a new evidence directory. Generate a script-specific lock, inspect
-the resolved dependency tree, and retain the results with the conversion logs:
+For the current EfficientSAM candidate, create the pinned checkout before
+referencing its PEP 723 exporter. The paths below match the evidence workspace
+used throughout this page. Generate a script-specific lock, inspect the resolved
+dependency tree, and retain the results with the conversion logs:
 
 ```sh
+set -euo pipefail
+
 EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
-EXPORT_SCRIPT="$EFFICIENTSAM_ROOT/coreai-models/models/efficient-sam/export.py"
+EFFICIENTSAM_COREAI_DIR="$EFFICIENTSAM_ROOT/coreai-models"
+EFFICIENTSAM_COREAI_REVISION='c2a0274af289bf481e2d6fd292a86a5bff038f12'
+EXPORT_SCRIPT="$EFFICIENTSAM_COREAI_DIR/models/efficient-sam/export.py"
 TOOLCHAIN_EVIDENCE_DIR="$EFFICIENTSAM_ROOT/toolchain"
 
-test -f "$EXPORT_SCRIPT"
 mkdir -p "$TOOLCHAIN_EVIDENCE_DIR"
+
+if test -e "$EFFICIENTSAM_COREAI_DIR"; then
+  test -d "$EFFICIENTSAM_COREAI_DIR/.git"
+else
+  git clone https://github.com/apple/coreai-models.git \
+    "$EFFICIENTSAM_COREAI_DIR"
+fi
+
+git -C "$EFFICIENTSAM_COREAI_DIR" switch --detach \
+  "$EFFICIENTSAM_COREAI_REVISION"
+test "$(git -C "$EFFICIENTSAM_COREAI_DIR" rev-parse HEAD)" = \
+  "$EFFICIENTSAM_COREAI_REVISION"
+test -z "$(git -C "$EFFICIENTSAM_COREAI_DIR" status --porcelain)"
+test -f "$EXPORT_SCRIPT"
 
 uv lock --refresh --script "$EXPORT_SCRIPT"
 uv lock --check --script "$EXPORT_SCRIPT"
@@ -198,6 +216,9 @@ rg 'coreai-torch v0\.4\.1' "$TOOLCHAIN_EVIDENCE_DIR/uv-tree.txt"
 
 shasum -a 256 "$EXPORT_SCRIPT" "$EXPORT_SCRIPT.lock" \
   | tee "$TOOLCHAIN_EVIDENCE_DIR/exporter-input-sha256.txt"
+
+uv run --locked --script "$EXPORT_SCRIPT" --help \
+  | tee "$TOOLCHAIN_EVIDENCE_DIR/exporter-help.txt"
 ```
 
 Those two version assertions are part of the reviewed EfficientSAM recipe, not
@@ -205,8 +226,12 @@ a general instruction to keep those versions forever. If Apple updates the
 recipe or fixes the converter again, pin a reviewed exporter commit, regenerate
 the lock, update the assertions and provenance together, and rerun checkpoint,
 conversion, compilation, runtime, and packaging validation from the beginning.
-Run the exporter with `uv run --locked --script`; do not add `--upgrade`, reuse
-an old `.aimodel`, or export into a directory containing an earlier candidate.
+The locked `--help` preflight downloads and installs the exact environment
+selected by the script lock without converting a model. Run the exporter with
+the same lock and `UV_OFFLINE=1`; do not add `--upgrade`, reuse an old
+`.aimodel`, or export into a directory containing an earlier candidate.
+Do not run `uv init --script` if `EXPORT_SCRIPT` is missing: that would create a
+new unrelated script instead of retrieving Apple's reviewed exporter.
 
 ### Release gates
 
@@ -447,10 +472,23 @@ EFFICIENTSAM_TORCH_HOME="$EFFICIENTSAM_ROOT/torch"
 mkdir -p "$EFFICIENTSAM_SOURCE_DIR" "$EFFICIENTSAM_EXPORT_DIR" \
   "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints"
 
-git clone https://github.com/apple/coreai-models.git "$EFFICIENTSAM_COREAI_DIR"
+if test -e "$EFFICIENTSAM_COREAI_DIR"; then
+  test -d "$EFFICIENTSAM_COREAI_DIR/.git"
+else
+  git clone https://github.com/apple/coreai-models.git "$EFFICIENTSAM_COREAI_DIR"
+fi
 git -C "$EFFICIENTSAM_COREAI_DIR" switch --detach "$EFFICIENTSAM_COREAI_REVISION"
-git clone https://github.com/rsyncOSX/PhotoAIKit.git "$EFFICIENTSAM_PHOTOAIKIT_DIR"
+test "$(git -C "$EFFICIENTSAM_COREAI_DIR" rev-parse HEAD)" = \
+  "$EFFICIENTSAM_COREAI_REVISION"
+
+if test -e "$EFFICIENTSAM_PHOTOAIKIT_DIR"; then
+  test -d "$EFFICIENTSAM_PHOTOAIKIT_DIR/.git"
+else
+  git clone https://github.com/rsyncOSX/PhotoAIKit.git "$EFFICIENTSAM_PHOTOAIKIT_DIR"
+fi
 git -C "$EFFICIENTSAM_PHOTOAIKIT_DIR" switch --detach "$EFFICIENTSAM_PHOTOAIKIT_REVISION"
+test "$(git -C "$EFFICIENTSAM_PHOTOAIKIT_DIR" rev-parse HEAD)" = \
+  "$EFFICIENTSAM_PHOTOAIKIT_REVISION"
 
 hf download "$EFFICIENTSAM_CHECKPOINT_REPOSITORY" \
   "$EFFICIENTSAM_SOURCE_FILENAME" \
@@ -463,24 +501,33 @@ test "$(stat -f '%z' "$EFFICIENTSAM_SOURCE_DIR/$EFFICIENTSAM_SOURCE_FILENAME")" 
   "$EFFICIENTSAM_EXPECTED_BYTES"
 ditto "$EFFICIENTSAM_SOURCE_DIR/$EFFICIENTSAM_SOURCE_FILENAME" \
   "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints/$EFFICIENTSAM_SOURCE_FILENAME"
+test "$(shasum -a 256 "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints/$EFFICIENTSAM_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
+  "$EFFICIENTSAM_EXPECTED_SHA256"
 ```
 
 Apple's exporter pins the Core AI packages but its EfficientSAM Git dependency
 must also resolve to the implementation revision above. Generate and inspect the
-script lock, then export only from the isolated verified checkpoint cache:
+script lock, then export only from the isolated verified checkpoint cache. The
+locked run uses the exact dependency artifacts recorded in
+`export.py.lock`; `TORCH_HOME` makes the exporter resolve
+`efficient_sam_vitt.pt` from the verified cache populated above:
 
 ```sh
-cd "$EFFICIENTSAM_COREAI_DIR"
-uv lock --script models/efficient-sam/export.py
-rg "$EFFICIENTSAM_IMPLEMENTATION_REVISION" models/efficient-sam/export.py.lock
+EXPORT_SCRIPT="$EFFICIENTSAM_COREAI_DIR/models/efficient-sam/export.py"
+uv lock --check --script "$EXPORT_SCRIPT"
+rg "$EFFICIENTSAM_IMPLEMENTATION_REVISION" "$EXPORT_SCRIPT.lock"
 
+UV_OFFLINE=1 \
 TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
-uv run --locked --script models/efficient-sam/export.py \
+uv run --locked --script "$EXPORT_SCRIPT" \
   --model efficient_sam_vitt \
   --dtype float16 \
   --num-queries 16 \
   --num-pts 1 \
   --output-dir "$EFFICIENTSAM_EXPORT_DIR"
+
+test "$(shasum -a 256 "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints/$EFFICIENTSAM_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
+  "$EFFICIENTSAM_EXPECTED_SHA256"
 ```
 
 Do not add `--dynamic` or `--overwrite` to the release conversion. The result
