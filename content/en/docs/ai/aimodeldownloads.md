@@ -182,6 +182,7 @@ used throughout this page. Generate a script-specific lock, inspect the resolved
 dependency tree, and retain the results with the conversion logs:
 
 ```sh
+(
 set -euo pipefail
 
 EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
@@ -203,7 +204,8 @@ git -C "$EFFICIENTSAM_COREAI_DIR" switch --detach \
   "$EFFICIENTSAM_COREAI_REVISION"
 test "$(git -C "$EFFICIENTSAM_COREAI_DIR" rev-parse HEAD)" = \
   "$EFFICIENTSAM_COREAI_REVISION"
-test -z "$(git -C "$EFFICIENTSAM_COREAI_DIR" status --porcelain)"
+git -C "$EFFICIENTSAM_COREAI_DIR" diff --quiet
+git -C "$EFFICIENTSAM_COREAI_DIR" diff --cached --quiet
 test -f "$EXPORT_SCRIPT"
 
 uv lock --refresh --script "$EXPORT_SCRIPT"
@@ -219,7 +221,14 @@ shasum -a 256 "$EXPORT_SCRIPT" "$EXPORT_SCRIPT.lock" \
 
 uv run --locked --script "$EXPORT_SCRIPT" --help \
   | tee "$TOOLCHAIN_EVIDENCE_DIR/exporter-help.txt"
+)
 ```
+
+Paste the complete parenthesized block, including the opening and closing
+parentheses. Its fail-fast settings then apply only to a subshell: a failed
+check returns to the parent terminal instead of closing it. The two `git diff`
+checks reject modifications to tracked files while permitting the generated,
+untracked `export.py.lock` on a deliberate rerun.
 
 Those two version assertions are part of the reviewed EfficientSAM recipe, not
 a general instruction to keep those versions forever. If Apple updates the

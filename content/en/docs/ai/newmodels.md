@@ -145,6 +145,7 @@ dimensions, 16 one-point queries, and no tokenizer. From the pinned clean
 [AI Model Download Service](../aimodeldownloads/), compile it with:
 
 ```sh
+(
 set -euo pipefail
 
 EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
@@ -172,6 +173,7 @@ uv run --locked --script "$EXPORT_SCRIPT" \
   --num-queries 16 \
   --num-pts 1 \
   --output-dir "$EFFICIENTSAM_EXPORT_DIR"
+)
 ```
 
 This command runs offline with the verified checkpoint copied into the isolated
