@@ -388,25 +388,22 @@ inside that same archive; doing so creates a self-referential checksum.
 
 ## 6. Generate the download manifest
 
-For the historical `v2` run, the operator used this private release work tree:
+Create the `v3` self-hosted manifest from exactly these two approved archives:
 
 ```text
-/Users/thomas/ModelAssets/Release
+Output/clip-datacomp.aar
+Output/sam3.aar
 ```
 
-This path is a record, not a portable prerequisite. For a new release use
-`RELEASE_WORK_ROOT`. Run every `ba-package` command in chapter 6 from that
-directory. Relative paths
-such as `Output/clip-datacomp.aar` and `Packaging/clip-datacomp.json` are
-resolved from the current directory; running the commands from
-`/Users/thomas/ModelAssets` or a RawCull source checkout selects the wrong
-paths.
+OpenAI CLIP and EfficientSAM are not part of `v3`. Do not pass
+`clip-openai.aar` or `efficient-sam.aar` to `ba-package`, and do not add their
+asset-pack IDs to the generated manifest. SAM 3 must have passed the technical,
+licence, and redistribution gates described earlier in this runbook before this
+procedure is used.
 
-Create a self-hosted manifest from the exact approved AAR files in
-`/Users/thomas/ModelAssets/Release/Output`. The generated manifest must contain
-only packs that have passed both technical and legal release gates. It may
-contain any ready subset of the four packs while reviews are in progress;
-RawCull must expose only the same ready set.
+Run every command in this chapter from `RELEASE_WORK_ROOT`. Relative paths such
+as `Output/clip-datacomp.aar` and `Output/sam3.aar` are resolved from the current
+directory.
 
 Verify every entry before publishing:
 
@@ -416,48 +413,53 @@ Verify every entry before publishing:
 - tag-pinned HTTPS archive URL;
 - correct destination selected by RawCull's catalogue.
 
-Do not use GitHub's `/releases/latest/download/` redirect. It excludes
-prereleases and makes the resolved version less explicit. Use URLs under:
+Do not use GitHub's `/releases/latest/download/` redirect. Use the immutable
+`v3` release directory:
 
 ```text
-https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/
+https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v3/
 ```
 
 ### 6.1. How to create the manifest
 
 Create the manifest with the same Xcode installation used to package the AAR
-files. First verify the working directory and inputs. These checks must list the
-release packaging catalogues and the AAR files generated in chapter 5:
+files. Define the release values, then verify the working directory and the
+exact two inputs:
 
 ```sh
-cd /Users/thomas/ModelAssets/Release
+RELEASE_WORK_ROOT='/path/to/private/release-work/ModelAssets/Release'
+MODEL_RELEASE_TAG='v3'
+DATACOMP_PACK_VERSION='3'
+SAM3_PACK_VERSION='3'
+DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/$MODEL_RELEASE_TAG/"
+
+cd "$RELEASE_WORK_ROOT"
 pwd
-ls -l Packaging/*.json Output/*.aar
+test -f Output/clip-datacomp.aar
+test -f Output/sam3.aar
+ls -l Output/clip-datacomp.aar Output/sam3.aar
 ```
 
 Pass only approved archives. `ba-package` matches version numbers to archive
 paths by position: the first value after `--asset-pack-versions` applies to the
 first AAR path, the second value to the second AAR path, and so on. Supply
-exactly one version for each AAR. Version `2` is used below for the new `v2`
-release; replace it with the next monotonically increasing integer for any pack
-that has already used that version.
+exactly one version for each AAR. The example uses pack version `3`; before
+publishing, confirm that `3` is greater than every version previously published
+for each asset-pack ID. The base URL must include its trailing slash.
 
-The base URL is the tag-pinned release directory, including its trailing slash:
+Generate `Output/manifest.json` from only DataComp CLIP and SAM 3:
 
 ```sh
-DOWNLOAD_BASE_URL="https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/"
-
 xcrun ba-package download-manifest create \
   Output/clip-datacomp.aar \
-  --asset-pack-versions 2 \
+  Output/sam3.aar \
+  --asset-pack-versions \
+    "$DATACOMP_PACK_VERSION" \
+    "$SAM3_PACK_VERSION" \
   --macos \
   --download-base-url "$DOWNLOAD_BASE_URL" \
   --output-path Output/manifest.json
 ```
-
-Generate `Output/manifest.json` with one of the commands below. Do not edit the
-generated JSON to add a blocked model. If the ready set changes, regenerate the
-manifest from exactly that set of AAR files.
 
 After generation, validate the JSON, print the included IDs, and inspect every
 generated pack entry before publishing:
@@ -477,83 +479,20 @@ exactly like the final URL component, for example
 `no.blogspot.RawCull.models.clip-datacomp`, with no `.aar` suffix. Chapter 7
 prepares those upload names. Do not hand-edit the generated JSON or URL.
 
-### 6.2. Manifest for both CLIP models
+### 6.2. Verify the exact `v3` model set
 
-Use this manifest after DataComp CLIP and OpenAI CLIP have both passed their
-technical and legal gates, while SAM 3 remains blocked:
-
-```sh
-xcrun ba-package download-manifest create \
-  Output/clip-datacomp.aar \
-  Output/clip-openai.aar \
-  --asset-pack-versions 2 2 \
-  --macos \
-  --download-base-url "$DOWNLOAD_BASE_URL" \
-  --output-path Output/manifest.json
-```
-
-The result must contain exactly these asset-pack IDs:
+The result must contain exactly these two asset-pack IDs:
 
 ```text
 no.blogspot.RawCull.models.clip-datacomp
-no.blogspot.RawCull.models.clip-openai
-```
-
-### 6.3. RawCull 3.3.0 manifest with EfficientSAM
-
-Use this manifest for RawCull 3.3.0 after EfficientSAM and both CLIP models have
-passed all release gates. SAM 3 remains omitted while its redistribution review
-is blocked:
-
-```sh
-xcrun ba-package download-manifest create \
-  Output/clip-datacomp.aar \
-  Output/clip-openai.aar \
-  Output/efficient-sam.aar \
-  --asset-pack-versions \
-    "$DATACOMP_PACK_VERSION" \
-    "$OPENAI_PACK_VERSION" \
-    "$EFFICIENTSAM_PACK_VERSION" \
-  --macos \
-  --download-base-url "$DOWNLOAD_BASE_URL" \
-  --output-path Output/manifest.json
-```
-
-The result must contain exactly these asset-pack IDs:
-
-```text
-no.blogspot.RawCull.models.clip-datacomp
-no.blogspot.RawCull.models.clip-openai
-no.blogspot.RawCull.models.efficient-sam
-```
-
-### 6.4. Manifest for all four models
-
-Use this manifest only after SAM 3 has independently passed all release gates:
-
-```sh
-xcrun ba-package download-manifest create \
-  Output/clip-datacomp.aar \
-  Output/clip-openai.aar \
-  Output/efficient-sam.aar \
-  Output/sam3.aar \
-  --asset-pack-versions \
-    "$DATACOMP_PACK_VERSION" \
-    "$OPENAI_PACK_VERSION" \
-    "$EFFICIENTSAM_PACK_VERSION" \
-    "$SAM3_PACK_VERSION" \
-  --macos \
-  --download-base-url "$DOWNLOAD_BASE_URL" \
-  --output-path Output/manifest.json
-```
-
-The result must contain exactly these asset-pack IDs:
-
-```text
-no.blogspot.RawCull.models.clip-datacomp
-no.blogspot.RawCull.models.clip-openai
-no.blogspot.RawCull.models.efficient-sam
 no.blogspot.RawCull.models.sam3
+```
+
+Reject the manifest if either ID is missing or if any additional ID is present:
+
+```sh
+test "$(jq -r '.assetPacks[].id' Output/manifest.json | sort | tr '\n' ' ')" = \
+  "no.blogspot.RawCull.models.clip-datacomp no.blogspot.RawCull.models.sam3 "
 ```
 
 ## Final reproducibility and licence gate
@@ -588,7 +527,7 @@ publish the manifest last.
 
 Chapter 7 uses two different locations:
 
-- local files come from `/Users/thomas/ModelAssets/Release/Output`;
+- local files come from `RELEASE_WORK_ROOT/Output`;
 - the release itself is in the GitHub repository `rsyncOSX/RawCull-AI-Models`.
 
 `gh release view` does not read a local model or packaging catalogue. Because
@@ -597,63 +536,45 @@ directory. Change to the release staging directory anyway so the later upload
 paths resolve correctly:
 
 ```sh
-cd /Users/thomas/ModelAssets/Release
+cd "$RELEASE_WORK_ROOT"
 gh auth status
 gh repo view rsyncOSX/RawCull-AI-Models --json nameWithOwner,url
 ```
 
-### 7.1. Create or inspect `v2`
+### 7.1. Create or inspect `v3`
 
 `gh release view` only inspects an existing release; it does not create the tag
-or release. To inspect `v2`, use this one-line form, which also avoids shell
+or release. To inspect `v3`, use this one-line form, which also avoids shell
 errors caused by spaces after a line-continuation backslash:
 
 ```sh
-gh release view v2 --repo rsyncOSX/RawCull-AI-Models --json tagName,isDraft,isPrerelease,isImmutable
+gh release view v3 --repo rsyncOSX/RawCull-AI-Models --json tagName,isDraft,isPrerelease,isImmutable
 ```
-
-For the existing `v2` release, the command returns:
-
-```json
-{
-  "isDraft": false,
-  "isImmutable": false,
-  "isPrerelease": true,
-  "tagName": "v2"
-}
-```
-
-`isImmutable:false` means GitHub is not currently enforcing immutable-release
-protection for this repository. Normally treat a release as immutable once
-clients have downloaded or consumed its manifest. The narrowly scoped republish
-procedure in section 7.4 is permitted only when the release is known to be
-unused and the entire affected payload-and-manifest set is replaced.
 
 If the command fails, interpret the error before changing its arguments:
 
 - `accepts at most 1 arg(s)` usually means a copied multiline command lost a
   continuation backslash; use the one-line command above;
-- `release not found` or `Could not resolve to a Release` means `v2` does not
+- `release not found` or `Could not resolve to a Release` means `v3` does not
   exist in the repository selected by `--repo`;
 - an authentication error requires `gh auth login` or a valid `GH_TOKEN`;
 - `error connecting to api.github.com` is a network or proxy failure, not a
-  problem with `v2`, `--repo`, or `--json`.
+  problem with `v3`, `--repo`, or `--json`.
 
 If GitHub reports `release not found`, create the release explicitly from the
-repository's `main` branch. Choose `--prerelease` only when that is the intended
-publication state:
+repository's `main` branch:
 
 ```sh
-gh release create v2 --repo rsyncOSX/RawCull-AI-Models \
+gh release create v3 --repo rsyncOSX/RawCull-AI-Models \
   --target main \
-  --title "RawCull AI models v2" \
-  --prerelease \
-  --notes "RawCull AI model asset packs for manifest version 2."
+  --title "RawCull AI models v3" \
+  --notes "RawCull AI model asset packs for manifest version 3: DataComp CLIP and SAM 3."
 ```
 
-Do not run `gh release create` when `gh release view v2` already succeeds. At
-verification time, `tagName` must be `v2` and `isDraft` must be `false`. A
-tag-pinned URL can use a published prerelease, but record that decision.
+Add `--prerelease` to the create command only if that is the intended
+publication state. Do not run `gh release create` when `gh release view v3`
+already succeeds. At verification time, `tagName` must be `v3` and `isDraft`
+must be `false`.
 
 ### 7.2. Prepare the exact release asset names
 
@@ -662,17 +583,11 @@ not. Make extensionless upload copies whose basenames exactly match the `id`
 values in `Output/manifest.json`:
 
 ```sh
-cd /Users/thomas/ModelAssets/Release
+cd "$RELEASE_WORK_ROOT"
 mkdir -p Output/Upload
 
 cp Output/clip-datacomp.aar \
   Output/Upload/no.blogspot.RawCull.models.clip-datacomp
-cp Output/clip-openai.aar \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai
-# RawCull 3.3.0, when EfficientSAM is present in Output/manifest.json:
-cp Output/efficient-sam.aar \
-  Output/Upload/no.blogspot.RawCull.models.efficient-sam
-# Only when SAM 3 is present in Output/manifest.json:
 cp Output/sam3.aar \
   Output/Upload/no.blogspot.RawCull.models.sam3
 ```
@@ -686,8 +601,10 @@ jq -r '.assetPacks[] | [.id, (.downloadSize | tostring)] | @tsv' \
 stat -f '%N %z' Output/Upload/no.blogspot.RawCull.models.*
 ```
 
-Do not upload `clip-datacomp.aar` or `clip-openai.aar` under those local names;
-they would produce URLs that do not match the generated manifest.
+Do not upload `clip-datacomp.aar` or `sam3.aar` under those local names; they
+would produce URLs that do not match the generated manifest. Confirm that the
+upload directory contains no stale OpenAI CLIP or EfficientSAM payload before
+continuing.
 
 ### 7.3. Upload and verify
 
@@ -698,25 +615,20 @@ Upload files in this order:
 3. upload `manifest.json` last;
 4. download and inspect the published manifest anonymously.
 
-For the current two-CLIP manifest, upload the extensionless assets explicitly:
+For the `v3` manifest, upload exactly the two extensionless assets:
 
 ```sh
-gh release upload v2 \
+gh release upload v3 \
   Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai \
+  Output/Upload/no.blogspot.RawCull.models.sam3 \
   --repo rsyncOSX/RawCull-AI-Models
 ```
-
-For RawCull 3.3.0, use its new tag and add
-`Output/Upload/no.blogspot.RawCull.models.efficient-sam` to the same upload
-command. Verify all three payloads anonymously before uploading that release's
-generated `manifest.json`.
 
 Do not use `--clobber` during a normal new-tag publication. Verify the remote
 filenames:
 
 ```sh
-gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+gh release view v3 --repo rsyncOSX/RawCull-AI-Models \
   --json assets \
   --jq '.assets[] | [.name, (.size | tostring), .url] | @tsv'
 ```
@@ -726,18 +638,21 @@ local upload copies, and only then upload the manifest:
 
 ```sh
 curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-datacomp \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-datacomp
-curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-openai \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-openai
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v3/no.blogspot.RawCull.models.clip-datacomp
+curl --fail --location --output /tmp/no.blogspot.RawCull.models.sam3 \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v3/no.blogspot.RawCull.models.sam3
 
+cmp Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
+  /tmp/no.blogspot.RawCull.models.clip-datacomp
+cmp Output/Upload/no.blogspot.RawCull.models.sam3 \
+  /tmp/no.blogspot.RawCull.models.sam3
 shasum -a 256 \
   Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  /tmp/no.blogspot.RawCull.models.clip-datacomp
-shasum -a 256 \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai \
-  /tmp/no.blogspot.RawCull.models.clip-openai
+  /tmp/no.blogspot.RawCull.models.clip-datacomp \
+  Output/Upload/no.blogspot.RawCull.models.sam3 \
+  /tmp/no.blogspot.RawCull.models.sam3
 
-gh release upload v2 Output/manifest.json \
+gh release upload v3 Output/manifest.json \
   --repo rsyncOSX/RawCull-AI-Models
 ```
 
@@ -745,141 +660,20 @@ Each local/remote checksum pair must match. Finally, download and inspect the
 published manifest anonymously:
 
 ```sh
-curl --fail --location --output /tmp/rawcull-v2-manifest.json \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
-jq empty /tmp/rawcull-v2-manifest.json
+curl --fail --location --output /tmp/rawcull-v3-manifest.json \
+  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v3/manifest.json
+cmp Output/manifest.json /tmp/rawcull-v3-manifest.json
+jq empty /tmp/rawcull-v3-manifest.json
 jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
-  /tmp/rawcull-v2-manifest.json
-```
-
-If clients might already have consumed the release, never replace files under
-its tag. Publish a corrective tag, for example `v2.0.1`, and update both RawCull
-manifest URLs. If the release is confirmed unused, follow section 7.4 instead.
-
-### 7.4. Historical emergency record: republishing unused `v2` assets
-
-Use this exception only when all of the following are true:
-
-- no user or client has downloaded or cached the model release;
-- the GitHub release reports `isImmutable:false`;
-- the replacement archives, manifest, RawCull catalogue, tests, notices, and
-  documentation have already been updated and verified together;
-- every model omitted for legal or technical reasons remains omitted. For the
-  current republish, SAM 3 remains blocked and absent.
-
-First verify the local replacement set. The manifest must contain exactly the
-two ready CLIP packs, and each `downloadSize` must match its extensionless
-upload file:
-
-| Asset                                      | Expected v2 bytes | Expected SHA-256                                                   |
-| ------------------------------------------ | ----------------: | ------------------------------------------------------------------ |
-| `no.blogspot.RawCull.models.clip-datacomp` |       282,966,632 | `cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7` |
-| `no.blogspot.RawCull.models.clip-openai`   |       282,866,068 | `e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c` |
-| `manifest.json`                            |               783 | `d9c58b6ff6752f5ae4e3d692a6d6d5839edca733d7d60da6ed4f54eca336d8a6` |
-
-```sh
-cd /Users/thomas/ModelAssets/Release
-
-jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
-  Output/manifest.json
-stat -f '%N %z' \
-  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai
-shasum -a 256 \
-  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai \
-  Output/manifest.json
-```
-
-Confirm that the manifest includes no SAM 3 entry:
-
-```sh
-test "$(jq -r '.assetPacks[].id' Output/manifest.json | sort | tr '\n' ' ')" = \
-  "no.blogspot.RawCull.models.clip-datacomp no.blogspot.RawCull.models.clip-openai "
-```
-
-Inspect the current remote assets and record their names, sizes, and digests
-before deleting anything:
-
-```sh
-gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
-  --json tagName,isDraft,isPrerelease,isImmutable,assets \
-  --jq '{tagName,isDraft,isPrerelease,isImmutable,assets:[.assets[]|{name,size,digest,url}]}'
-```
-
-Delete the old `manifest.json` first. This prevents a client from discovering
-the old manifest while its referenced payloads are being replaced. Then delete
-the two old CLIP uploads by exact name. Do not delete or recreate the release or
-tag itself:
-
-```sh
-gh release delete-asset v2 manifest.json \
-  --repo rsyncOSX/RawCull-AI-Models --yes
-gh release delete-asset v2 no.blogspot.RawCull.models.clip-datacomp \
-  --repo rsyncOSX/RawCull-AI-Models --yes
-gh release delete-asset v2 no.blogspot.RawCull.models.clip-openai \
-  --repo rsyncOSX/RawCull-AI-Models --yes
-```
-
-Verify those three names are absent. If any deletion failed, stop and resolve it
-before uploading replacements:
-
-```sh
-gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
-  --json assets --jq '.assets[].name'
-```
-
-Upload the two replacement payloads first. SAM 3 must not be included:
-
-```sh
-gh release upload v2 \
-  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai \
-  --repo rsyncOSX/RawCull-AI-Models
-```
-
-Download both published payloads anonymously and compare their byte counts and
-SHA-256 values with the exact local upload files. Upload `manifest.json` only
-after both comparisons succeed:
-
-```sh
-curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-datacomp \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-datacomp
-curl --fail --location --output /tmp/no.blogspot.RawCull.models.clip-openai \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/no.blogspot.RawCull.models.clip-openai
-
-cmp Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  /tmp/no.blogspot.RawCull.models.clip-datacomp
-cmp Output/Upload/no.blogspot.RawCull.models.clip-openai \
-  /tmp/no.blogspot.RawCull.models.clip-openai
-shasum -a 256 \
-  Output/Upload/no.blogspot.RawCull.models.clip-datacomp \
-  /tmp/no.blogspot.RawCull.models.clip-datacomp \
-  Output/Upload/no.blogspot.RawCull.models.clip-openai \
-  /tmp/no.blogspot.RawCull.models.clip-openai
-
-gh release upload v2 Output/manifest.json \
-  --repo rsyncOSX/RawCull-AI-Models
-```
-
-Finally, download the new manifest anonymously and verify it byte-for-byte, then
-cross-check every remote asset against its manifest entry and local catalogue:
-
-```sh
-curl --fail --location --output /tmp/rawcull-v2-manifest.json \
-  https://github.com/rsyncOSX/RawCull-AI-Models/releases/download/v2/manifest.json
-cmp Output/manifest.json /tmp/rawcull-v2-manifest.json
-jq -r '.assetPacks[] | [.id, (.version | tostring), (.downloadSize | tostring), .url] | @tsv' \
-  /tmp/rawcull-v2-manifest.json
-gh release view v2 --repo rsyncOSX/RawCull-AI-Models \
+  /tmp/rawcull-v3-manifest.json
+gh release view v3 --repo rsyncOSX/RawCull-AI-Models \
   --json assets \
   --jq '.assets[] | [.name, (.size | tostring), .digest, .url] | @tsv'
 ```
 
-Do not leave `v2` without a manifest longer than necessary. If replacement or
-verification fails after deletion, keep the manifest absent until the two
-payloads are complete and verified; never restore a manifest that references a
-missing or mismatched archive.
+If clients might already have consumed the release, never replace files under
+its tag. Publish a corrective tag, for example `v3.0.1`, and update both RawCull
+manifest URLs. Treat `v3` as immutable after publication.
 
 ## 8. Update RawCull's production catalogue
 
