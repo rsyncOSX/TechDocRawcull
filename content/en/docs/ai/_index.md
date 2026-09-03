@@ -32,8 +32,6 @@ revision in `Package.resolved`. RawCull intelligence code lives under
 | This overview                                                  | Where does AI belong in the system?                    | You need the vocabulary and responsibility split                                                                     |
 | [How RawCull Enables and Uses CLIP](clip-in-rawcull/)          | How does the CLIP preference become a running backend? | You are tracing model discovery, activation, RAW decoding, inference, fallback, distance calculation, or persistence |
 | [AI Model Downloads](aimodeldownloads/)                        | Where do model assets come from?                       | You are changing download, acceptance, or installation behavior                                                      |
-| [Evaluating CLIP Models](evaluateclipmodels/)                  | How are candidate CLIP models compared reproducibly?   | You are preparing fixtures, running evaluations, or interpreting model-quality measurements                          |
-| [CLIP Model Evaluation Results](evaluation/)                   | How did the evaluated CLIP models perform?             | You need the recorded comparison results and conclusions                                                             |
 | [AI Model Licence and Provenance Clearance](licenceprocedure/) | What evidence is required before a model can ship?     | You are reviewing licences, provenance, redistribution, or release readiness                                         |
 | [Publishing New RawCull AI Models](newmodels/)                 | How is an approved model packaged and published?       | You are preparing a model release or updating the download manifest                                                  |
 
@@ -188,22 +186,3 @@ selection, and storage lifecycle.
 | **Composition root**    | The one place where concrete providers, stores, paths, and app adapters are assembled                                                        |
 | **Partial CLIP result** | Valid CLIP artifacts plus per-file failures; failed files remain unavailable to similarity and burst grouping until a later successful index |
 | **Host**                | The application integrating PhotoAIKit; here, RawCull                                                                                        |
-
-## Suggested Learning Order
-
-This section follows the main documentation index: first read the scan,
-concurrency, cache, focus/sharpness, and burst-group pages. Then read this
-overview and [RawCull Packages](../packages/) for the boundaries. Continue with
-[How PhotoAIKit Is Constructed](../packages/photoaikit/), then follow the live
-path in [How RawCull Loads and Uses CLIP](clip-in-rawcull/) and
-[Modular AI Integration](../modularaiintegration/).
-
-Installation and acceptance steps intentionally live only in
-[AI Model Downloads](aimodeldownloads/). The architecture pages describe managed
-locations and validation but do not duplicate download procedures.
-
-For model-selection work, continue with
-[Evaluating CLIP Models](evaluateclipmodels/) and the recorded
-[CLIP Model Evaluation Results](evaluation/). Release work then proceeds through
-[AI Model Licence and Provenance Clearance](licenceprocedure/) before
-[Publishing New RawCull AI Models](newmodels/).

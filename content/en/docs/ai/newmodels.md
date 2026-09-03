@@ -3,49 +3,37 @@ author = "Thomas Evensen"
 title = "New RawCull AI models"
 linkTitle = "New RawCull AI models"
 date = "2026-08-10"
-lastmod = "2026-09-02"
-description = "Release runbook for publishing DataComp CLIP, OpenAI CLIP, EfficientSAM, and Meta SAM 3."
-tags = ["ai", "models", "downloads", "clip", "efficient-sam", "sam3", "background-assets", "self-hosting", "apple-hosting"]
+lastmod = "2026-09-03"
+description = "Release runbook for publishing DataComp CLIP and Meta SAM 3."
+tags = ["ai", "models", "downloads", "clip", "sam3", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 31
 +++
 
 # Publishing new RawCull AI models
 
-This runbook publishes four optional models:
+This runbook publishes two optional models:
 
 | Model         | Asset-pack ID                              | Installed destination  |
 | ------------- | ------------------------------------------ | ---------------------- |
 | DataComp CLIP | `no.blogspot.RawCull.models.clip-datacomp` | `Models/CLIP-DataComp` |
-| OpenAI CLIP   | `no.blogspot.RawCull.models.clip-openai`   | `Models/CLIP-OpenAI`   |
-| EfficientSAM  | `no.blogspot.RawCull.models.efficient-sam` | `Models/EfficientSAM`  |
 | Meta SAM 3    | `no.blogspot.RawCull.models.sam3`          | `Models/SAM3`          |
 
-SigLIP2 remains deliberately excluded. EfficientSAM is planned for RawCull
-3.3.0 and must be prepared as a new pack; do not mutate the published `v2`
-release to add it.
-
-The published record described by this page is the `v2` release in
+The release described by this page is `v3` in
 [`RawCull-AI-Models`](https://github.com/rsyncOSX/RawCull-AI-Models/releases).
 Tag names and GitHub release URLs are case-sensitive.
 
-The current `v2` manifest publishes DataComp CLIP and OpenAI CLIP only. Meta SAM
-3 remains blocked and must not be uploaded or added to the deployable manifest
-until its redistribution review is complete. The RawCull 3.3.0 release should
-add EfficientSAM under a new immutable model-release tag after its technical and
-licence gates pass.
+The `v3` manifest must publish DataComp CLIP and Meta SAM 3 only. Meta SAM 3
+must not be uploaded or added to the deployable manifest until its
+redistribution review is complete.
 
-The literal `v2` hashes, sizes, URLs, and commands below are a reproducibility
-record for that publication. They are not a reusable instruction to mutate the
-same tag. For a new release, define these variables once and use a new immutable
-tag and monotonically increasing per-pack versions:
+Define these variables once and use a new immutable tag and monotonically
+increasing per-pack versions for any later release:
 
 ```sh
 MODEL_RELEASE_REPOSITORY='rsyncOSX/RawCull-AI-Models'
 MODEL_RELEASE_TAG='vNEXT'
 DATACOMP_PACK_VERSION='NEXT_INTEGER'
-OPENAI_PACK_VERSION='NEXT_INTEGER'
-EFFICIENTSAM_PACK_VERSION='NEXT_INTEGER'
 SAM3_PACK_VERSION='NEXT_INTEGER'
 RELEASE_SOURCE_ROOT='/path/to/RawCull-AI-Models/ModelAssets/Release'
 RELEASE_WORK_ROOT='/path/to/private/release-work/ModelAssets/Release'
@@ -75,7 +63,7 @@ The packaging manifest schema uses `assetPackID`, `downloadPolicy`,
 generated download manifest uses `id`, version, download size, and URL; do not
 copy the packaging key name `assetPackID` into generated-manifest assertions.
 
-## 1. Build the four canonical bundles
+## 1. Build the two canonical bundles
 
 Follow [AI Model Download Service](../aimodeldownloads/) for the pinned source
 checks, exact PhotoAIKit commands, runtime validation, and packaging layout. The
@@ -94,15 +82,6 @@ CLIP-DataComp/
 ├── tokenizer/
 └── ViT-B-32-256-datacomp_s34b_b86k_float16_static.aimodel/
 
-CLIP-OpenAI/
-├── metadata.json
-├── tokenizer/
-└── clip-vit-base-patch32_float16_static.aimodel/
-
-EfficientSAM/
-├── metadata.json
-└── efficient_sam_vitt_float16_static_q16.aimodel/
-
 SAM3/
 ├── metadata.json
 ├── tokenizer/
@@ -110,8 +89,8 @@ SAM3/
 ```
 
 Use PhotoAIKit revision `6e3216027b267c27ccaf99d334807b18ea1aaec9`, or document
-and review the exact later revision actually used. Release CLIP bundles must use
-Float16, static batch dimensions, metadata version `0.4`, separate
+and review the exact later revision actually used. The release CLIP bundle must
+use Float16, static batch dimensions, metadata version `0.4`, separate
 `image_encoder` and `text_encoder` functions, and corrected bicubic
 preprocessing. The checked-in blocked SAM 3 candidate uses metadata version
 `0.2`, while the reviewed current exporter emits `0.3`. A future SAM 3 release
@@ -138,55 +117,6 @@ semantic rankings. The corrected tested bundle uses the registered
 Keep every `*_source.aimodel` as private conversion evidence. Never select it in
 a packaging manifest or place it in a downloadable pack.
 
-EfficientSAM is exported separately with Apple's pinned `coreai-models`
-EfficientSAM recipe. The changed release graph uses Float16, static batch
-dimensions, 16 one-point queries, and no tokenizer. From the pinned clean
-`coreai-models` checkout described in
-[AI Model Download Service](../aimodeldownloads/), compile it with:
-
-```sh
-(
-set -euo pipefail
-
-EFFICIENTSAM_ROOT='/Users/thomas/ModelAssets/ReleaseEvidence/EfficientSAM/38bb0b55425abf62274ba4a8c51249e3d7298b70'
-EFFICIENTSAM_COREAI_DIR="$EFFICIENTSAM_ROOT/coreai-models"
-EFFICIENTSAM_EXPORT_DIR="$EFFICIENTSAM_ROOT/export"
-EFFICIENTSAM_TORCH_HOME="$EFFICIENTSAM_ROOT/torch"
-EFFICIENTSAM_SOURCE_FILENAME='efficient_sam_vitt.pt'
-EFFICIENTSAM_EXPECTED_SHA256='dff858b19600a46461cbb7de98f796b23a7a888d9f5e34c0b033f7d6eb9e4e6a'
-EXPORT_SCRIPT="$EFFICIENTSAM_COREAI_DIR/models/efficient-sam/export.py"
-
-test -f "$EXPORT_SCRIPT"
-test -f "$EXPORT_SCRIPT.lock"
-uv lock --check --script "$EXPORT_SCRIPT"
-rg 'coreai-core v1\.0\.0b2' "$EFFICIENTSAM_ROOT/toolchain/uv-tree.txt"
-rg 'coreai-torch v0\.4\.1' "$EFFICIENTSAM_ROOT/toolchain/uv-tree.txt"
-test -f "$EFFICIENTSAM_ROOT/toolchain/exporter-help.txt"
-test "$(shasum -a 256 "$EFFICIENTSAM_TORCH_HOME/hub/checkpoints/$EFFICIENTSAM_SOURCE_FILENAME" | cut -d ' ' -f 1)" = \
-  "$EFFICIENTSAM_EXPECTED_SHA256"
-
-UV_OFFLINE=1 \
-TORCH_HOME="$EFFICIENTSAM_TORCH_HOME" \
-uv run --locked --script "$EXPORT_SCRIPT" \
-  --model efficient_sam_vitt \
-  --dtype float16 \
-  --num-queries 16 \
-  --num-pts 1 \
-  --output-dir "$EFFICIENTSAM_EXPORT_DIR"
-)
-```
-
-This command runs offline with the verified checkpoint copied into the isolated
-`TORCH_HOME` and the exact converter dependencies installed by the locked
-preflight. It does not use an ambient `pip` installation, re-resolve packages,
-or reuse an earlier generated `.aimodel`.
-
-This must create
-`efficient_sam_vitt_float16_static_q16/efficient_sam_vitt_float16_static_q16.aimodel`.
-The query count is compiled into the static graph; renaming the old Q64 asset is
-not a conversion. Do not add `--dynamic` or package an output from the older
-beta converter toolchain.
-
 ## 2. Validate model behavior before packaging
 
 For each bundle:
@@ -199,23 +129,11 @@ For each bundle:
 4. Install the complete candidate in a clean RawCull or RawCullFB model path.
 5. Rebuild all model-specific indexes after every model or fingerprint change.
 
-For both CLIP models, run PyTorch/Core AI parity and then the same RawCullFB
+For DataComp CLIP, run PyTorch/Core AI parity and then the RawCullFB
 `semantictest.txt`. The report must include semantic-search rankings and
 image-to-image similarity comparisons. Review rankings, score spread, repeated
 results, failures, and elapsed time. Do not compare models against a reused
 index.
-
-For EfficientSAM, verify PhotoAIKit resolves the complete bundle, compiles the
-portable Core AI program, and produces correctly placed masks in RawCull. Test
-the Q16 4 × 4 point grid on portraits, groups, animals, sports, landscapes,
-low-light scenes, off-centre subjects, and scenes with no clear subject. Record
-mask quality, subject-selection success, latency, peak `phys_footprint`, wired
-memory, swap growth, and errors. Compare the first inference, later inferences,
-and memory after Deep Review closes. Reject the candidate if its memory remains
-close to the previous Q64 baseline or pressure becomes warning/critical on a
-16 GB supported Mac.
-EfficientSAM is not text-guided; do not describe its target label as a language
-prompt.
 
 For SAM 3, test text prompts, mask dimensions and placement, licence acceptance,
 relaunch, and removal.
@@ -233,46 +151,6 @@ not reuse values from the old custom-named runtime.
 
 The published `v2` record is 282,966,632 bytes with SHA-256
 `cf433dcd199b44635a4ff0260bd8e79177e4907a4cfcb2f72043066b8cbe4ef7`.
-
-### OpenAI CLIP
-
-The current engineering/release record marks OpenAI CLIP ready and publishes it
-in `v2`. Its pinned source revision is
-`3d74acf9a28c67741b2f4f2ea7635f0aaf6f0268`, the recorded source-weight
-SHA-256 is `a63082132ba4f97a80bea76823f544493bffa8082296d62d71581a4feff1576f`,
-and the archive is 282,866,068 bytes with SHA-256
-`e9181157c2d4012db2e6478949488f9906696a4ed78ecaa10235d9762621136c`.
-
-Before republishing or replacing it, re-evaluate the exact trained-weight
-licence basis recorded by the responsible approver; the current Hugging Face
-model page does not itself provide a weight-specific licence identifier. Record
-the PhotoAIKit revision, command, tokenizer checksum, runtime fingerprint,
-archive checksum, byte count, complete notices, evidence date, and approver.
-Published availability and a `.ready` enum value are product state, not legal
-evidence.
-
-### EfficientSAM
-
-EfficientSAM is the segmentation model planned for RawCull 3.3.0. Before
-enabling its pack:
-
-1. verify the pinned `yformer/EfficientSAM` implementation revision and
-   `merve/EfficientSAM` checkpoint revision, byte count, and SHA-256;
-2. use the pinned Apple `coreai-models` converter revision and locked Python
-   dependency resolution documented in the download-service page;
-3. record the conversion command, exporter and lock checksums, runtime
-   fingerprint, `main.mlirb` checksum, archive checksum, and byte count;
-4. include the complete Apache License 2.0, applicable Apple BSD 3-Clause
-   notice, and any notices required by the locked dependencies in
-   `Notices/EfficientSAM`;
-5. validate the Q16 runtime through PhotoAIKit and RawCull on the supported
-   macOS/Xcode toolchain; and
-6. publish the pack and generated manifest under a new immutable tag before
-   changing the production descriptor to `.ready`.
-
-The stable pack identity is `no.blogspot.RawCull.models.efficient-sam`, its
-managed destination is `Models/EfficientSAM`, and its runtime selector is
-`efficient_sam_vitt_float16_static_q16.aimodel`. It has no tokenizer directory.
 
 ### Meta SAM 3
 
@@ -293,26 +171,19 @@ from the public manifest until that review is complete.
 
 ## 4. Prepare release staging
 
-The reviewed source tree may contain all four known candidates, but a generated
-release work tree and manifest must contain only the ready subset and its notice
-catalogues:
+The generated release work tree and manifest must contain only DataComp CLIP,
+SAM 3, and their notice catalogues:
 
 ```text
 ModelAssets/Release/
 ├── Models/
 │   ├── CLIP-DataComp/
-│   ├── CLIP-OpenAI/
-│   ├── EfficientSAM/
 │   └── SAM3/
 ├── Notices/
 │   ├── CLIP-DataComp/
-│   ├── CLIP-OpenAI/
-│   ├── EfficientSAM/
 │   └── SAM3/
 ├── Packaging/
 │   ├── clip-datacomp.json
-│   ├── clip-openai.json
-│   ├── efficient-sam.json
 │   └── sam3.json
 └── Output/
 ```
@@ -320,7 +191,7 @@ ModelAssets/Release/
 Each packaging manifest selects only:
 
 - the bundle's `metadata.json`;
-- its `tokenizer` directory when required (CLIP and SAM 3 only);
+- its `tokenizer` directory;
 - its optimized runtime `.aimodel` directory;
 - its matching notice directory.
 
@@ -344,16 +215,14 @@ xcrun ba-package --version
 xcrun ba-package help package
 ```
 
-Run one package operation per ready model from the staging root. For the current
-`v2` republish, package the two CLIP models only:
+Run one package operation per ready model from the staging root. Package
+DataComp CLIP first:
 
 ```sh
 cd /Users/thomas/ModelAssets/Release
 
 xcrun ba-package package Packaging/clip-datacomp.json \
   --output-path Output/clip-datacomp.aar
-xcrun ba-package package Packaging/clip-openai.json \
-  --output-path Output/clip-openai.aar
 
 shasum -a 256 Output/*.aar
 stat -f '%N %z bytes' Output/*.aar
@@ -365,14 +234,6 @@ status changes from blocked to ready:
 ```sh
 xcrun ba-package package Packaging/sam3.json \
   --output-path Output/sam3.aar
-```
-
-For RawCull 3.3.0, package EfficientSAM after its technical and licence gates
-pass:
-
-```sh
-xcrun ba-package package Packaging/efficient-sam.json \
-  --output-path Output/efficient-sam.aar
 ```
 
 The `.aar` suffix here means an Apple Archive produced for Managed Background
@@ -395,11 +256,8 @@ Output/clip-datacomp.aar
 Output/sam3.aar
 ```
 
-OpenAI CLIP and EfficientSAM are not part of `v3`. Do not pass
-`clip-openai.aar` or `efficient-sam.aar` to `ba-package`, and do not add their
-asset-pack IDs to the generated manifest. SAM 3 must have passed the technical,
-licence, and redistribution gates described earlier in this runbook before this
-procedure is used.
+SAM 3 must have passed the technical, licence, and redistribution gates
+described earlier in this runbook before this procedure is used.
 
 Run every command in this chapter from `RELEASE_WORK_ROOT`. Relative paths such
 as `Output/clip-datacomp.aar` and `Output/sam3.aar` are resolved from the current
@@ -603,8 +461,7 @@ stat -f '%N %z' Output/Upload/no.blogspot.RawCull.models.*
 
 Do not upload `clip-datacomp.aar` or `sam3.aar` under those local names; they
 would produce URLs that do not match the generated manifest. Confirm that the
-upload directory contains no stale OpenAI CLIP or EfficientSAM payload before
-continuing.
+upload directory contains no stale payload before continuing.
 
 ### 7.3. Upload and verify
 
@@ -678,19 +535,15 @@ manifest URLs. Treat `v3` as immutable after publication.
 ## 8. Update RawCull's production catalogue
 
 Configure the production catalogue for exactly the two models published in
-`v3`: DataComp CLIP and SAM 3. Disable OpenAI CLIP and EfficientSAM:
+`v3`: DataComp CLIP and SAM 3:
 
 ```swift
-static let includeOpenAICLIP = false
 static let includeDataCompCLIP = true
-static let includeEfficientSAM = false
 static let includeSAM3 = true
 ```
 
 The enabled download-ID and model-selection sets must likewise contain only
-DataComp CLIP and SAM 3. OpenAI CLIP and EfficientSAM must not appear in the
-production settings UI or the deployable catalogue, even if their descriptors
-remain in source for future development.
+DataComp CLIP and SAM 3.
 
 Update the DataComp CLIP and SAM 3 production descriptors with the actual `v3`
 archive values:
@@ -750,8 +603,7 @@ Tests must verify:
 - bundled licence texts match their recorded checksums;
 - both manifest URL locations use the same tag;
 - provenance and notice records describe the generated archives;
-- excluded models do not appear in settings or the production catalogue, while
-  EfficientSAM appears in both for RawCull 3.3.0.
+- excluded models do not appear in settings or the production catalogue.
 
 Run the focused download and release-metadata tests, then the full suite:
 
@@ -775,33 +627,27 @@ xcodebuild \
 
 Before shipping:
 
-1. confirm Settings lists only the enabled subset of DataComp, OpenAI, and SAM
-   3;
+1. confirm Settings lists only DataComp CLIP and SAM 3;
 2. download each enabled model through Managed Background Assets;
 3. rebuild each CLIP index and test semantic search and similarity;
-4. verify that DataComp and OpenAI artifacts never cross-load;
-5. after SAM 3 becomes ready and is published, accept its licence and verify
+4. after SAM 3 becomes ready and is published, accept its licence and verify
    segmentation;
-6. relaunch and verify installation and selection persistence;
-7. remove each pack independently;
-8. interrupt a download and verify retry;
-9. verify Vision feature-print similarity remains the safe fallback when no CLIP
+5. relaunch and verify installation and selection persistence;
+6. remove each pack independently;
+7. interrupt a download and verify retry;
+8. verify Vision feature-print similarity remains the safe fallback when no CLIP
    model is available.
 
 ## Release checklist
 
-- [ ] The supported model scope remains DataComp CLIP, OpenAI CLIP, and SAM 3.
-- [ ] The current manifest contains exactly the ready subset (both CLIP packs
-      for v2).
+- [ ] The supported model scope remains DataComp CLIP and SAM 3.
+- [ ] The `v3` manifest contains exactly DataComp CLIP and SAM 3.
 - [ ] DataComp uses `datacomp_s34b_b86k`, not the custom filename preset.
 - [ ] Exact upstream revisions and source checksums are recorded.
 - [ ] The exact PhotoAIKit revision and conversion commands are recorded.
 - [ ] Runtime fingerprints match `metadata.json`.
 - [ ] CLIP parity, semantic search, and image similarity are reviewed.
 - [ ] SAM 3 segmentation and licence acceptance are tested.
-- [ ] OpenAI's current ready/published decision has a dated, named evidence
-      record covering the exact trained weights; any newly discovered blocker
-      removes it from the next manifest.
 - [ ] SAM 3 remains blocked and absent, or its redistribution review is
       complete.
 - [ ] Only optimized runtime assets are packaged.
