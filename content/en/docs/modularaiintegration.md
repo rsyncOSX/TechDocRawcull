@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Modular AI Integration"
 date = "2026-08-29"
-lastmod = "2026-08-31"
+lastmod = "2026-09-03"
 description = "How RawCull's completed modular AI refactor separates configuration, model management, similarity, semantic search, burst analysis, and optional Deep Review."
 weight = 58
 tags = ["ai", "architecture", "modularization", "semantic-search", "similarity", "burst-analysis"]
@@ -81,6 +81,134 @@ flowchart TD
     Integration --> Contracts["PhotoAIKit protocols"]
     Contracts --> Backends["Vision, CLIP, and segmentation backends"]
 ```
+
+### How The Diagram Maps To Construction And Calls
+
+The arrows do not all mean "calls in this direction." A solid arrow primarily
+means that the source retains the destination or uses it as a dependency. A
+dotted arrow means that a focused object must occasionally call back into
+application-owned behavior. Those callbacks are deliberately weak, or are
+supplied as short-lived closures that capture the application weakly.
+
+#### Construction at application startup
+
+`RawCullApp.init()` calls `RawCullApplicationState.live()`. The returned
+`RawCullApplicationState` is an assembly value containing the two stable roots;
+the app stores its `viewModel` and `intelligenceRuntime` separately in `@State`.
+`RawCullApplicationState.make(...)`, in
+`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`, constructs
+the live graph in dependency order:
+
+1. It creates `RawCullAIIntegration`. The integration constructs the concrete
+   Vision fallback, CLIP resource managers, segmentation stores and services,
+   and `DeepAIReviewFeature` behind PhotoAIKit-facing protocols.
+2. It creates `RawCullAIModelManagementModel`, then passes that exact instance
+   into `RawCullAISettingsModel`. During settings initialization,
+   `bindLocationsConsumer(self)` installs the settings model as the management
+   model's weak destination for complete installed-model location snapshots.
+3. It asks settings for an initial `RawCullIntelligenceConfiguration`. The
+   snapshot selects narrow similarity and semantic-search services from the
+   integration, while Vision remains the safe similarity fallback until a CLIP
+   provider has been validated.
+4. It creates one `SimilarityScoringModel` from that configuration, then creates
+   `RawCullSimilarityFeature` and `RawCullSemanticSearchFeature` over the same
+   scoring model. The semantic feature is also given the same similarity
+   feature, so semantic indexing presentation and image indexing operation state
+   cannot diverge.
+5. It creates `DeepAIReviewController` around the integration's existing
+   `DeepAIReviewFeature`, rather than creating a second operation model.
+6. It creates `RawCullViewModel` with those exact feature objects. The view
+   model constructs and strongly retains `BurstAnalysisCoordinator`, and binds
+   itself as the weak similarity and Deep Review application context.
+7. It creates `RawCullIntelligenceRuntime`, which strongly retains the
+   integration, settings, model management, similarity, semantic-search, and
+   Deep Review objects. The runtime repeats the similarity-context bind with the
+   same view-model identity; the bind is intentionally idempotent for that same
+   object.
+8. Finally, assembly binds the semantic feature weakly to the view model and
+   settings weakly to the runtime. Binding settings immediately publishes the
+   first revisioned configuration. Identity assertions then verify that the
+   runtime and view model received the same feature and operation-model
+   instances.
+
+`RawCullApp.body` passes the focused feature objects to `RawCullMainView` and
+passes `settingsModel` to `SettingsView`. Views therefore call feature methods
+directly; they do not locate providers through the integration or manufacture
+new feature models.
+
+#### How representative calls travel through the graph
+
+- **Startup and model refresh:** the app's `.task` calls
+  `settingsModel.refresh()`. Settings calls `modelManagementModel.refresh()`,
+  which asks its coordinator for one snapshot, publishes download presentations,
+  and sends the complete `managedModelLocations` map through its weak locations
+  consumer. Settings installs those locations in `RawCullAIIntegration`,
+  refreshes capabilities and saved burst evidence in parallel, then publishes a
+  new complete runtime configuration.
+- **Settings changes:** a settings setter persists the choice and calls
+  `publishConfiguration()`. That method increments `configurationRevision`,
+  builds `configurationSnapshot(...)`, and calls
+  `configurationConsumer?.apply(configuration:)`. The runtime rejects stale
+  revisions, accepts equal identities without resetting work, and otherwise
+  replaces only the changed segmentation, similarity, or semantic-search
+  dependency. The stable feature instances are not replaced.
+- **Semantic search:** a view calls `RawCullSemanticSearchFeature.search(for:)`.
+  The feature asks its weak application target for the currently admitted files,
+  asks it to prepare RawCull selection and burst state, delegates ranking to the
+  shared `SimilarityScoringModel`, then asks the target to apply the resulting
+  selection. Generation checks around the awaits prevent an older query from
+  applying after a newer action.
+- **Similarity work:** views and the view model construct typed hydration,
+  indexing, or ranking requests and call `RawCullSimilarityFeature`. When a
+  backend replacement needs application policy, the feature uses its weak
+  `RawCullSimilarityApplicationContext` to cancel/reset burst analysis and to
+  obtain a catalog snapshot. The feature owns task and generation checks while
+  the shared scoring model owns the observable artifacts and results.
+- **Burst analysis:** `RawCullViewModel` builds an immutable
+  `BurstAnalysisPipelineRequest` and calls its retained
+  `BurstAnalysisCoordinator`. Per-run `BurstAnalysisRunCallbacks` report
+  progress and return a typed `BurstAnalysisPipelineResult`. Every closure that
+  reaches back to the view model captures `[weak self]`; the result is applied
+  only if the request's generation and catalog are still current. The
+  coordinator does not retain a permanent application delegate.
+- **Deep Review:** a view calls `DeepAIReviewController.start(for:)`. The
+  controller asks its weak `DeepAIReviewApplicationContext` for a
+  `DeepAIReviewGroupContext`. The view model copies the current group signature,
+  candidate IDs and URLs, burst ranks, sharpness scores, subject labels, focus
+  points, and scoring source into that value. The controller then maps it into
+  an immutable, `Sendable` `DeepAIReviewRequest` and calls
+  `DeepAIReviewFeature.start(_:)`. The feature receives evidence, not a
+  reference to the view model.
+
+#### How the weak references work
+
+Each stored weak destination is typed as an `AnyObject`-constrained protocol,
+which permits Swift's `weak` storage while exposing only the required methods:
+
+| Weak or non-owning edge         | Storage and binding                                                                            | Calls allowed through the edge                                                                        |
+| ------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Settings to runtime             | `RawCullAISettingsModel.configurationConsumer`, bound by `bindConfigurationConsumer(_:)`       | Apply one complete revisioned intelligence configuration and return capabilities.                     |
+| Model management to settings    | `RawCullAIModelManagementModel.locationsConsumer`, bound during settings initialization        | Deliver one complete managed-model location map after refresh, download, or removal.                  |
+| Similarity to view model        | `RawCullSimilarityFeature.applicationContext`, bound while constructing the view model/runtime | Read a typed catalog snapshot and cancel/reset burst work when the backend changes.                   |
+| Semantic search to view model   | `RawCullSemanticSearchFeature.applicationTarget`, bound after both objects exist               | Admit files and coordinate selection, navigation, catalog restoration, and scoped burst invalidation. |
+| Deep Review to view model       | `DeepAIReviewController.applicationContext`, bound by `RawCullViewModel.init`                  | Check whether work is blocked and copy current burst evidence into a value context.                   |
+| Burst coordinator to view model | No stored back-reference; per-run callbacks use `[weak self]`                                  | Validate currency, publish progress and scoring side effects, and apply a typed result.               |
+
+Because a weak property is automatically set to `nil` when its target is
+released, these calls use optional chaining or `guard let` and safely become a
+no-op when an application root no longer exists. The weak properties are also
+marked `@ObservationIgnored` where their enclosing type is observable: binding
+bookkeeping is not UI state. Single-bind preconditions (or same-identity checks)
+prevent an object from being silently redirected to a different application
+root.
+
+The ownership consequence is important. The runtime and view model may both
+retain the stable feature objects, and the view model retains its burst
+coordinator, but none of those children retains the view model or runtime back
+through a coordination edge. Without `weak`, paths such as runtime -> settings
+-> runtime and view model -> semantic feature -> view model would be retain
+cycles. The same pattern is used outside the diagram by `AppDelegate`, whose
+reference to `RawCullViewModel` is also weak.
 
 Solid arrows show lifetime ownership or dependency use. Dotted arrows are weak
 application coordination edges. The weak edges allow a feature to request the
