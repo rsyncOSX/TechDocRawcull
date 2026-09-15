@@ -31,10 +31,11 @@ Keep IDs and destinations stable across release versions unless intentionally
 creating a different pack or moving its installed contents. The generated
 manifest must agree with `RawCullAIModelDownloadCatalog.production` exactly.
 
-Qwen3-4B is not in this table because RawCull does not currently declare a Qwen
-download descriptor or import a PhotoAIKit language-model provider. The build
-recipe later on this page creates a developer Core AI LLM bundle; adding it to
-`v4` is a separate product and integration decision.
+Qwen is not in this table because RawCull does not currently declare a managed
+Qwen download descriptor. RawCull does import PhotoAIKit's Qwen provider, but
+the person using the app selects a local vision-language bundle. The build
+recipe later on this page creates that developer bundle; adding it to `v4` is a
+separate product and integration decision.
 
 ## Verified Baseline For v4
 
@@ -231,104 +232,101 @@ Keep the verified source manifest and PhotoAIKit revision in `PROVENANCE.json`;
 do not claim that `metadata.json` alone binds the revision. Exclude
 `sam3_float16_source.aimodel` from the downloadable pack.
 
-## Create A Compiled Qwen3-4B Bundle
+## Create A Qwen3-VL Bundle For Image Prompts
 
-This optional procedure produces a macOS Core AI language-model bundle with an
-ahead-of-time compiled `.aimodelc`. It does not by itself add Qwen to
-PhotoAIKit, RawCull's catalog, or the `v4` manifest.
+Yes, image prompts require a new model export. The earlier `Qwen3-4B` recipe
+creates a text-only bundle whose `metadata.json` has `kind: llm` and only a main
+decoder asset. RawCull deliberately rejects that bundle before inference.
+Changing the metadata string cannot add vision support: a usable bundle needs
+the Qwen3-VL checkpoint, `kind: vlm`, and separate `main`, `embedding`, and
+`vision` Core AI assets.
 
-Use the same Core AI exporter revision resolved through PhotoAIKit:
+RawCull currently resolves PhotoAIKit at
+`c5c76590c3d79ad508d24d893cd7d8d6aa873355`, which resolves Apple's
+`coreai-models` at `7359dbcf6c3babb4fbfadfd015ffcc1cb6d87420`.
+That Core AI revision provides the `qwen3-vl` recipe for
+`Qwen/Qwen3-VL-2B-Instruct`. Use that exact exporter revision:
 
 ```sh
-QWEN_REVISION='1cfa9a7208912126459214e8b04321603b3df60c'
-QWEN_ROOT="/Users/thomas/ModelAssets/ReleaseEvidence/Qwen3-4B/$QWEN_REVISION"
-QWEN_SOURCE_DIR="$QWEN_ROOT/source"
+COREAI_MODELS_REVISION='7359dbcf6c3babb4fbfadfd015ffcc1cb6d87420'
+COREAI_MODELS_DIR='/Users/thomas/ModelAssets/coreai-models'
 
-mkdir -p "$QWEN_SOURCE_DIR"
-hf download Qwen/Qwen3-4B \
-  config.json generation_config.json model.safetensors.index.json \
-  model-00001-of-00003.safetensors model-00002-of-00003.safetensors \
-  model-00003-of-00003.safetensors tokenizer.json tokenizer_config.json \
-  merges.txt vocab.json LICENSE README.md \
-  --revision "$QWEN_REVISION" --local-dir "$QWEN_SOURCE_DIR"
+git clone https://github.com/apple/coreai-models.git "$COREAI_MODELS_DIR"
+git -C "$COREAI_MODELS_DIR" checkout --detach "$COREAI_MODELS_REVISION"
+cd "$COREAI_MODELS_DIR"
 
-test "$(stat -f '%z' "$QWEN_SOURCE_DIR/model-00001-of-00003.safetensors")" = '3957900840'
-test "$(stat -f '%z' "$QWEN_SOURCE_DIR/model-00002-of-00003.safetensors")" = '3987450520'
-test "$(stat -f '%z' "$QWEN_SOURCE_DIR/model-00003-of-00003.safetensors")" = '99630640'
-test "$(stat -f '%z' "$QWEN_SOURCE_DIR/tokenizer.json")" = '11422654'
-
-test "$(shasum -a 256 "$QWEN_SOURCE_DIR/model-00001-of-00003.safetensors" | cut -d ' ' -f 1)" = \
-  '328a91d3122359d5547f9d79521205bc0a46e1f79a792dfe650e99fc2d651223'
-test "$(shasum -a 256 "$QWEN_SOURCE_DIR/model-00002-of-00003.safetensors" | cut -d ' ' -f 1)" = \
-  '6cd087b316306a68c562436b5492edbcf6e16c6dba3a1308279caa5a58e21ca5'
-test "$(shasum -a 256 "$QWEN_SOURCE_DIR/model-00003-of-00003.safetensors" | cut -d ' ' -f 1)" = \
-  'e4bf436957184f4eeb86a80e9db394503f1f56446b2e6b7edeac5b81470f4ca1'
-test "$(shasum -a 256 "$QWEN_SOURCE_DIR/tokenizer.json" | cut -d ' ' -f 1)" = \
-  'aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4'
-
-git clone https://github.com/apple/coreai-models.git
-cd coreai-models
-git checkout --detach cc812078731871574c9b2eb620aa40734c4b89ee
-
-uv run coreai.model.registry \
-  --model-info qwen3-4b-8bit-kv \
-  --type llm \
-  --platform macOS
-
-uv run coreai.llm.export qwen3-4b-8bit-kv \
-  --platform macOS \
-  --output-dir "$PWD/exports" \
-  --output-name qwen3_4b_4bit_weights_8bit_kv_cache_dynamic
+uv run coreai.vlm.export --list-models
+uv run coreai.vlm.export qwen3-vl \
+  --max-context-length 4096 \
+  --output-dir "$PWD/exports"
 ```
 
-This preset exports Qwen3-4B with INT4 per-block weights, an INT8 per-tensor KV
-cache, float16 compute, and the 40,960-token registry context limit. At the
-verification point, `Qwen/Qwen3-4B` resolved to immutable Hugging Face revision
-`1cfa9a7208912126459214e8b04321603b3df60c` under Apache-2.0. Record that
-revision and verify the downloaded source blobs before conversion:
+Do not pass `--skip-vision`; it intentionally omits the vision encoder and does
+not produce a bundle RawCull can use for photos. The exporter downloads the
+Qwen3-VL checkpoint and creates:
 
-| Source blob | Bytes | SHA-256 |
-|---|---:|---|
-| `model-00001-of-00003.safetensors` | 3,957,900,840 | `328a91d3122359d5547f9d79521205bc0a46e1f79a792dfe650e99fc2d651223` |
-| `model-00002-of-00003.safetensors` | 3,987,450,520 | `6cd087b316306a68c562436b5492edbcf6e16c6dba3a1308279caa5a58e21ca5` |
-| `model-00003-of-00003.safetensors` | 99,630,640 | `e4bf436957184f4eeb86a80e9db394503f1f56446b2e6b7edeac5b81470f4ca1` |
-| `tokenizer.json` | 11,422,654 | `aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4` |
+```text
+exports/qwen3_vl_2b/
+├── metadata.json
+├── tokenizer/
+├── qwen3_vl_2b.aimodel
+├── embed.aimodel
+└── vision.aimodel
+```
 
-The exporter at this revision does not expose a Hugging Face `--revision`
-option. Preserve the resolved snapshot revision from the export environment and
-fail the release if it is not the recorded revision above; do not assume that a
-future `main` snapshot has the same bytes.
+Before selecting the directory in RawCull, verify that `metadata.json` contains
+`"kind": "vlm"`, that `assets.main`, `assets.embedding`, and `assets.vision`
+name those three existing assets, and that `source.hf_model_id` is
+`Qwen/Qwen3-VL-2B-Instruct`. Select the `qwen3_vl_2b` directory, not one of the
+individual `.aimodel` directories.
 
-Compile for the current Mac's Core AI architecture with Xcode 27 or newer:
+The VLM exporter uses Hugging Face `snapshot_download` but does not expose a
+`--revision` option. For a release-quality or reproducible artifact, first pin
+and record the resolved Qwen3-VL snapshot revision and source-file hashes, then
+ensure the exporter consumed that cached snapshot. Do not reuse the Qwen3-4B
+revision or hashes: Qwen3-4B and Qwen3-VL-2B-Instruct are different checkpoints.
+
+Ahead-of-time compilation is optional because RawCull and PhotoAIKit accept
+both `.aimodel` and `.aimodelc`. If compiling, compile all three assets for the
+current Mac architecture, not only the main decoder:
 
 ```sh
-MODEL_DIR="$PWD/exports/qwen3_4b_4bit_weights_8bit_kv_cache_dynamic"
-MODEL_NAME="qwen3_4b_4bit_weights_8bit_kv_cache_dynamic"
+MODEL_DIR="$PWD/exports/qwen3_vl_2b"
 ARCHITECTURE=$(xcrun swift -e \
   'import CoreAI; print(AIModel.deviceArchitectureName)')
 
-xcrun coreai-build compile \
-  "$MODEL_DIR/$MODEL_NAME.aimodel" \
-  --output "$MODEL_DIR/$MODEL_NAME-$ARCHITECTURE.aimodelc" \
-  --platform macOS \
-  --min-deployment-version 27.0 \
-  --architecture "$ARCHITECTURE" \
-  --preferred-compute gpu
+xcrun coreai-build compile "$MODEL_DIR/qwen3_vl_2b.aimodel" \
+  --output "$MODEL_DIR/qwen3_vl_2b.aimodelc" \
+  --platform macOS --min-deployment-version 27.0 \
+  --architecture "$ARCHITECTURE" --preferred-compute gpu
+xcrun coreai-build compile "$MODEL_DIR/embed.aimodel" \
+  --output "$MODEL_DIR/embed.aimodelc" \
+  --platform macOS --min-deployment-version 27.0 \
+  --architecture "$ARCHITECTURE" --preferred-compute gpu
+xcrun coreai-build compile "$MODEL_DIR/vision.aimodel" \
+  --output "$MODEL_DIR/vision.aimodelc" \
+  --platform macOS --min-deployment-version 27.0 \
+  --architecture "$ARCHITECTURE" --preferred-compute gpu
 ```
 
-Then change `metadata.json` so `assets.main` names the compiled directory, for
-example `qwen3_4b_4bit_weights_8bit_kv_cache_dynamic-h16s.aimodelc`. Do not guess
-the architecture suffix; use the value printed by Core AI. Keep the tokenizer
-directory and all other bundle metadata beside the compiled asset.
+With those exact basename-plus-`c` output names, the Core AI bundle resolver
+can fall back from each `.aimodel` metadata entry to its `.aimodelc` counterpart
+when the source asset is absent. If different compiled names are used, update
+all three entries in `metadata.json`. Compiled assets are
+architecture-specific; keep the uncompiled bundle for portability or build and
+label separate bundles for each supported architecture.
 
-An `.aimodelc` is architecture-specific. A downloadable pack containing it
-must target only compatible Macs, or the release must provide separate packs
-and manifest entries per architecture. If portability is required, distribute
-the uncompiled `.aimodel` and accept runtime compilation instead. Before
-packaging, run `llm-runner` against the final bundle, hash the complete compiled
-directory with the repository's deterministic tree-fingerprint method, and
-record the Xcode/Core AI build versions, architecture, source revision, source
-blob hashes, metadata, licence, and final asset-pack hash and size.
+Validate the completed bundle with an actual image before relying on RawCull:
+
+```sh
+swift run -c release llm-runner \
+  --model "$MODEL_DIR" \
+  --image /absolute/path/to/test-photo.jpg \
+  --prompt "Describe this image."
+```
+
+This creates a developer-selected local bundle only. It does not add Qwen to
+RawCull's Managed Background Assets catalog or the `v4` manifest.
 
 ## 2. Generate The Manifest
 
