@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawCull Loads and Uses CLIP"
 linkTitle = "CLIP in RawCull"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "A beginner-friendly source walk-through of RawCull's OpenAI and DataComp CLIP models, model loading, PhotoAIKit packages, image similarity, semantic search, recovery, and persistence."
 tags = ["ai", "clip", "openai", "datacomp", "photoaikit", "semantic-search", "similarity", "rawcull"]
 categories = ["technical details"]
@@ -13,12 +13,14 @@ weight = 20
 
 # How RawCull Loads and Uses CLIP
 
-RawCull supports two CLIP models:
+RawCull contains prepared support for two CLIP models:
 
 - **OpenAI CLIP ViT-B/32**, which processes a 224 × 224 image;
 - **OpenCLIP DataComp ViT-B-32-256**, which processes a 256 × 256 image.
 
-The user selects one model in **Settings > AI**. That one selection defines the
+Production currently exposes DataComp CLIP; OpenAI CLIP is excluded by
+`includeOpenAICLIP = false` while its descriptor and provider code remain in the
+tree. When more than one CLIP model is enabled, the user's selection defines the
 vector space used for both image-to-image similarity and text-to-image semantic
 search. RawCull never mixes vectors from the two models.
 
@@ -156,9 +158,12 @@ RawCull also links `CoreAISAM3Backend`, but SAM 3 is a separate segmentation
 model. Its resource check happens alongside the two CLIP checks; it is not used
 to calculate CLIP vectors.
 
-PhotoAIKit has one external Swift package dependency: `apple/coreai-models`,
-pinned to an exact revision. Its `CoreAISegmentation` product makes the Core AI
-runtime APIs available to the CLIP and SAM 3 backend targets.
+PhotoAIKit depends on `apple/coreai-models`, pinned to
+`cc812078731871574c9b2eb620aa40734c4b89ee`, and on
+`huggingface/swift-transformers` from 1.3.3. `CoreAISegmentation` supplies the
+Core AI runtime integration; the `Tokenizers` product supplies tokenizer
+support used by the CLIP backend. RawCull's lockfile currently resolves
+swift-transformers 1.3.4.
 
 ### 3.2 Apple Frameworks Used Around The Packages
 
@@ -395,7 +400,7 @@ The provider then:
 
 1. reads `assets.main` and creates an `AIModel`;
 2. asks Core AI to prefer GPU specialization;
-3. creates `CLIPTokenizer` from the bundle's tokenizer folder;
+3. creates `CoreAIClipTokenizer` from the bundle's tokenizer folder;
 4. finds and loads the metadata-selected image and text functions;
 5. requires `pixel_values` and `image_embeds` on the image side;
 6. requires `input_ids` and `text_embeds` on the text side;

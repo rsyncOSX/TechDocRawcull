@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Export and Copy Pipeline"
 linkTitle = "Export / Copy Pipeline"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "The one-way rsync-backed pipeline RawCull uses to export selected photographs."
 tags = ["rawcull", "export", "rsync", "security-scoped-urls"]
 categories = ["technical details"]
@@ -59,7 +59,7 @@ rating, tagged-only) into the actual argument array passed to rsync, e.g.:
 
 ```
 ["-avc", "--itemize-changes", "--update", "--from0",
- "--files-from=/var/tmp/copyfilelist-<uuid>.list0",
+ "--files-from=.../Application Support/RawCull/CopyLists/<uuid>.list0",
  "<source folder>/", "<destination folder>/"]
 ```
 
@@ -75,28 +75,29 @@ user selected and tells rsync to copy only those.
 1. **Resolve the file list** — `viewModel.extractRatedfilenames(minimumRating:)`
    (or the tagged-files equivalent) returns the filenames to copy.
 2. **Write the include list** — filenames are null-separated and written to
-   a temp file under `/var/tmp/copyfilelist-<UUID>.list0`; the temp file is
-   deleted in `cleanup()` once the run finishes.
-3. **Resolve security-scoped access** for both source and destination
-   folders (they may be different security-scoped bookmarks than the
-   currently active catalog), tracked as `sourceAccessedURL`/
+   an operation-unique file under Application Support
+   `RawCull/CopyLists/`; it is deleted in `cleanup()`.
+3. **Resolve security-scoped access** — the source is the current selected
+   catalog URL; the destination must resolve from `destBookmark`. There is no
+   direct-path fallback. Both scopes are tracked as `sourceAccessedURL` and
    `destAccessedURL` and released in `cleanup()`.
 4. **Build arguments and launch** — via the external `RsyncProcessStreaming`
    package's process wrapper, configured through
    `CreateStreamingHandlers.createHandlers(fileHandler:processTermination:)`
    (`Model/Handlers/CreateStreamingHandlers.swift`), which hardcodes
    `rsyncPath: "/usr/bin/rsync"`.
-5. **Stream progress** — `fileHandler` is invoked with a running count as
-   rsync emits itemized-change lines; `processTermination` receives the full
-   output array plus exit status when the process exits.
+5. **Stream progress and termination** — `fileHandler` yields a running count;
+   `processTermination` maps process termination into `CopyOutcome.success`,
+   `.failed(message:)`, or `.cancelled`.
 6. **Report a typed failure** if any step fails, via the
    `CopyStartupFailure` enum (`rsyncArgumentsUnavailable`,
    `noMatchingFiles`, `sourceAccessFailed`, `processLaunchFailed`, ...), so
    the UI can show a specific alert rather than a generic error.
 
-Any startup or teardown failure is surfaced through
-`viewModel.operationFailurePresentation`, driving the alert already wired up
-in `RawCullMainView`.
+Startup failures are returned synchronously as `CopyStartupFailure` and shown by
+`CopyFilesView`. Process failures and cancellation are retained in
+`CopyDataResult.outcome`; stderr/exit diagnostics are appended to detailed
+output instead of being presented as a successful copy.
 
 `isolated deinit { cleanup() }` guarantees the temp include-file and
 security-scoped access are released even if `ExecuteCopyFiles` is
@@ -126,10 +127,14 @@ block. RawCull turns that into UI-friendly data in three steps:
    minimum star rating (or "tagged files only") and a destination, and
    optionally toggles dry-run.
 2. `CopyFilesView` constructs and drives `ExecuteCopyFiles`.
-3. On completion, a summary ("3 files · 45.2 MB") is shown with a button to
+3. On completion, a result headed **Copy complete**, **Dry run complete**,
+   **Copy incomplete**, **Dry run failed**, or a cancelled variant is shown.
+   `CopyOperation` retains the actual source, destination, and dry-run mode so
+   the result cannot drift if view state changes while rsync is running.
+4. A summary ("3 files · 45.2 MB") includes a button to
    open the detailed itemized output table
    (`Views/OutputViews/DetailsView.swift`), backed by `RemoteDataNumbers`.
-4. `Views/SavedFiles` provides a separate, persistent browser over
+5. `Views/SavedFiles` provides a separate, persistent browser over
    previously-saved culling records (`CullingModel.savedFiles`) independent
    of any specific copy run.
 

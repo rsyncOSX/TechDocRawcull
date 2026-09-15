@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "Known Issues and Findings"
 linkTitle = "Known Issues"
 date = "2026-09-04"
-lastmod = "2026-09-04"
-description = "Prioritized RawCull code-review findings and recommended remediations."
+lastmod = "2026-09-15"
+description = "Prioritized RawCull code-review findings, resolved items, and verification gaps."
 tags = ["rawcull", "issues", "code-review", "security"]
 categories = ["technical details"]
 weight = 90
@@ -12,164 +12,80 @@ weight = 90
 
 # Known Issues and Findings
 
-This is a code-review pass over the main `RawCull` app target (excluding
-`RawCullTests` and the external SPM packages). Overall the codebase is
-unusually clean for its size: **no force-unwraps (`!`), no `try!`, no
-force-casts (`as!`), no unguarded array `[0]` accesses, no `DispatchSemaphore`
-or `Timer`/`NotificationCenter` leaks**, and every
-`startAccessingSecurityScopedResource()` call has a matching
-`stopAccessingSecurityScopedResource()` on all paths, including cancellation
-and `deinit`. The findings below are the exceptions to that otherwise solid
-baseline. Severities: **High** (real user-facing breakage or data-loss risk),
-**Medium** (real bug/gap, narrow trigger conditions or degraded UX), **Low**
-(code-quality / robustness / maintainability).
+This page records findings verified against the current app source. It separates
+open behavior from items fixed since the September 4 review so old remediation
+advice is not mistaken for current implementation guidance.
 
----
+## Open Findings
 
-## 1. No escape hatch when a quit-time save fails — **Medium/High**
+### 1. App-scope bookmark entitlements need signed-build verification — Medium
 
-`Main/RawCullApp.swift`, `AppDelegate.applicationShouldTerminate`:
+`RawCull.entitlements` currently declares the app sandbox and the Managed
+Background Assets application group, but not an explicit
+`com.apple.security.files.bookmarks.app-scope` or
+`com.apple.security.files.user-selected.read-write` key. The active catalog is
+Powerbox-selected and the copy destination is persisted as `destBookmark`.
 
-```swift
-terminationTask = Task {
-    let didSave = await viewModel.cullingModel.flushPersistence()
-    if didSave {
-        viewModel.stopActiveSecurityScopedAccess()
-    }
-    terminationTask = nil
-    sender.reply(toApplicationShouldTerminate: didSave)
-}
-return .terminateLater
-```
+This is a verification item, not proof of a failure. Exercise catalog and
+destination access across relaunch in the actual signed distribution build. If
+bookmark resolution fails under the shipping sandbox, add the required
+capability and retain the existing “reopen/reselect” recovery messages.
 
-If `flushPersistence()` fails (e.g. the catalog's volume was ejected, disk is
-full, or permissions changed), `didSave` is `false` and the app replies
-`false` to `NSApplication` — **the app refuses to quit**. `RawCullMainView`
-does show an alert in this situation (`persistenceErrorIsPresented`,
-driven by `cullingModel.persistenceError`), but that alert only offers
-**"Retry"** (and "Archive Damaged File" for load failures, not save
-failures). There is no "Quit Without Saving" / "Force Quit" option, so a
-user whose destination volume is genuinely gone has no in-app way to exit
-cleanly — they must force-quit via the Dock or Activity Monitor, which is a
-worse experience than a clearly-labeled data-loss confirmation.
+### 2. Directory-enumeration failures are still silent — Low
 
-**Suggested fix:** add a destructive "Quit Without Saving" button to the
-persistence-failure alert, and have it call
-`sender.reply(toApplicationShouldTerminate: true)` directly instead of
-looping through `flushPersistence()` again.
+`Actors/ScanFiles.swift` still catches a directory-enumeration error and returns
+an empty result while its warning log remains commented out. Permission, missing
+volume, and I/O failures can therefore look like an empty catalog. Restore a
+diagnostic at minimum and consider a non-blocking user-facing failure state.
 
-## 2. Security-scope fallback path is likely dead code in the sandboxed build — **Medium**
+### 3. Last-waiter cancellation can briefly duplicate a thumbnail decode — Low
 
-`Model/ParametersRsync/ExecuteCopyFiles.swift`, `tryFallbackPath(_:key:)`:
+When the last waiter leaves an exact-key `RequestThumbnail` request, the actor
+removes the in-flight entry and cooperatively cancels the producer. A new waiter
+can start another producer before the old blocking decode observes
+cancellation. Generation checks still discard stale completion safely, so this
+is wasted work rather than a correctness failure.
 
-```swift
-private func tryFallbackPath(_ fallbackPath: String, key: String) -> URL? {
-    let fallbackURL = URL(fileURLWithPath: fallbackPath)
-    guard fallbackURL.startAccessingSecurityScopedResource() else { ... }
-    ...
-}
-```
+### 4. Commented logger calls remain — Low
 
-This calls `startAccessingSecurityScopedResource()` on a **plain
-`file://` URL built from a string path**, not on a URL resolved from a
-security-scoped bookmark or an `NSOpenPanel` selection. `RawCull.entitlements`
-confirms the app runs under `com.apple.security.app-sandbox = true`. In a
-sandboxed process, `startAccessingSecurityScopedResource()` only succeeds
-for URLs that were actually granted through Powerbox (an open panel) or a
-resolved security-scoped bookmark — calling it on an arbitrary path outside
-the container will almost always return `false`. This makes the fallback
-branch effectively unreachable/useless in production, while its companion
-success-path log line ("Successfully accessed fallback path for ...") would
-be misleading if it were ever hit. Recommend removing the fallback (relying
-solely on bookmark resolution) or replacing it with a clear "please
-reselect this folder" prompt routed through `NSOpenPanel`.
+Commented `Logger` statements remain in scan, cache, and thumbnail paths. They
+should either be removed or restored behind deliberate logging policy so they
+do not look like accidentally disabled diagnostics.
 
-## 3. Entitlements may be missing a required file-access capability — **Medium (needs verification)**
+## Resolved Since The Previous Review
 
-`RawCull.entitlements` declares only:
+### Quit-time persistence recovery
 
-```xml
-<key>com.apple.security.application-groups</key> ... 
-<key>com.apple.security.app-sandbox</key><true/>
-```
+`AppDelegate.applicationShouldTerminate(_:)` now delegates to its testable
+`beginTermination(...)` lifecycle. A failed flush presents Retry, Cancel, and the
+destructive **Quit Without Saving** choice. `QuitRecoveryTests.swift` covers
+successful save, retry, cancel, and discard behavior, and only one termination
+task can be active.
 
-There is no `com.apple.security.files.bookmarks.app-scope` or
-`com.apple.security.files.user-selected.read-write` entry, despite the app's
-core workflow depending on persisting security-scoped bookmarks
-(`UserDefaults.standard.data(forKey: "sourceBookmark")` /
-`"destBookmark"`, see `RawCullViewModel.swift` and
-`ExecuteCopyFiles.getAccessedURL`) to regain access to user-chosen source
-and destination folders **across app relaunches**. Document-scoped bookmarks
-created directly from an `NSOpenPanel` grant typically don't require an
-extra entitlement, but this is worth explicitly re-verifying against a real
-signed build — if bookmark resolution silently fails after an update to
-sandbox rules, users would lose access to previously configured catalogs
-with only a generic "could not access folder" alert and no diagnostic path
-back to the root cause.
+### Copy security-scope fallback
 
-## 4. Scan failures are completely silent (no log, no UI) — **Low**
+The plain-path fallback was removed. `ExecuteCopyFiles` uses the selected
+catalog URL as the source and requires `destBookmark` for the destination. It
+refreshes stale destination bookmarks while access is active and returns clear
+reopen/reselect messages on failure.
 
-`Actors/ScanFiles.swift`, `scanFiles(url:onProgress:)`:
+### Copy result integrity
 
-```swift
-} catch {
-    // Logger.process.warning("Scan Error: \(error)")
-    return []
-}
-```
+Process termination now produces a typed `CopyOutcome` and retains an immutable
+`CopyOperation` snapshot. Failure output is included in details; result titles
+distinguish completed, incomplete, and cancelled copies/dry runs. Startup and
+completion tests cover these paths.
 
-Any failure enumerating the catalog directory (permission denied, missing
-folder, I/O error) is swallowed to an empty file list with **the log line
-commented out** — there is no OSLog entry and no user-facing alert, so a
-scan failure is indistinguishable from "this folder is genuinely empty."
-This makes field diagnosis of access problems unnecessarily hard.
-Uncomment/restore the log line at minimum; consider surfacing a
-non-blocking banner for repeated scan failures the way persistence failures
-already are.
+### Export filename collisions
 
-## 5. Minor duplicate-decode race in thumbnail request coalescing — **Low**
+`SaveJPGImage` uses filesystem-enforced creation without overwriting and retries
+with numeric suffixes. Concurrent exports and case-insensitive collisions no
+longer overwrite an existing JPEG.
 
-`Actors/RequestThumbnail.swift`, `cancelWaiter`/`enqueue`: when the *last*
-waiter for a coalesced request cancels, the in-flight entry is removed from
-`inFlightRequests` and `task.cancel()` is called, but cancellation is
-cooperative — if the underlying decode is mid-flight inside
-`rawLoader.thumbnailCGImage` (which doesn't check `Task.isCancelled`
-internally) and a **new** request for the same file arrives before the old
-task notices cancellation, a second concurrent decode of the same file will
-start. This wastes CPU/disk I/O but is not a correctness bug: the generation
-check in `finishRequest` ensures the stale result is discarded safely and no
-continuation is double-resumed. Consider making the old task's completion
-check-and-reuse an already-superseding in-flight entry instead of always
-starting a fresh decode.
+## Review Baseline
 
-## 6. Commented-out `Logger` calls scattered through the codebase — **Low**
-
-`grep -rn '^\s*// Logger\.'` finds 13 debug log lines left commented out
-(e.g. in `RequestThumbnail.swift`, `ScanFiles.swift`). Harmless, but they're
-dead debugging leftovers that should either be deleted or restored/gated
-behind a debug flag — as-is they add noise for future readers wondering if
-they're intentionally disabled instrumentation or accidental omissions.
-
----
-
-## What was checked and found clean
-
-- **Force-unwraps / `try!` / `as!`**: none in the app target.
-- **Security-scoped resource pairing**: every `start...` has a matching
-  `stop...` on every return path, including error paths, task cancellation,
-  and `isolated deinit` (`RawCullViewModel`, `ExecuteCopyFiles`, `ScanFiles`,
-  `OpencatalogView`).
-- **Debounced-save correctness** (`CullingModel.scheduleSave`): revision
-  counters correctly prevent a stale debounced write from clobbering newer
-  in-memory state; `flushPersistence`/`retryPersistence` correctly cancel any
-  pending debounce and persist the *current* snapshot, not a stale captured
-  one.
-- **Array indexing**: every `array[0]`-style access found is either guarded
-  by a preceding `!isEmpty` check or targets an Apple-guaranteed
-  non-empty system directory list.
-- **Swift 6 concurrency**: `SWIFT_VERSION = 6.0` is set for all targets,
-  which enables complete concurrency checking at the language-mode level
-  regardless of the separate (Swift 5-only) `SWIFT_STRICT_CONCURRENCY`
-  build setting — the apparent inconsistency in `project.pbxproj` (only the
-  test target sets `SWIFT_STRICT_CONCURRENCY = complete` explicitly) is not
-  a functional gap.
+The app target still avoids force unwraps, `try!`, force casts, and blocking
+semaphores in production paths. Swift 6 language mode supplies complete
+concurrency checking. Continue to treat security-scope pairing, revisioned
+persistence, cancellation ownership, and stale-result guards as executable
+invariants backed by focused tests rather than one-time review conclusions.

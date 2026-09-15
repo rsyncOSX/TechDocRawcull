@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
@@ -28,23 +28,23 @@ owns the dependency. A revision-only pin has no semantic-version label.
 
 | Identity              | Relationship               | Version/branch | Revision                                   |
 | --------------------- | -------------------------- | -------------- | ------------------------------------------ |
-| PhotoAIKit            | app                        | revision pin   | `1e2eaccd00947fbadda300e4a617842479cae7b9` |
-| PhotoAnalysisKit      | app                        | `1.2.2`        | `3bf462fab0d82f5e4c315273688933ace68fa737` |
+| PhotoAIKit            | app                        | revision pin   | `20e57359603313af7c2d38cae3e8b6e37f8838ef` |
+| PhotoAnalysisKit      | app                        | `1.3.1`        | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
 | RawCullCore           | app                        | `1.1.2`        | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
-| RawParserKit          | app                        | `1.2.9`        | `26327d983a3f0216c460684ad91944b9543af420` |
+| RawParserKit          | app                        | `1.3.0`        | `d2175ed880d39021bdb5f5a2a842b460af0b316c` |
 | RsyncArguments        | app                        | `1.0.0`        | `0ff6518136c208dfbecc1a918f045048ca79853d` |
 | RsyncProcessStreaming | app                        | `1.0.0`        | `dd86f012b352888fd146e0b6e103740dc237f740` |
 | ParseRsyncOutput      | app                        | `1.0.0`        | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
 | DecodeEncodeGeneric   | app                        | `1.0.0`        | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
-| coreai-models         | transitive from PhotoAIKit | revision pin   | `bffc38fe48f50e4e962ac9772b64a5b55a605286` |
+| coreai-models         | transitive from PhotoAIKit | revision pin   | `cc812078731871574c9b2eb620aa40734c4b89ee` |
 | EventSource           | transitive                 | `1.5.1`        | `86b5096ac59ab46e66bd1f6377c604bc1dab0bc2` |
-| swift-asn1            | transitive                 | `1.7.1`        | `a9a5efd40eaf558a2bcd48d64b1d1646be686008` |
+| swift-asn1            | transitive                 | `1.7.2`        | `d9a5b37470adc940d22c3bcd5ca6953a516b727f` |
 | swift-collections     | transitive                 | `1.6.0`        | `a0cb0954ecb21e4e31b0070e6ed5674e8556685a` |
-| swift-crypto          | transitive                 | `4.5.1`        | `47d3869a7291f085c1fb9fb1e6d3b97a793f45c6` |
-| swift-huggingface     | transitive                 | `0.9.0`        | `b721959445b617d0bf03910b2b4aced345fd93bf` |
-| swift-jinja           | transitive                 | `2.4.2`        | `7d0b8880ef8e567dd4e0089f8b99fb354129017c` |
-| swift-transformers    | transitive                 | `1.3.3`        | `2fa33e1f5e7131a7fc64c28e6d161dcec0d24820` |
-| xgrammar              | transitive                 | `main`         | `3842647890df7c8133fba6bc0e3d11fc9730e0bd` |
+| swift-crypto          | transitive                 | `4.5.2`        | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
+| swift-huggingface     | transitive                 | `0.10.1`       | `b5403ed09403f674601fd1123e07c5b32914d16f` |
+| swift-jinja           | transitive                 | `2.5.1`        | `4588064a20f3fc093c95f2f7d3359999bf30cae5` |
+| swift-transformers    | transitive                 | `1.3.4`        | `c21fdcde390313a6d98d8e33a346f2c3486c3ab0` |
+| xgrammar              | transitive                 | `0.2.2`        | `4d145cc13d878c751ebeed36af1c013074be76bc` |
 | yyjson                | transitive                 | `0.12.0`       | `8b4a38dc994a110abaec8a400615567bd996105f` |
 
 Do not infer the app boundary from every transitive pin. Xcode product

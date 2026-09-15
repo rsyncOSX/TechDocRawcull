@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -12,7 +12,7 @@ mermaid = true
 # Detailed Sharpness Scoring
 
 This is the algorithm-level reference for scalar sharpness at **PhotoAnalysisKit
-1.2.2**, revision **3bf462fab0d82f5e4c315273688933ace68fa737**. RawCull chooses
+1.3.1**, revision **2a1466e04d821fa2628d6985296643e0d0c7e465**. RawCull chooses
 files and image sources, maps UI settings, bounds work, publishes progress,
 normalizes badges, and persists results. PhotoAnalysisKit owns the analysis
 formula.

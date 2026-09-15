@@ -3,7 +3,7 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-08-20
+lastmod: 2026-09-15
 ---
 
 # File Read and Write Reference
@@ -16,7 +16,7 @@ changing sandbox access, cache locations, persistence, or export behavior.
 | File/folder                                        | Access                                   | Owner                                                                |
 | -------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
 | User-selected catalog folder                       | Read                                     | `RawCullViewModel`, `ScanFiles`, `DiscoverFiles`, parser package     |
-| RAW files (`.arw`, `.nef`)                         | Read                                     | scan, thumbnails, focus parsing, zoom, export, diagnostics           |
+| RAW files (`.arw`, `.nef`, `.dng`)                 | Read                                     | scan, thumbnails, focus parsing, zoom, export, diagnostics           |
 | `focuspoints.json` beside catalog                  | Read optional                            | `ScanFiles` fallback                                                 |
 | App Support `savedfiles.json` and backups          | Read/write/move                          | `CullingModel`, `ReadSavedFilesJSON`, `WriteSavedFilesJSON`          |
 | App Support `settings.json`                        | Read/write                               | `SettingsViewModel`, `SettingsFileWriter`                            |
@@ -27,9 +27,8 @@ changing sandbox access, cache locations, persistence, or export behavior.
 | Subject-mask cache                                 | Read/write/delete                        | PhotoAIKit subject-mask stores configured by `RawCullAIIntegration`  |
 | Exported `.jpg` files in a chosen destination      | Write                                    | `ExtractAndSaveJPGs`, `SaveJPGImage`                                 |
 | Temporary rsync include lists / process streams    | Write/delete/read                        | `ExecuteCopyFiles`, `ArgumentsSynchronize`, `PrepareOutputFromRsync` |
-| Security-scoped bookmarks                          | Read/write UserDefaults                  | `OpencatalogView`, copy workflow                                     |
+| Destination security-scoped bookmark               | Read/write UserDefaults                  | `OpencatalogView`, copy workflow                                     |
 | AI selections and managed-model metadata           | Read/write UserDefaults and app metadata | `RawCullAISettingsModel`, model download service                     |
-| Similarity diagnostics log                         | Append/read/truncate                     | `SimilarityDiagnosticsLog`                                           |
 
 ## Catalog Reads
 
@@ -104,7 +103,9 @@ destination catalog. It supports two modes:
 
 The actor bounds parallel extraction, tracks progress and per-file failures, and
 passes JPEG `Data` to `SaveJPGImage`; non-Sendable image objects do not cross
-the save boundary. `SaveJPGImage` writes atomically.
+the save boundary. `SaveJPGImage` creates files without overwriting. If a name
+already exists, it retries with ` (1)`, ` (2)`, and so on; the filesystem
+enforces exclusivity for case-insensitive and simultaneous-export collisions.
 `RawCullViewModel.startSelectedJPGExtraction` starts destination security-scoped
 access before constructing the actor and stops it on the main actor after the
 awaited result returns.
@@ -119,7 +120,7 @@ Main files:
 | File                           | Role                                            |
 | ------------------------------ | ----------------------------------------------- |
 | `CopyFilesView.swift`          | UI and execution lifecycle                      |
-| `OpencatalogView.swift`        | Source/destination picker and bookmark creation |
+| `OpencatalogView.swift`        | Destination picker and bookmark creation        |
 | `ExecuteCopyFiles.swift`       | Process owner and progress/result state         |
 | `ArgumentsSynchronize.swift`   | Builds rsync arguments                          |
 | `PrepareOutputFromRsync.swift` | Parses process output                           |
@@ -131,10 +132,12 @@ current `RawCullViewModel`. It then creates an operation-unique file under
 NUL, and rsync receives `--from0` plus `--files-from=<path>`. This preserves
 spaces and newlines without converting the list into command-line arguments.
 
-Source and destination folders are restored from security-scoped bookmarks or
-fall back to selected paths. Both successful scope acquisitions remain owned by
-the `ExecuteCopyFiles` instance while `/usr/bin/rsync` runs. Process handlers
-stream progress and output back to main-actor state.
+The source is the currently selected catalog URL and the destination is restored
+only from `destBookmark`; there is no arbitrary path fallback. Both successful
+scope acquisitions remain owned by the `ExecuteCopyFiles` instance while
+`/usr/bin/rsync` runs. A stale destination bookmark is refreshed while its
+resolved grant is active. Process handlers stream progress and a typed
+`CopyOutcome` (`success`, `failed`, or `cancelled`) back to main-actor state.
 
 Startup returns a typed `CopyStartupFailure` for unavailable arguments, missing
 model state, an empty selection, Application Support/include-list failures,
@@ -146,11 +149,12 @@ releases process handlers.
 
 ## Security-Scoped Bookmarks
 
-The copy workflow stores source and destination bookmark `Data` in
-`UserDefaults` after the user picks folders. Picker access is balanced
-immediately after bookmark creation. At execution time, `ExecuteCopyFiles`
-resolves each bookmark with `.withSecurityScope` and starts a new
-operation-lifetime scope.
+The copy workflow stores destination bookmark `Data` in `UserDefaults` after the
+user picks a folder. Picker access is balanced immediately after bookmark
+creation. At execution time, `ExecuteCopyFiles` starts a fresh scope for the
+active catalog URL and resolves `destBookmark` with `.withSecurityScope` for the
+operation-lifetime destination scope. Failure asks the user to reopen the
+catalog or reselect the destination rather than attempting a plain-path fallback.
 
 The catalog browsing flow is different: `RawCullViewModel` owns one active
 security-scoped catalog URL and stops it during catalog transition or successful
@@ -183,18 +187,11 @@ explicit migration.
 
 ## Diagnostics Reads
 
-`RawFileDiagnostics` reads RAW files and parser metadata for developer-facing
-reports. It can call both Sony and Nikon parser diagnostics and report ImageIO
-properties, embedded JPEG locations, focus-parser output, and format
-classification.
-
-`SimilarityDiagnosticsLog` appends structured backend/fallback events to an
-Application Support log. It replaces the log after it reaches 5 MiB and supports
-read and clear operations for the diagnostics window. Diagnostics should avoid
-exposing full user paths in ordinary presentation.
-
-RAW-file diagnostics are read-only. Similarity diagnostics may write only their
-bounded app-owned log.
+RawCull currently has no separate RAW-diagnostics report file or persistent
+similarity-diagnostics log in the app target. Developer diagnostics use OSLog,
+package tests, and focused app integration tests. If a file-backed log is added
+later, keep it bounded, app-owned, and free of full user paths in ordinary
+presentation.
 
 ## What To Check When Changing This Area
 

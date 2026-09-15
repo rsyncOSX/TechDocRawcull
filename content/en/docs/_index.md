@@ -2,7 +2,7 @@
 title: RawCull Tech Documentation
 linkTitle: Documentation
 menu: { main: { weight: 20 } }
-lastmod: 2026-08-20
+lastmod: 2026-09-15
 ---
 
 ## RawCull Developer Notes
@@ -49,7 +49,7 @@ user-selected folders, export, or copying.
 | Background ownership       | `RawCull/Actors/`                                                         | Serializes scans, thumbnail requests, caches, persistence, extraction, and contention gates                                   |
 | App services and adapters  | `RawCull/Model/`                                                          | Connects the UI model to RAW parsing, sharpness analysis, AI providers, persistence, diagnostics, and rsync                   |
 | Reusable domain logic      | `RawCullCore` package                                                     | Value models and pure algorithms such as burst grouping and ranking                                                           |
-| RAW decoding               | `RawParserKit` package                                                    | Format dispatch, metadata normalization, MakerNote parsing, thumbnail extraction, and preview creation                        |
+| RAW decoding               | `RawParserKit` package                                                    | ARW, NEF, and DNG dispatch, metadata normalization, MakerNote parsing, thumbnail extraction, and preview creation              |
 | Image analysis             | `PhotoAnalysisKit` package                                                | Sharpness, saliency, focus evidence, masks, and analysis descriptors                                                          |
 | AI contracts and workflows | `PhotoAIKit` package products                                             | Typed similarity artifacts, Vision/CLIP backends, semantic search, segmentation, and storage contracts                        |
 | Tests                      | `RawCullTests/` and package test targets                                  | Executable behavior contracts, concurrency checks, cache identity checks, and integration coverage                            |
@@ -60,7 +60,7 @@ user-selected folders, export, or copying.
 flowchart TD
     App["RawCullApp: composition root"] --> Main["RawCullMainView: presentation router"]
     Main --> VM["RawCullViewModel: @MainActor orchestration"]
-    VM --> Feature["Feature models: culling, sharpness, similarity, settings"]
+    VM --> Feature["Feature models: culling, sharpness, similarity, Deep Review, settings"]
     VM --> Actors["Actors: scan, thumbnail, cache, persistence, export"]
     Feature --> Analysis["PhotoAnalysisKit"]
     Feature --> AI["PhotoAIKit services and typed artifacts"]

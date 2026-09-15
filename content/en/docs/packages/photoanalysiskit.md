@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -13,8 +13,8 @@ weight = 20
 
 # How PhotoAnalysisKit Is Constructed
 
-> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.2.2` at
-> `3bf462fab0d82f5e4c315273688933ace68fa737`. The facade, descriptors, presets,
+> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.3.1` at
+> `2a1466e04d821fa2628d6985296643e0d0c7e465`. The facade, descriptors, presets,
 > batch behavior, calibration, evidence, and mask APIs below describe that
 > revision.
 
@@ -263,13 +263,17 @@ shape, position, and penalty components behind each candidate patch.
 The overlay pipeline:
 
 1. chooses AF-center, AF-neighborhood, AF, saliency, mixed, or global evidence;
-2. builds primary and, for AF regions, fine-detail Laplacians;
+2. builds one native-pixel fine-detail Laplacian with clamped edges for every region;
 3. ranks local patches and selects the best evidence patches;
-4. chooses an adaptive percentile threshold;
-5. optionally relaxes the threshold to guarantee minimum visible coverage;
-6. applies erosion and dilation to the binary edge mask;
-7. colorizes, clips, feathers, and crops the mask;
+4. chooses an adaptive percentile threshold from the complete selected search regions;
+5. applies optional erosion and dilation to the binary edge mask;
+6. colorizes, clips to the full search regions, feathers, and crops the mask;
+7. measures visible coverage after rendering with GPU reductions;
 8. returns updated evidence and render diagnostics with the image.
+
+The renderer deliberately does not lower the threshold to force visible pixels.
+`guaranteeVisibleFocusEvidence` remains in the public configuration for source
+compatibility, but a weak or unfocused image may produce an empty mask.
 
 `FocusMaskRegionSource` describes whether saliency, AF, both, or neither
 provided the overlay region. `FocusEvidenceOverlayStyle` distinguishes subject

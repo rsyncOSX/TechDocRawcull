@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-08-20"
+lastmod = "2026-09-15"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
@@ -29,7 +29,7 @@ share keys merely because they originate from the same RAW file.
 | Full-size JPEG disk cache     | `Actors/FullSizeJPGDiskCache.swift`, `Model/Handlers/ZoomPreviewHandler.swift`                                          | Larger embedded JPEG previews for zoom                                             |
 | Per-file similarity artifacts | `Actors/PerFileAnalysisArtifactStore.swift`                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
 | Burst analysis cache          | `Actors/BurstAnalysisCache.swift`                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
-| Diagnostics                   | `Model/Cache/CacheDelegate.swift`, `Model/Cache/CacheStatistics.swift`, `Views/Diagnostics/MemoryDiagnosticsView.swift` | Hit/miss/eviction/pressure counters                                                |
+| Cache accounting              | `Model/Cache/CacheDelegate.swift`, `Actors/SharedMemoryCache.swift`                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
 
 ## Thumbnail Lookup
 
@@ -80,7 +80,7 @@ separation, purpose separation, orientation policy, and schema participation.
 ## `CachedThumbnail`
 
 `CachedThumbnail` wraps an immutable `NSImage`, its cache cost, and the
-standardized source URL used by eviction diagnostics.
+standardized source URL associated with the representation.
 
 The cost is calculated from image representations:
 
@@ -152,25 +152,13 @@ user settings.
 At warning or critical pressure, the policy falls back toward 60 percent of the
 baseline, again respecting user limits and minimum settings.
 
-## Eviction Tracking
+## Eviction Accounting
 
-`CacheDelegate` is shared by both `NSCache` instances. It records three
-counters:
-
-| Counter           | Meaning                                            |
-| ----------------- | -------------------------------------------------- |
-| memory evictions  | Preview-memory entries evicted                     |
-| grid evictions    | Grid-memory entries evicted                        |
-| unknown evictions | A delegated `NSCache` that was neither known cache |
-
-The delegate also calls back into `SharedMemoryCache` to decrement manual
-cost/count mirrors. This is necessary because `NSCache` does not expose current
-cost or item count.
-
-For preview-cache evictions, the delegate stores the evicted URL in a
-recent-eviction ring. If the same URL is requested shortly after and falls back
-to disk, diagnostics can label that as a boomerang miss: the item was useful,
-but the cache evicted it too soon.
+`CacheDelegate` is shared by both `NSCache` instances. When an entry is evicted,
+it identifies the originating cache and calls back into `SharedMemoryCache` to
+decrement the corresponding manual cost/count mirrors. This is necessary
+because `NSCache` does not expose current cost or item count. The current tree
+does not maintain a separate eviction-history or hit-rate diagnostics store.
 
 ## Memory Pressure
 
@@ -183,8 +171,8 @@ but the cache evicted it too soon.
 | `.critical`  | Clear both memory caches, reset counters, set preview cache limit to 50 MB until recovery |
 
 The current pressure level is stored behind an `OSAllocatedUnfairLock` and
-exposed as a synchronous `nonisolated` property. This lets `MemoryViewModel` and
-diagnostics read pressure state without an actor hop.
+exposed as a synchronous `nonisolated` property. This lets `MemoryViewModel`
+read pressure state without an actor hop.
 
 ## Disk Caches
 
@@ -236,8 +224,8 @@ supply migration candidates, but it is not accepted as a current snapshot.
 - Keep grid and preview purposes separate and bump the thumbnail schema when
   representation semantics change.
 - Update manual cost/count mirrors whenever adding or removing cache entries.
-- Check diagnostics if cache hit rate drops; boomerang misses often point to a
-  limit or pollution problem.
+- Use Instruments or temporary signposts to distinguish eviction churn from
+  decoding or I/O regressions; the production tree does not export hit-rate logs.
 - Do not feed zoom-preview images into the normal thumbnail RAM cache unless you
   intentionally want them competing with grid thumbnails.
 - Keep per-file AI artifact persistence separate from the catalog-wide derived

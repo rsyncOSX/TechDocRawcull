@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Modular AI Integration"
 date = "2026-08-29"
-lastmod = "2026-09-03"
+lastmod = "2026-09-15"
 description = "How RawCull's completed modular AI refactor separates configuration, model management, similarity, semantic search, burst analysis, and optional Deep Review."
 weight = 58
 tags = ["ai", "architecture", "modularization", "semantic-search", "similarity", "burst-analysis"]
@@ -25,12 +25,12 @@ policy, and SwiftUI presentation. Phases 0–8 establish and migrate this
 architecture, Phase 10 organizes it physically under `RawCull/Intelligence`, and
 Phases 11–12 finalize the app-local boundary and remove transitional APIs.
 
-> **Implementation status, 2026-08-31:** Phases 0–8 and 10–12 are implemented
+> **Implementation status, 2026-09-15:** Phases 0–8 and 10–12 are implemented
 > and automatically verified. Phase 9 remains intentionally deferred. The manual
 > acceptance matrix for representative catalogs and installed licensed model
-> resources remains pending; it is qualification work, not another architecture
-> phase. Model downloads for the DataComp and OpenAI CLIP variants were manually
-> verified during Phase 4.
+> resources remains qualification work, not another architecture phase.
+> Production model downloads now expose DataComp CLIP and Meta SAM 3; OpenAI
+> CLIP and EfficientSAM remain excluded by the catalog inclusion policy.
 
 ## Why The Architecture Changed
 

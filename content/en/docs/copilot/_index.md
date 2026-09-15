@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Architecture"
 linkTitle = "Copilot Catalog"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "Architecture overview and guided documentation catalog for the RawCull macOS application."
 tags = ["rawcull", "architecture", "swift", "swiftui"]
 categories = ["technical details"]
@@ -13,7 +13,7 @@ weight = 70
 # RawCull — Architecture Overview & Documentation Index
 
 RawCull is a macOS app for **culling RAW photos**: scanning a folder of camera
-RAW files (Sony ARW today), showing fast previews, letting the photographer
+RAW files (Sony ARW, Nikon NEF, and Adobe DNG), showing fast previews, letting the photographer
 rate/reject/flag images, grouping near-duplicate "burst" shots with
 on-device AI, and finally exporting the keepers to a destination folder.
 
@@ -36,7 +36,7 @@ nothing about this codebase.
 | — | [Intelligence Runtime](runtime/) | Deep dive: how the Intelligence runtime is built, reconfigured, and extended |
 | 06 | [SwiftUI-View-Layer.md](06-swiftui-view-layer/) | Navigation, state-management idioms, the grid view |
 | 07 | [Settings-and-Configuration.md](07-settings-and-configuration/) | User preferences, AI settings, memory monitor |
-| — | [Features and Roadmap](features/) | RawCull vs. other culling apps, and the post-3.2.0 roadmap |
+| — | [Features and Roadmap](features/) | RawCull vs. other culling apps, and the post-3.2.2 roadmap |
 | — | [Known Issues](issues/) | Code-review findings, with severities |
 
 > **Naming note:** the project (and this worktree's branch) carries the name
@@ -150,7 +150,7 @@ across topic-focused files.
    preferences, AI model management/licensing, memory monitoring.
 8. [Features and Roadmap](features/) — how RawCull compares to other culling apps
    (Photo Mechanic, Aftershoot, Narrative Select, Lightroom Classic, and
-   others), and the principles guiding how it should evolve after 3.2.0.
+   others), and the principles guiding how it should evolve after 3.2.2.
    Product-level, not implementation detail — a good read once you
    understand the architecture and want the "why this app, why this shape"
    context.
@@ -162,7 +162,7 @@ across topic-focused files.
 
 | Term | Meaning |
 |---|---|
-| **Catalog** / `ARWSourceCatalog` | A user-selected source folder of RAW files, plus its bookmark/metadata. Culling decisions are keyed per catalog. |
+| **Catalog** / `RawCullSourceCatalog` | A user-selected source folder of RAW files, plus its bookmark/metadata. Culling decisions are keyed per catalog. |
 | **Culling** | The act of rating (-1 reject, 0 keeper, 2–5 stars) or flagging RAW files so a subset can be exported. |
 | **Burst** | A group of near-duplicate frames (e.g. continuous shooting) detected via similarity scoring, presented together so the user picks the best one. |
 | **Deep Review** | An optional, heavier AI pass over a burst group (subject segmentation + focus scoring) that recommends a winner. |

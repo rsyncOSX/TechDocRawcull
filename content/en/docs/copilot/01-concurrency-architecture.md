@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Concurrency Architecture"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "RawCull actor isolation, structured concurrency, backpressure, cancellation, and request coalescing."
 tags = ["rawcull", "swift", "concurrency", "actors"]
 categories = ["technical details"]
@@ -157,7 +157,7 @@ counts back to the main actor.
 
 ## Custom synchronization primitives
 
-`SharedMemoryCache` needs synchronous, lock-free reads of counters that
+`SharedMemoryCache` needs synchronous, lock-backed reads of counters that
 `NSCache` doesn't expose (its cost/count), so it uses `OSAllocatedUnfairLock`
 instead of actor hops for those specific fields:
 
@@ -169,9 +169,9 @@ _memCost.withLock { $0 = max(0, $0 - existing.cost) }
 It also listens for kernel memory-pressure transitions with
 `DispatchSource.makeMemoryPressureSource`, bridging the callback (which fires
 on a background dispatch queue) back into actor isolation with a plain
-`Task { await self.handleMemoryPressureEvent() }`. No `DispatchQueue`,
-`NSLock`, or semaphore is used anywhere else — everything else is structured
-concurrency plus these two primitives.
+`Task { await self.handleMemoryPressureEvent() }`. These locks are deliberately
+limited to synchronous pressure state and cache count/cost mirrors; actor
+isolation still owns configuration and disk-cache operations.
 
 Memory pressure response is graduated, not all-or-nothing:
 
@@ -184,15 +184,15 @@ Memory pressure response is graduated, not all-or-nothing:
 ## A deliberate cache-admission invariant
 
 `ScanAndCreateThumbnails` (background preload) intentionally **never**
-admits images into `SharedMemoryCache`'s full-size memory cache — only
+admits images into `SharedMemoryCache`'s preview memory cache — only
 `RequestThumbnail` (driven by actual UI requests) does. The code comments
 explain why: admitting during scan would immediately evict ~180 items in
 LRU order before the user ever looks at them, guaranteeing a near-100%
 cache-miss ("boomerang") rate on first browse. Preload still writes to the
 **disk** JPEG cache, so `RequestThumbnail`'s disk-cache branch can serve the
-first UI request cheaply without a cold RAW decode — it just doesn't warm
-the memory cache. If you're debugging "why doesn't this show up after
-preload", this is usually why: it's working as designed.
+first UI request cheaply without a cold RAW decode. Preload does populate the
+separate 200 px grid-memory cache; it only avoids warming preview RAM. If you're
+debugging why a preloaded image is absent from preview RAM, this is usually why.
 
 ## Generation counters prevent stale results
 

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "The RawCull Intelligence Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-03"
+lastmod = "2026-09-15"
 description = "How RawCullIntelligenceRuntime provides stable AI object lifetimes, applies configuration changes, and avoids rebuilding the application graph when settings change."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection"]
@@ -140,7 +140,8 @@ Stable identity preserves:
 - operation and catalog generations used to reject stale completions;
 - observable progress and presentation state;
 - the shared similarity artifact and semantic-search state;
-- cached Deep Review results;
+- cached Deep Review results and per-file completed mask candidates used by
+  subject-outline presentation;
 - view bindings to the current feature objects;
 - testable identity across the application graph.
 

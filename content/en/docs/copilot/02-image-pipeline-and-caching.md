@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Image Pipeline and Caching"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "The RawCull scan, decode, thumbnail, preview, memory-cache, and disk-cache pipeline."
 tags = ["rawcull", "images", "thumbnails", "caching"]
 categories = ["technical details"]
@@ -69,8 +69,9 @@ the grid and the loupe/zoom view have very different quality/size needs:
 
 | Tier | Actor | Content | Typical size |
 |---|---|---|---|
-| Grid | `SharedMemoryCache` (grid cache) + `DiskCacheManager` | ~200px JPEG thumbnails, quality ~0.7 | Hundreds of items, small footprint |
-| Preview | `SharedMemoryCache` (preview cache) + `FullSizeJPGDiskCache` | Full-size decoded previews, quality ~0.85 | Dozens of items, large footprint |
+| Grid | `SharedMemoryCache.gridThumbnailCache` | 200 px in-memory thumbnails populated by preload and demand | Hundreds of items, small footprint |
+| Preview | `SharedMemoryCache.memoryCache` + `DiskCacheManager` | Representation-aware preview JPEGs and decoded images | UI-driven, larger footprint |
+| Zoom | `FullSizeJPGDiskCache` | Large embedded/developed JPEG previews | Separate disk lifetime |
 
 Don't confuse the two when debugging a "wrong image size" issue — a file can
 be present in one tier and absent from the other.
@@ -104,18 +105,15 @@ does, in order:
    disk in a detached background task, and admit the decoded image to
    memory.
 
-### The scan-never-admits invariant
+### The scan-admission invariant
 
 `ScanAndCreateThumbnails` (the proactive preloader that runs right after a
-folder scan) explicitly **does not** call into `SharedMemoryCache`'s
-admission path — it only writes to the **disk** cache. Only
-`RequestThumbnail`, driven by genuine UI requests (scrolling, opening the
-loupe), admits to the memory cache. This is a deliberate LRU-ordering
-decision: if preload admitted eagerly, it would evict already-cached
-UI-relevant items in scan order, and the user's first real browse would see
-a near-100% cache miss rate. Preloading still pays off because the *disk*
-cache is warm, so `RequestThumbnail`'s disk-hit branch is cheap even on a
-cold memory cache.
+folder scan) writes preview JPEGs to disk and populates only the dedicated
+200 px grid-memory cache. It deliberately does **not** admit scan-order results
+to the larger preview-memory cache. Only `RequestThumbnail`, driven by genuine
+UI requests, promotes disk or source results into preview RAM. This keeps the
+preview cache's eviction order aligned with user demand without sacrificing a
+warm grid.
 
 ## RAW decoding
 
@@ -131,6 +129,11 @@ Two extraction modes exist, selectable per-export
   `SaveJPGImage`.
 - **`demosaicedRAW`** — fully demosaic the RAW sensor data into a full-size
   JPEG (`SonyRawFormat.createFullSizeJPEG`); slower but full resolution.
+
+RawParserKit's registered discovery and thumbnail/metadata paths currently
+support Sony ARW, Nikon NEF, and Adobe DNG. Direct reuse of camera-authored JPEG
+bytes in `embeddedPreviewJPEGData` has specialized ARW and NEF branches; other
+registered formats can still use the decoded-preview/encode path.
 
 `RawImageLoadingConcurrency.batchExtractionLimit` governs how many of these
 decodes run concurrently in a batch export (scaled to

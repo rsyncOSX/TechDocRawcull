@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "SwiftUI View Layer"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "RawCull windows, navigation, state flow, grid composition, and view-layer conventions."
 tags = ["rawcull", "swiftui", "views", "state-management"]
 categories = ["technical details"]
@@ -11,8 +11,7 @@ weight = 60
 
 # SwiftUI View Layer
 
-`RawCull/Views/` (87 files across 16 subfolders, ~15k lines) is the
-presentation layer. This doc covers the navigation architecture, the
+`RawCull/Views/` is the presentation layer. This doc covers the navigation architecture, the
 grid/inspection tools that make up most of the screen time, and the SwiftUI
 state-management idioms used consistently across the whole layer, so you can
 match the existing style when adding a view.
@@ -165,6 +164,17 @@ recommendation back through
 `viewModel.applyDeepAIReviewRecommendation(_:to:)` — the view never talks to
 the AI backend directly, only through the controller (see
 [Intelligence and AI Subsystem](../05-intelligence-ai-subsystem/)).
+
+Completed Deep Review masks are also indexed by file ID. Loupe, zoom, and the
+burst workspace can request the cached mask and display an orange subject
+outline without rerunning segmentation. The `S` key toggles this overlay. A
+missing cached mask leaves the control unavailable and directs the user to run
+Deep Review first.
+
+`DeepAIReviewMaskOutlineRenderer` extracts mask alpha at threshold 0.5, applies
+a resolution-scaled morphology radius clamped to 2...14 pixels, and composites
+a white contour that the SwiftUI layer tints orange. Outline tasks are cancelled
+and guarded by file/mask identity before publication.
 
 ## Photo inspection tools
 

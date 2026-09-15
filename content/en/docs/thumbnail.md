@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-08-20"
+lastmod = "2026-09-15"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
@@ -35,7 +35,7 @@ is a different source when its size or modification date changes.
 | Thumbnail identity and caches    | `Model/Cache/ThumbnailCacheKey.swift`, `Actors/SharedMemoryCache.swift`, `Actors/DiskCacheManager.swift`, `Model/Cache/CachedThumbnail.swift`                                                       |
 | Full-size preview loading        | `Model/FullSizePreviewLoader.swift`, `Model/Handlers/ZoomPreviewHandler.swift`, `Actors/FullSizeJPGDiskCache.swift`                                                                                 |
 | Vendor dispatch                  | `RawParserKit/Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift`, `SonyRawFormat.swift`, `NikonRawFormat.swift`                                                                       |
-| Behavior tests                   | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`, `ThumbnailProviderTests.swift`, `DiskCacheAndScanAdmissionTests.swift`, `ThumbnailCacheIdentityTests.swift`, `ThumbnailContentionTests.swift` |
+| Behavior tests                   | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`, `ThumbnailProviderTests.swift`, `DiskCacheAndScanAdmissionTests.swift`, `ThumbnailCacheIdentityTests.swift`, `RawCullVerifyTestsConcurrencyTests.swift` |
 
 ## Catalog Load Flow
 
@@ -85,6 +85,7 @@ The current registry contains:
 | --------- | --------- | ---------------- |
 | Sony ARW  | `.arw`    | `SonyRawFormat`  |
 | Nikon NEF | `.nef`    | `NikonRawFormat` |
+| Adobe DNG | `.dng`    | `DNGRawFormat`   |
 
 `ScanFiles` performs its own non-recursive directory listing and asks
 `RawFormatRegistry.format(for:)` whether each item is supported. Discovery and
@@ -104,9 +105,11 @@ creates one child task per supported file. Each child:
 
 The production adapter, `RawParserKitImageLoader`, maps
 `RawParserKit.RawImageLoader.metadata(for:)` into the app's `ExifMetadata`.
-RawParserKit reads ImageIO EXIF/TIFF data, dispatches body-specific details
+RawParserKit reads ImageIO EXIF/TIFF data, dispatches format-specific details
 through `RawFormatRegistry`, and resolves MakerNote or EXIF subject-area focus
-evidence.
+evidence. DNG preview discovery classifies TIFF IFDs with `NewSubFileType` and
+`Compression` before using its legacy positional fallback, so a JPEG-compressed
+raw strip is not mistaken for a rendered preview.
 
 This is a single metadata pass per file. The app no longer runs separate EXIF
 and MakerNote extraction passes.
@@ -309,7 +312,7 @@ Within RawParserKit, `RawFormat` provides vendor policy:
 
 | Requirement                           | Use                             |
 | ------------------------------------- | ------------------------------- |
-| `extensions`, `displayName`           | Registry lookup and diagnostics |
+| `extensions`, `displayName`           | ARW/NEF/DNG registry lookup and diagnostics |
 | `extractThumbnail`                    | Vendor thumbnail fallback       |
 | `extractEmbeddedPreview`              | Largest usable embedded preview |
 | `focusLocation`                       | MakerNote AF location           |

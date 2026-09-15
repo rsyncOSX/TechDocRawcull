@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Culling and Persistence"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "RawCull ratings, filters, catalog switching, and debounced persistent storage."
 tags = ["rawcull", "culling", "ratings", "persistence"]
 categories = ["technical details"]
@@ -129,6 +129,20 @@ rather than throwing past its callers, so the UI can react:
 - **Save failure** — `persistenceError: String?`, with `hasUnsavedChanges`
   left `true` so the user isn't falsely told their ratings are safe; the
   next successful save clears both.
+
+Application termination is deferred through `AppDelegate.beginTermination`.
+It keeps one termination task alive, marks termination pending to suppress the
+normal save alert, and awaits `flushPersistence()`. If the flush fails, an
+app-modal recovery alert remains available even after the last window closes:
+
+- **Retry** repeats the flush after the user restores access or disk space;
+- **Cancel Quit** keeps the in-memory changes and resumes the app;
+- **Quit Without Saving** is destructive, releases the active security scope,
+  and completes termination.
+
+Only a successful flush or explicit discard releases folder access and replies
+that termination may proceed. `QuitRecoveryTests.swift` exercises success,
+cancel, retry, and discard paths against this real lifecycle helper.
 
 ## Filtering: `RatingFilter` and `filteredFiles`
 

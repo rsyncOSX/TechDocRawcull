@@ -4,7 +4,7 @@ description:
   Prioritized backlog for keeping RawCull technical documentation aligned with
   the code
 weight: 95
-lastmod: 2026-08-22
+lastmod: 2026-09-15
 ---
 
 # Documentation Update Plan
@@ -20,7 +20,7 @@ implementation details.
 
 ## Recently Completed Baseline
 
-The following pages were reconciled with the RawCull source on 20 August 2026
+The following pages were reconciled with the RawCull source on 15 September 2026
 and form the current learning path:
 
 | Page                                          | Current baseline                                                                                         |
@@ -77,8 +77,9 @@ Required update:
 Completion evidence:
 
 - Every named actor and task owner exists in the current source.
-- `ThumbnailContentionTests`, `ThumbnailLoaderConcurrencyTests`, persistence
-  tests, and security-scope tests support the documented rules.
+- `ThumbnailProviderTests`, `RawCullVerifyTestsConcurrencyTests`,
+  `RawCullVerifyTestsDataRaceDetectionTests`, persistence tests, and
+  security-scope tests support the documented rules.
 
 ### 2. Focus Mask And Sharpness Overview
 
@@ -337,7 +338,7 @@ Required update:
 
 ### 19. Evaluating CLIP Models
 
-Page: [Evaluating CLIP Models](../ai/evaluateclipmodels/)
+Planned page: **Evaluating CLIP Models** (not yet present)
 
 Required update:
 
@@ -350,7 +351,7 @@ Required update:
 
 ### 20. CLIP Evaluation Results
 
-Page: [CLIP Model Evaluation Results](../ai/evaluation/)
+Planned page: **CLIP Model Evaluation Results** (not yet present)
 
 Required update:
 

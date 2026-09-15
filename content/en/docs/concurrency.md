@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
@@ -183,7 +183,7 @@ A task marked `@concurrent`, or an `@concurrent` function, explicitly leaves
 inherited actor isolation while retaining structured task behavior. Examples
 include RawCull's RAW demosaic helper, sorting and ranking helpers, diagnostics,
 and PhotoAnalysisKit's Core Image/Vision worker. The pinned PhotoAnalysisKit
-1.2.2 implementation uses an explicit concurrent child and a cancellation
+1.3.1 implementation uses an explicit concurrent child and a cancellation
 handler; it does not use a detached task for the focus engine.
 
 ### Detached And Queue-Backed Work
@@ -265,7 +265,7 @@ or use a continuation without a cancellation path.
 | ------------------- | -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Active catalog      | `RawCullViewModel`               | Before `catalogLoadTask`, after the previous catalog is flushed     | Catalog cancellation, empty/failed load, replacement, successful termination, or deinit                                        |
 | Selected JPG export | `RawCullViewModel+Thumbnails`    | Before constructing `ExtractAndSaveJPGs`                            | Main-actor completion path after success, failure, or cancellation                                                             |
-| Rsync copy          | `ExecuteCopyFiles`               | Bookmark URL, then direct-path fallback, for source and destination | One idempotent `cleanup()` on startup failure, completion, close, or deinit; it also removes the operation's include-list file |
+| Rsync copy          | `ExecuteCopyFiles`               | Active catalog URL for source; `destBookmark` for destination       | One idempotent `cleanup()` on startup failure, completion, close, or deinit; it also removes the operation's include-list file |
 | App termination     | `AppDelegate` and `CullingModel` | No new scope; uses the active catalog scope                         | Flush first; release scope only on successful flush                                                                            |
 
 Every successful security-scope start has one owner that records the URL and one
@@ -275,7 +275,8 @@ idempotent cleanup path.
 
 | Runtime rule                                                                                                 | Protecting tests                                                             |
 | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Exact-key thumbnail coalescing, independent waiter cancellation, producer generation, and preload-gate drain | `RawCullTests/ThumbnailContentionTests.swift`                                |
+| Exact-key thumbnail coalescing and independent waiter cancellation                                      | `RawCullTests/ThumbnailProviderTests.swift`                                  |
+| Preload-gate drain and cancellation races                                                                | `RawCullTests/RawCullVerifyTestsConcurrencyTests.swift`                      |
 | Six-slot limit, FIFO transfer, queued cancellation, and cancel-all                                           | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`                         |
 | Replacement-safe source/representation identity                                                              | `RawCullTests/ThumbnailCacheIdentityTests.swift`                             |
 | Scoring request coalescing and generation-safe completion                                                    | `RawCullTests/SharpnessScoringTests.swift`                                   |

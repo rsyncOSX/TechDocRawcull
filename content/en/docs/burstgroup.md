@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
@@ -39,6 +39,8 @@ typed `SimilarityArtifact` values rather than assuming one representation.
 | Ratings and manual overrides                 | `CullingModel.swift`, `SavedFiles.swift`                                                                                              |
 | Burst home and review list                   | `BurstGroupsHomeView.swift`, `SimilarityGridSelectionView.swift`, `CullingGridView.swift`                                             |
 | Single-burst workspace and comparison        | `BurstCullingWorkspaceView.swift`, `ComparisonGridView.swift`                                                                         |
+| Batch badge selection and rating              | `CullingGridSelectionCoordinator.swift`, `CullingGridView.swift`                                                                      |
+| Deep Review subject outlines                  | `DeepAIReviewMaskOutlineRenderer.swift`, `MainThumbnailImageView.swift`, `ZoomOverlayView.swift`, `BurstCullingWorkspaceView.swift`   |
 | Tests                                        | `RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift`, `BurstRankingEngineTests.swift`, app burst/culling tests         |
 
 ## End-to-End Flow
@@ -218,6 +220,13 @@ The grouped culling grid can collapse a burst to its top three ranked frames. A
 group header opens the dedicated workspace and toggles Reviewed or Deferred
 state.
 
+The grid can also derive batch selectors from visible burst-rank, saliency, and
+sharpness badges. A normal badge action replaces the selection with every
+visible match, Command toggles the matching set, and Shift extends/replaces
+according to the coordinator's modifier policy. Batch rating applies one rating
+to the resulting selected files. The coordinator is a pure value transformation
+so these semantics are testable without SwiftUI.
+
 `BurstCullingWorkspaceView` displays one large selected frame plus a bounded
 three-frame image window around the current selection and a filmstrip of ranked
 candidates. It reuses `ComparisonImagePaneView`,
@@ -230,6 +239,11 @@ eligible multi-frame group, and `E` toggles the metadata panel. The workspace
 also exposes zoom, thumbnail/embedded-JPEG source selection, focus evidence,
 rating, pick/reject, reviewed state, and the detailed comparison grid. Escape
 returns to the active burst list.
+
+When Deep Review has produced a stored mask for the selected file, the workspace
+can render its orange subject outline. `S` toggles the outline. The lookup uses
+completed mask candidates indexed by file ID, and asynchronous outline results
+are committed only while the selected file and mask identity remain current.
 
 ## Review States
 

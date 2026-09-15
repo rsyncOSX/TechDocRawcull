@@ -2,6 +2,7 @@
 author = "Thomas Evensen"
 title = "Security-Scoped URLs"
 date = "2026-02-05"
+lastmod = "2026-09-15"
 tags = ["security", "sandbox", "bookmarks"]
 categories = ["technical details"]
 mermaid = true
@@ -11,8 +12,8 @@ mermaid = true
 
 RawCull is a sandboxed macOS app. Any access outside the app container must come from user consent, usually a file/folder picker. RawCull uses two security-scope patterns:
 
-1. active catalog access for browsing/culling,
-2. persistent bookmarks for the rsync copy source and destination.
+1. active catalog access for browsing/culling and as the rsync source,
+2. a persistent bookmark for the rsync destination.
 
 ## Source Map
 
@@ -22,12 +23,11 @@ RawCull is a sandboxed macOS app. Any access outside the app container must come
 | Catalog scan scope | `Actors/ScanFiles.swift` |
 | CLIP indexing | `RawCullViewModel+Similarity.swift`, `SimilarityScoringModel.swift`, `RawCullVisionSimilarityService.swift` |
 | Semantic search | `RawCullViewModel+Similarity.swift`, `SimilarityScoringModel.swift`, `RawCullSemanticSearchService.swift` |
-| Similarity artifact cache | `Actors/PerFileAnalysisArtifactStore.swift` |
+| Similarity artifact cache | `Intelligence/Persistence/PerFileAnalysisArtifactStore.swift` |
 | Copy-folder bookmarks | `Views/CopyFiles/OpencatalogView.swift`, `SourceAndDestinationSection.swift` |
 | rsync runtime scope | `Model/ParametersRsync/ExecuteCopyFiles.swift` |
 | Selected JPG export | `ExtractJPGsSheetView.swift`, `RawCullViewModel+Thumbnails.swift`, `ExtractAndSaveJPGs.swift`, `SaveJPGImage.swift` |
 | App termination | `Main/RawCullApp.swift`, `CullingModel.swift` |
-| RAW diagnostics | `RawCullViewModel+Diagnostics.swift`, `RawFileDiagnostics.swift` |
 
 ## API Basics
 
@@ -94,8 +94,7 @@ The owner is the component that records a successful start and is therefore resp
 | Active catalog | `RawCullViewModel` | `startSecurityScopedAccess(for:)` before catalog work | Catalog cancel/change, empty scan, successful app termination, or deinit | A failed start is not recorded. Switching first flushes culling persistence; a failed flush retains the old catalog and scope. |
 | Directory scan | `ScanFiles.scanFiles` | Local `startAccessingSecurityScopedResource()` | `defer`, but only when the local start returned `true` | `defer` covers success, thrown filesystem errors, cancellation, and early return. The view model's broader scope is not stopped. |
 | Selected JPG export | `RawCullViewModel.startSelectedJPGExtraction` | Start the chosen destination immediately before creating `ExtractAndSaveJPGs` | On return from `extractAndSavejpgs()`, before publishing completion or failure UI | Failed destination start aborts without a stop. Per-file failures are collected; the operation-level stop still runs after the actor returns. Source reads borrow the active catalog scope. |
-| rsync copy | `ExecuteCopyFiles` | Resolve and start source, then destination, from bookmarks or fallback paths | Idempotent `cleanup()` after normal completion, close/cancel, startup failure, launch failure, or deinit | If destination setup fails, cleanup stops the already-started source. `didCleanUp` prevents double stops and duplicate include-file removal. |
-| RAW diagnostics | Active catalog (`RawCullViewModel`) | No additional start; the command is available for a `FileItem` in the active catalog | No additional stop | Cancelling or replacing `rawDiagnosticsTask` only cancels diagnostic work. Catalog teardown owns scope cleanup. |
+| rsync copy | `ExecuteCopyFiles` | Start the selected catalog URL, then resolve and start `destBookmark` | Idempotent `cleanup()` after normal completion, close/cancel, startup failure, launch failure, or deinit | There is no direct-path fallback. If destination setup fails, cleanup stops the already-started source. `didCleanUp` prevents duplicate stops and include-file removal. |
 | AI indexing | Active catalog (`RawCullViewModel`) | No per-file start; indexing borrows the selected directory scope | No per-file stop | Index cancellation stops AI work, not the catalog scope. Catalog cancellation/change releases the owner scope after cancelling related work. |
 | Semantic query | None for ranking; active catalog remains open for follow-on actions | No start; ranking reads hydrated in-memory artifacts | No stop | Query cancellation discards query work. Any subsequent preview/export uses the appropriate catalog or export scope. |
 
@@ -170,31 +169,30 @@ sequenceDiagram
     VM->>VM: stopAccessing catalog URL
 ```
 
-## Copy Workflow Bookmarks
+## Copy Workflow Bookmark
 
-The copy workflow needs persistent source/destination folders for rsync. `OpencatalogView` creates bookmarks when the user picks folders.
+The copy workflow reuses the active catalog as its source and persists only the
+destination. `OpencatalogView` creates `destBookmark` when the user picks that
+folder.
 
 ```mermaid
 flowchart TD
-    A["User picks source/destination"] --> B["startAccessing"]
+    A["User picks destination"] --> B["startAccessing"]
     B --> C["bookmarkData(.withSecurityScope)"]
-    C --> D["UserDefaults sourceBookmark/destBookmark"]
+    C --> D["UserDefaults destBookmark"]
     D --> E["stopAccessing"]
     E --> F["Later: ExecuteCopyFiles resolves bookmark"]
-    F --> G["startAccessing during rsync"]
-    G --> H["cleanup stops both scopes"]
+    F --> G["start destination scope during rsync"]
+    S["Selected catalog URL"] --> H["start source scope during rsync"]
+    G --> I["cleanup stops both scopes"]
+    H --> I
 ```
 
-The bookmark keys are:
-
-| Key | Meaning |
-|---|---|
-| `sourceBookmark` | rsync source folder |
-| `destBookmark` | rsync destination folder |
-
-If bookmark resolution fails, `ExecuteCopyFiles` tries the fallback path from the UI.
-
-The fallback follows the same ownership rule as a resolved bookmark: only a URL whose `startAccessingSecurityScopedResource()` succeeds is returned and stored. A failed bookmark start does not create ownership; if the fallback also fails, startup aborts. If source access succeeds but destination access fails, `cleanup()` releases the source before returning the startup error.
+If the selected catalog scope cannot be started, the user is asked to reopen the
+catalog. If `destBookmark` is missing or cannot be resolved, the user must
+reselect the destination. A stale bookmark is regenerated while its resolved
+scope is active. If source access succeeds but destination access fails,
+`cleanup()` releases the source before returning the startup error.
 
 ## rsync Runtime Cleanup
 
@@ -205,7 +203,10 @@ The fallback follows the same ownership rule as a resolved bookmark: only a URL 
 
 `cleanup()` finishes the progress stream, stops both security-scoped resources, clears process references, and is guarded by `didCleanUp` so multiple termination paths are safe.
 
-`close()` sets `isClosing`, cancels the process, and calls cleanup. Normal process termination waits briefly after `onCompletion` before cleanup so completion code can still use the scoped URLs.
+`close()` sets `isClosing`, cancels the process, and calls cleanup. Normal
+termination constructs a `CopyDataResult` containing the output, typed outcome,
+and immutable `CopyOperation` source/destination snapshot, invokes completion,
+and then cleans up. There is no timing-delay dependency in the completion path.
 
 The include list is written under `Application Support/RawCull/CopyLists`, not the user-selected source or destination. Cleanup removes the per-operation list on every path after it has been created.
 
@@ -221,7 +222,12 @@ Destination access failure prevents actor creation and presents **Export Not Sta
 
 `AppDelegate.applicationShouldTerminate(_:)` returns `.terminateLater` and starts one termination task. That task awaits `cullingModel.flushPersistence()` before releasing the active catalog scope. A second termination request while the task is running also returns `.terminateLater` rather than starting another flush.
 
-If persistence succeeds, the app stops the active catalog scope and replies `true` to AppKit. If persistence fails, it deliberately keeps both the app and scope alive and replies `false`; this avoids terminating after an unsaved culling-state failure. This termination path owns only the active catalog scope. Export and rsync operations retain their own completion, close, and deinit cleanup.
+If persistence succeeds, the app stops the active catalog scope and replies
+`true` to AppKit. If persistence fails, a modal recovery choice offers retry,
+cancel quitting, or **Quit Without Saving**. Retry repeats the flush; cancel
+keeps the app and scope alive; discard releases the scope and terminates while
+explicitly acknowledging unsaved culling changes. Only one termination task is
+active. Export and rsync retain their own cleanup ownership.
 
 ## File Writes
 

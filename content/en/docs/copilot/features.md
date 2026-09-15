@@ -3,19 +3,19 @@ author = "Thomas Evensen"
 title = "RawCull Features and Roadmap"
 linkTitle = "Features and Roadmap"
 date = "2026-09-04"
-lastmod = "2026-09-04"
-description = "RawCull's product position, design principles, and post-3.2.0 roadmap."
+lastmod = "2026-09-15"
+description = "RawCull's product position, design principles, and post-3.2.2 roadmap."
 tags = ["rawcull", "features", "roadmap", "product"]
 categories = ["technical details"]
 weight = 80
 +++
 
-# RawCull vs. Other Culling Apps, and Where RawCull Goes After 3.2.0
+# RawCull vs. Other Culling Apps, and Where RawCull Goes After 3.2.2
 
 This document is deliberately different from the rest of the `Docs/` catalog:
 docs 00–07 and `runtime.md` explain *how the code works*. This one is a
 **product-positioning and roadmap** document — it compares RawCull (current
-version **3.2.0**) against other well-known photo-culling tools on macOS, and
+version **3.2.2**) against other well-known photo-culling tools on macOS, and
 lays out a set of principles and concrete ideas for how the app should evolve
 afterward. It's written for the same reader as the rest of the catalog
 (Swift/SwiftUI-literate, new to this codebase), but the goal here is product
@@ -32,7 +32,7 @@ understanding, not implementation detail.
 ## What RawCull is, in one paragraph
 
 RawCull is a **100% dedicated RAW-photo culling app** for macOS. It scans a
-folder of RAW files (Sony ARW today — see
+folder of RAW files (Sony ARW, Nikon NEF, and Adobe DNG — see
 [Image Pipeline and Caching](../02-image-pipeline-and-caching/)), decodes
 fast previews, lets the photographer rate/reject/flag images, optionally
 groups near-duplicate "burst" shots and recommends a sharpest-on-subject
@@ -56,7 +56,7 @@ commonly compare against. It's ordered roughly from "manual, no AI" to
 
 | App | Platform | AI culling | Runs locally? | Auto-applies ratings? | Pricing model | Primary audience |
 |---|---|---|---|---|---|---|
-| **RawCull 3.2.0** | macOS only | Yes (similarity/burst grouping, semantic search, Deep Review recommendation) | 100% on-device (Apple CoreAI) | **Never** — advisory only | (project-specific) | RAW shooters who want a fast, private, single-purpose culler |
+| **RawCull 3.2.2** | macOS only | Yes (similarity/burst grouping, semantic search, Deep Review recommendation) | 100% on-device (Apple CoreAI) | **Never** — advisory only | (project-specific) | RAW shooters who want a fast, private, single-purpose culler |
 | **Photo Mechanic** | macOS, Windows | No | N/A | No | One-time license | Sports/press/agency — pure speed and metadata, no AI at all |
 | **FastRawViewer** | macOS, Windows, Linux | No | N/A | No | One-time license | Technical pixel-level RAW inspection (true histogram, focus peaking) |
 | **Narrative Select** | macOS, Windows | Yes (face/expression detection, scene/angle grouping) | Mixed (has cloud-connected features) | No — AI scores, user approves every keeper | Free tier + paid plans | Portrait/wedding photographers who want AI guidance with full manual override |
@@ -105,7 +105,7 @@ commonly compare against. It's ordered roughly from "manual, no AI" to
 
 Being honest about the comparison also means naming where RawCull is behind:
 
-- **RAW format coverage.** Today RawCull decodes Sony ARW only (via
+- **RAW format coverage.** Today RawCull decodes Sony ARW, Nikon NEF, and Adobe DNG (via
   `RawParserKit` — see
   [Image Pipeline and Caching](../02-image-pipeline-and-caching/)).
   Every competitor above supports far more camera makes out of the box.
@@ -158,7 +158,7 @@ rules that define what RawCull *is* and will keep being, even as it grows:
    without going through explicit user interaction, should be treated as a
    design regression, not a feature.
 
-## How RawCull should evolve after 3.2.0
+## How RawCull should evolve after 3.2.2
 
 The ideas below are grouped by theme. All of them respect the three
 principles above; none of them turn RawCull into something it isn't.
@@ -167,7 +167,7 @@ principles above; none of them turn RawCull into something it isn't.
 
 The single biggest gap versus every competitor in the table is format
 coverage. `RawParserKit` decoding more camera RAW formats (Canon CR2/CR3,
-Nikon NEF, Fujifilm RAF, generic DNG) would make RawCull usable by a much
+Fujifilm RAF, and others) would make RawCull usable by a much
 larger share of photographers without touching the culling model, the
 Intelligence subsystem, or the export pipeline at all — this is a pure
 "widen the front door" investment, not a culling-feature investment, but it's

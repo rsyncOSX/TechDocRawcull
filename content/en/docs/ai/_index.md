@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "Learning guide to PhotoAIKit and RawCull's AI integration."
 tags = ["ai", "clip", "sam3", "photoaikit"]
 categories = ["technical details"]
@@ -41,6 +41,11 @@ PhotoAIKit contains three backend families used by RawCull:
 - **SAM 3 and EfficientSAM subject segmentation** for subject masks.
 - **Apple Vision feature prints** for always-available image similarity.
 
+The current production download catalog exposes DataComp CLIP and Meta SAM 3.
+OpenAI CLIP remains implemented but excluded, while EfficientSAM remains a
+blocked prepared descriptor. SAM 3 requires acceptance of its verified bundled
+licence before download.
+
 Vision is the startup and service-selection fallback: RawCull uses it when CLIP
 is disabled or the selected CLIP bundle cannot produce a validated provider. A
 selected CLIP indexing pass keeps its valid per-file artifacts and records the
@@ -68,7 +73,7 @@ RawCull and PhotoAIKit answer different kinds of questions.
 **RawCull asks:**
 
 - Where are models installed for this application?
-- How is a Sony or Nikon RAW file decoded for AI input?
+- How is a Sony, Nikon, or DNG RAW file decoded for AI input?
 - Which backend did the user request?
 - When should a catalog be indexed or reindexed?
 - How do similarity distances affect burst grouping and culling?

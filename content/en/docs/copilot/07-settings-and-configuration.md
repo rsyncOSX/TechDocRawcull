@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Settings and Configuration"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "RawCull preferences, AI configuration, settings persistence, and memory monitoring."
 tags = ["rawcull", "settings", "configuration", "memory"]
 categories = ["technical details"]
@@ -31,7 +31,7 @@ etc.). It groups into four areas via `// MARK:` comments:
 | **Memory cache** | `memoryCacheSizeMB`, `gridCacheSizeMB` — user-chosen ceilings on top of `CacheRecommendationPolicy`'s adaptive defaults (see [Image Pipeline and Caching](../02-image-pipeline-and-caching/)). |
 | **Thumbnail size** | `thumbnailSizeGrid` (200px default), `thumbnailSizePreview` (1616px), `thumbnailSizeFullSize` (8700px), plus an optional CIRAWFilter-based sharpening pipeline (`enableThumbnailSharpening`, `thumbnailSharpenAmount`) for the zoom preview. |
 | **Sharpness scoring** | Parameters feeding the sharpness-scoring algorithm used for burst ranking: border inset fraction, subject-classification toggle, salient-region weight, a `SharpnessPhotoType` preset (`.auto`, portrait, landscape, etc.), a speed/quality trade-off (`SharpnessScoringQuality`), and which image `SharpnessScoringSource` to score from (default: the embedded camera preview, cheaper than a full RAW decode). |
-| **Focus mask** | Laplacian-based focus-peaking tuning: pre-blur radius, threshold, energy multiplier, erosion/dilation/feather radii — these directly parameterize the focus-mask rendering seen in the zoom overlay. |
+| **Focus mask** | Laplacian-based focus-peaking tuning: pre-blur radius 1.92, threshold 0.46, energy multiplier 7.62, erosion/dilation 0, and feather radius 0.5 — these directly parameterize focus-mask rendering. |
 
 `CacheSettingsLimits` (`memoryMinMB`/`MaxMB` = 1000–8000,
 `gridMinMB`/`MaxMB` = 400–2000) bounds what the user is allowed to enter for

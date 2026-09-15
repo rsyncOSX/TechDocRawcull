@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -14,7 +14,7 @@ weight = 10
 # How PhotoAIKit Is Constructed
 
 > **Revision audited:** RawCull resolves PhotoAIKit at
-> `1e2eaccd00947fbadda300e4a617842479cae7b9`. Product names and behavior on this
+> `20e57359603313af7c2d38cae3e8b6e37f8838ef`. Product names and behavior on this
 > page describe that commit, not a newer sibling checkout.
 
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
@@ -55,8 +55,10 @@ but it would silently encode application policy into the AI layer.
 ## 2. Read `Package.swift` As An Architecture Diagram
 
 `PhotoAIKit/Package.swift` declares Swift tools 6.4, macOS 27, Swift 6 language
-mode, seven library products, and one test target. The only external package
-dependency is a pinned revision of `apple/coreai-models`.
+mode, seven library products, and one test target. It pins
+`apple/coreai-models` to revision
+`cc812078731871574c9b2eb620aa40734c4b89ee` and declares
+`huggingface/swift-transformers` from 1.3.3 (RawCull currently resolves 1.3.4).
 
 ```mermaid
 flowchart TD
@@ -70,6 +72,7 @@ flowchart TD
     CoreAI["apple/coreai-models\nCoreAISegmentation product"] --> CLIP
     CoreAI --> Efficient
     CoreAI --> SAM3
+    Transformers["swift-transformers\nTokenizers product"] --> CLIP
     Tests["PhotoAIKitTests"] --> Contracts
     Tests --> CLIP
     Tests --> Efficient
@@ -335,6 +338,14 @@ export), selects the highest-scoring mask, and adapts it to the same
 lazy model loading, request inference, query selection, confidence conversion,
 mask decoding, resizing, thresholding, feathering, timing, and diagnostics.
 
+The provider creates `CoreAIClipTokenizer` and asks Core AI for up to five
+segments. Postprocessing prefers the exhaustive semantic probability map when
+the exporter supplies one. Otherwise it unions every returned instance mask,
+rather than selecting only the highest-scoring instance. The resulting
+`SubjectSegmentationResult` therefore represents all subjects matching the
+prompt. `SAM3MultiSubjectTests` protects both the semantic-map and instance-union
+paths.
+
 The public contract speaks in `SubjectSegmentationRequest` and
 `SubjectSegmentationResult`, not Core AI tensors. This lets workflows and hosts
 work at the domain level while the backend handles framework details.
@@ -496,6 +507,7 @@ Together the tests cover architectural promises such as:
 - legacy data is a rewrite candidate, not silently current data;
 - batch transport has an explicit versioned schema;
 - cancellation crosses the service boundary.
+- SAM 3 preserves all matching subjects through its semantic-map or union fallback.
 
 Fake decoders, providers, and stores make these tests possible. That testability
 is a direct consequence of putting protocols in the innermost target.

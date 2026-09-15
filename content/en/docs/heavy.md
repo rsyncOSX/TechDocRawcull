@@ -2,6 +2,7 @@
 author = "Thomas Evensen"
 title = "Synchronous Code"
 date = "2026-05-19"
+lastmod = "2026-09-15"
 tags = ["concurrency", "imageio", "blocking"]
 categories = ["technical details"]
 mermaid = true
@@ -17,13 +18,13 @@ Most RawCull code uses async/await, actors, and task groups. Some framework and 
 | Area | Files |
 |---|---|
 | Cancellation-aware blocking bridge | `RawParserKit/Sources/RawParserKit/CancellableImageIOWork.swift` |
-| RAW thumbnail and embedded JPEG extraction | `SonyThumbnailExtractor.swift`, `NikonThumbnailExtractor.swift`, `JPGSonyARWExtractor.swift` (`SonyEmbeddedJPEGExtractor`), `JPGNikonNEFExtractor.swift` (`NikonEmbeddedJPEGExtractor`) |
+| RAW thumbnail and embedded JPEG extraction | `SonyThumbnailExtractor.swift`, `NikonThumbnailExtractor.swift`, `DNGThumbnailExtractor.swift`, `JPGSonyARWExtractor.swift`, `JPGNikonNEFExtractor.swift`, `DNEmbeddedJPEGExtractor.swift` |
 | RAW development and orientation | `SonyRAWJPEGCreator.swift`, `ThumbnailSharpener.swift`, `OrientationNormalizedImageLoader.swift` |
-| Binary RAW parsing | `SonyMakerNoteParser.swift`, `NikonMakerNoteParser.swift`, `SonyRawFormat.swift`, `NikonRawFormat.swift` |
+| Binary RAW parsing | Sony, Nikon, and DNG MakerNote/format files in `RawParserKit/Sources/RawParserKit/` |
 | Thumbnail and preview callers | `RequestThumbnail.swift`, `ScanAndCreateThumbnails.swift`, `ScanAndExtractJPGs.swift`, `FullSizePreviewLoader.swift`, `ZoomPreviewHandler.swift`, `ComparisonImageLoader.swift` |
 | Export and JPEG encoding | `ExtractAndSaveJPGs.swift`, `SaveJPGImage.swift`, `DiskCacheManager.swift`, `FullSizeJPGDiskCache.swift` |
 | Filesystem and persistence | `ScanFiles.swift`, `DiscoverFiles.swift`, `PerFileAnalysisArtifactStore.swift`, `SettingsViewModel.swift`, `ReadSavedFilesJSON.swift`, `WriteSavedFilesJSON.swift` |
-| Diagnostics and image analysis | `RawCullViewModel+Diagnostics.swift`, `RawFileDiagnostics.swift`, `RawCullPhotoAnalysisAdapter.swift`, `DeepAIReviewFeature.swift` |
+| Image analysis | `RawCullPhotoAnalysisAdapter.swift`, `DeepAIReviewFeature.swift`, `DeepAIReviewMaskOutlineRenderer.swift` |
 | External process | `ExecuteCopyFiles.swift`, `RsyncProcessStreaming.RsyncProcess` |
 
 ## Why Blocking Work Matters
@@ -59,7 +60,9 @@ public async extractThumbnail(...)
         -> private extractSync(...)
 ```
 
-That shape appears in the Sony and Nikon thumbnail extractors and in `SonyEmbeddedJPEGExtractor` and `NikonEmbeddedJPEGExtractor`. The compatibility enums `JPGSonyARWExtractor` and `JPGNikonNEFExtractor` are deprecated; new callers and documentation must use the current extractor names.
+That shape appears in the Sony, Nikon, and DNG thumbnail/embedded-preview
+extractors. The compatibility enums `JPGSonyARWExtractor` and
+`JPGNikonNEFExtractor` remain deprecated public shims.
 
 `SonyRAWJPEGCreator.createFullSizeJPEG` uses the same bridge at utility QoS for `CIRAWFilter`, render probing, and JPEG representation. `DecodeConcurrencyLimiter` separately bounds how many expensive decodes are admitted; limiting concurrency and moving blocking work off the cooperative executor solve different problems and both protections should remain.
 
@@ -67,7 +70,7 @@ That shape appears in the Sony and Nikon thumbnail extractors and in `SonyEmbedd
 
 | Synchronous operation | Current execution boundary | Why |
 |---|---|---|
-| Sony/Nikon thumbnail and embedded-preview ImageIO decode | `CancellableImageIOWork` on a global GCD queue, with cancellation checkpoints and decode limiting where supplied | Decode duration is input- and OS-decoder-dependent and may be repeated across a catalog. |
+| ARW/NEF/DNG thumbnail and embedded-preview ImageIO decode | `CancellableImageIOWork` on a global GCD queue, with cancellation checkpoints and decode limiting where supplied | Decode duration is input- and OS-decoder-dependent and may be repeated across a catalog. |
 | Sony developed RAW via `CIRAWFilter` and JPEG representation | `CancellableImageIOWork` at utility QoS | Full RAW development and encoding are long, nonsuspending framework calls. |
 | Sharpened RAW preview | Detached task in `ZoomPreviewHandler`; concurrent task in `ComparisonImageLoader` | `ThumbnailSharpener` performs synchronous `CIRAWFilter` and `CIContext` rendering. The detached zoom path is appropriate for potentially long rendering; a concurrent task alone still uses Swift's cooperative executor and must remain bounded. |
 | Orientation-normalized ImageIO load | Detached task in disk/full-size preview cache callers; otherwise kept inside an already isolated worker | File decode can block. The synchronous loader is a leaf API, so the caller owns the execution boundary. |
@@ -75,8 +78,7 @@ That shape appears in the Sony and Nikon thumbnail extractors and in `SonyEmbedd
 | JPG export writes | Encode `CGImage` to Sendable `Data` in the owning actor, then atomic `Data.write` in a detached background task | Avoids sending a non-Sendable image across isolation and keeps file writes off the actor/cooperative executor. |
 | Catalog enumeration | Synchronous `contentsOfDirectory` at the start of the `ScanFiles` actor operation | One bounded directory listing precedes parallel per-file work. Revisit this boundary if catalogs or remote volumes make enumeration measurably slow. |
 | `focuspoints.json` and settings reads | Detached utility task | Whole-file `Data(contentsOf:)` can block even for normally small JSON files. |
-| Sony/Nikon MakerNote and embedded-JPEG byte parsing | Runs within RAW-loader, extractor, scan, or diagnostic worker context | `FileHandle` and mapped/full-file fallback reads are synchronous. They must not be called directly from the main actor; full-file fallbacks make duration input-dependent. |
-| RAW diagnostics | `Task { @concurrent ... }` in `presentRawDiagnostics` | Keeps parser and ImageIO inspection off `@MainActor`. Because diagnostics can read large RAW structures, preserve cancellation checks and move to the GCD bridge/detached execution if profiling shows cooperative-pool occupation. |
+| ARW/NEF/DNG TIFF, MakerNote, and embedded-JPEG parsing | Runs within RAW-loader, extractor, scan, or package-test worker context | `FileHandle` and mapped/full-file fallback reads are synchronous. They must not be called directly from the main actor; full-file fallbacks make duration input-dependent. |
 | Sorting, filtering, histogram math, and small result transforms | `@concurrent` | CPU work is bounded, does not wait on blocking APIs, and benefits from leaving the caller's actor without requiring a dedicated blocking thread. |
 | rsync startup | Synchronous argument/include-list preparation and `executeProcess()` on `ExecuteCopyFiles`' main-actor method; output and completion are streamed asynchronously by `RsyncProcessStreaming` | `executeProcess()` launches and returns; it does not synchronously wait for rsync to finish. Include-list size and launch latency must stay bounded or be moved off the main actor. |
 
@@ -121,7 +123,11 @@ The code normalizes decoded images to 8-bit sRGB RGBA before the focus pipeline.
 
 ## Direct Binary Parsing
 
-Sony and Nikon MakerNote parsers use `FileHandle` to read bounded leading regions first, but some fallbacks read the full file to find later MakerNotes or JPEG ranges. They locate focus-point data and embedded JPEG offsets, then may read the selected JPEG byte range directly. These are synchronous filesystem operations and must remain inside scan/parser/extractor/diagnostic worker contexts.
+Sony, Nikon, and DNG parsers use `FileHandle` to read bounded leading regions
+first, but some fallbacks read the full file to find later TIFF/MakerNote
+structures or JPEG ranges. They locate focus-point data and embedded JPEG
+offsets, then may read the selected JPEG byte range directly. These synchronous
+operations must remain inside scan/parser/extractor worker contexts.
 
 The parsers are written as stateless enums, so they do not need actor isolation.
 

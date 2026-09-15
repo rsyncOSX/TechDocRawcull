@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "AI Model Licence and Provenance Clearance"
 linkTitle = "AI Licence and Provenance"
 date = "2026-08-22"
+lastmod = "2026-09-15"
 description = "Current model-distribution evidence and the reusable RawCull clearance procedure."
 tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -11,9 +12,10 @@ weight = 30
 
 # AI model licence and provenance clearance procedure
 
-Status: mixed — two CLIP packs published; SAM 3 blocked
+Status: DataComp CLIP and SAM 3 enabled in production `v3`; OpenAI CLIP and
+EfficientSAM excluded
 
-Evidence reviewed: 2026-08-22
+Technical repository evidence reviewed: 2026-09-15
 
 Evidence record owner: Thomas Evensen, RawCull maintainer
 
@@ -23,15 +25,17 @@ This section is a dated status snapshot. It describes RawCull's current product
 and repository records; it is not a legal conclusion and must not be copied into
 a later release without a fresh evidence review.
 
-| Pack | Product/release record on 2026-08-22 | Evidence record | Expiring or unresolved point | Owner/action before next publication |
+| Pack | Current product/release record | Evidence record | Residual point for the next publication | Owner/action before next publication |
 |---|---|---|---|---|
-| DataComp CLIP | `.ready`, enabled, published in `v2` | `PROVENANCE.json` status `ready`; model page labels the checkpoint MIT; v2 archive evidence is recorded in the production catalog | Provenance still records the upstream revision as a reference and leaves `source_weight_sha256` null; the model card also contains deployment cautions | RawCull maintainer must recheck the official model page/licence and either bind the exact weight file or sign the residual provenance decision |
-| OpenAI CLIP | `.ready`, enabled, published in `v2` | `PROVENANCE.json` status `ready`; pinned source file/revision/SHA-256 and OpenAI CLIP MIT notice are recorded | The Hugging Face checkpoint page reviewed on 2026-08-22 does not itself display a weight-specific licence identifier; historical support/discussion evidence below did not establish one | Named release approver must preserve the exact legal basis for the trained weights and reassess it before republishing |
-| Meta SAM 3 | `.blocked`, excluded, absent from the public manifest | Complete SAM License and checksum are packaged; upstream source revision/SHA-256 are recorded | Official checkpoint remains gated; compatibility of an anonymous public converted download with that gate remains unresolved | Keep blocked unless Meta or qualified counsel resolves the exact delivery proposal; record responder authority, date, and scope |
+| DataComp CLIP | `.ready`, enabled, published in `v3` | Archive size/SHA-256, runtime fingerprint, reference revision, tokenizer and notice hashes are recorded | Provenance still records the upstream revision as a reference and leaves `source_weight_sha256` null | Bind the exact weight file on a rebuild or preserve a signed residual-provenance decision |
+| OpenAI CLIP | `.ready` in the prepared catalog, excluded from production | Historical `v2` archive and pinned source evidence remain recorded | The weight-specific licence basis described below remains a future-publication question | Reassess and record a named approval before enabling it again |
+| Meta SAM 3 | `.ready`, enabled, published in `v3`; verified licence acceptance required | Archive size/SHA-256, source revision/checksum, runtime hash, complete licence and notice hashes are recorded | The upstream checkpoint is gated; the repository records the project owner's release decision, not an independent legal opinion | Preserve the decision and evidence; reopen review if terms, delivery, model, or licence text changes |
+| EfficientSAM | `.blocked` in the prepared catalog, excluded from production | Source/checkpoint/conversion/licence metadata are prepared | Final converted fingerprint and archive size/SHA-256 are absent | Keep excluded until its descriptor and provenance pass the complete gate |
 
 The application catalog and `ModelAssets` records are the authoritative account
-of what RawCull currently ships: DataComp and OpenAI have archive hashes and
-byte counts; SAM 3 has neither and remains blocked. A `.ready` value proves only
+of what RawCull currently ships: production `v3` contains DataComp and SAM 3.
+OpenAI CLIP and EfficientSAM do not pass the inclusion flags into the production
+catalog or manifest template. A `.ready` value proves only
 that the product gate was opened. Model availability, a public archive, or a
 model-page licence badge must never be treated alone as permission for the
 specific conversion and redistribution.
@@ -50,7 +54,7 @@ either:
 1. cleared under this procedure; or
 2. deliberately excluded from the release and manifest.
 
-Existing `v2` archives are immutable historical release evidence. The safest
+Existing release archives are immutable historical evidence. The safest
 remedy for a recorded provenance gap is a new candidate and new release tag
 created from pinned, hashed source files after the applicable licence decision
 has been reviewed; do not rewrite history by silently replacing the old record.
@@ -81,7 +85,7 @@ pinned conversion code, command, dependencies, and toolchain
         ↓
 SHA-256 of the converted runtime model
         ↓
-SHA-256 and byte size of the packaged AAR
+SHA-256 and byte size of the packaged Managed Background Assets pack
 ```
 
 A filename, a local cache timestamp, or a likely upstream snapshot is not a
@@ -152,10 +156,10 @@ Perform these steps separately for every model that passes its licence gate.
 8. Update the corresponding `PROVENANCE.json` with the actual source revision,
    source filename, source SHA-256, conversion command or record, tool versions,
    output fingerprints, and supporting evidence references.
-9. Rebuild the AAR using the explicit selectors. Verify that the chosen runtime
+9. Rebuild the extensionless asset pack using the explicit selectors. Verify that the chosen runtime
    model, tokenizer, `metadata.json`, and complete notice catalog are present,
    and that `_source.aimodel` and conversion intermediates are absent.
-10. Record the new AAR byte size and SHA-256. The previous unpublished AAR hash
+10. Record the new asset-pack byte size and SHA-256. The previous unpublished archive hash
     must not be reused for the rebuilt archive.
 
 An example pinned Hugging Face acquisition has this form; select the correct
@@ -180,7 +184,7 @@ privileged legal advice.
 
 ### Current position
 
-RawCull currently records this pack as ready and publishes it in `v2`. The
+RawCull currently records this pack as ready and publishes it in `v3`. The
 pinned DataComp repository page reviewed on 2026-08-22 identifies the checkpoint
 as MIT licensed, which is positive evidence. The remaining technical gap is
 that the packaged provenance does not identify and hash the exact source-weight
@@ -337,7 +341,7 @@ all of the following before publication:
    RawCull's own MIT licence does not relicense the model, and RawCull must not
    claim ownership of or permission to redistribute the DataComp training
    dataset.
-7. Complete the common provenance procedure, PhotoAIKit validation, AAR
+7. Complete the common provenance procedure, PhotoAIKit validation, asset-pack
    inspection, archive hashing, manifest verification, and download tests.
    Change `PROVENANCE.json` and the production catalogue to `ready` only after
    those technical controls describe the new release candidate accurately.
@@ -358,7 +362,9 @@ the evidence and decision; it is not a legal opinion.
 
 ### Current position
 
-RawCull currently records this pack as ready and publishes it in `v2`. The
+RawCull retains this pack as ready in the prepared catalog, but excludes it from
+the production catalog and `v3` manifest. The historical `v2` record remains
+relevant if this model is considered for a future release. The
 OpenAI CLIP source repository contains an MIT licence covering the software and
 associated documentation. The Hugging Face checkpoint page reviewed on
 2026-08-22 still does not display a clear weight-level licence designation. A
@@ -498,7 +504,7 @@ Ask:
 
 After licence clearance, re-export from the exact local source file and
 revision above. Record the conversion command and bind the new output to the
-source SHA-256. Update the provenance record and rebuild the AAR.
+source SHA-256. Update the provenance record and rebuild the extensionless asset pack.
 
 ### Sufficient resolution
 
@@ -530,6 +536,12 @@ downloading. Hugging Face documents that a gated model's authors control
 access. The licence text appears permissive about redistribution, but a public
 GitHub download would let downstream users obtain the derivative without going
 through Meta's upstream access flow.
+
+The repository's current product decision nevertheless marks SAM 3 ready,
+enables it in production `v3`, and records verified archive metadata. This
+technical state does not erase the review topic below or claim independent
+legal advice; preserve the decision record and reopen it when the model,
+licence, delivery mechanism, or upstream terms change.
 
 Official references:
 
@@ -604,7 +616,7 @@ without an accountable decision.
 Re-export from the recorded revision and `model.safetensors` SHA-256, recording
 the complete conversion command and environment. Preserve the full SAM License
 with the pack, maintain explicit acceptance against its checksum, and rebuild
-the AAR. Re-check the official licence immediately before publication because
+the extensionless asset pack. Re-check the official licence immediately before publication because
 the agreement states that Meta may modify it.
 
 ## Contact-request template
@@ -711,7 +723,7 @@ Maintain a private register with at least these fields:
 | Conditions | Notices, attribution, acceptance, gating, use restrictions, trade controls |
 | Legal review | Counsel, date, private matter/reference number, approved/blocked conclusion |
 | Conversion | Script/commit, command, dependencies, toolchain, timestamp, output hashes |
-| Pack | Explicit selector manifest, AAR byte size and SHA-256, notice verification |
+| Pack | Explicit selector manifest, asset-pack byte size and SHA-256, notice verification |
 | Decision | Ready, blocked, replaced, or omitted; responsible approver and date |
 
 Do not mark a contact item complete merely because a message was sent. Record
@@ -739,8 +751,8 @@ complete:
       command and environment.
 - [ ] Converted output fingerprints and runtime hashes are recorded.
 - [ ] PhotoAIKit validation passes.
-- [ ] A new AAR was built with explicit selectors and inspected.
-- [ ] The AAR byte size and SHA-256 are recorded.
+- [ ] A new extensionless Managed Background Assets pack was built with explicit selectors and inspected.
+- [ ] The asset-pack byte size and SHA-256 are recorded.
 - [ ] `PROVENANCE.json`, `NOTICE.md`, and the application catalogue agree.
 - [ ] A responsible human has signed and dated the release decision.
 
@@ -750,15 +762,15 @@ If even one required item remains open, keep that pack blocked or omit it.
 
 RawCull may publish a ready subset. Every candidate must still have an explicit
 ready, blocked, replaced, or omitted decision, and every blocked/omitted asset
-must be absent from that manifest. The current `v2` record follows this rule by
-publishing both CLIP packs and omitting SAM 3.
+must be absent from that manifest. The current `v3` record follows this rule by
+publishing DataComp CLIP and SAM 3 while excluding OpenAI CLIP and EfficientSAM.
 
 After the decisions are complete:
 
 1. Re-export every approved model from its pinned and hashed source.
 2. Update the notice catalogs and change only genuinely approved catalogue
    descriptors to `ready`.
-3. Rebuild and inspect the AARs; record their new hashes and sizes.
+3. Rebuild and inspect the extensionless asset packs; record their new hashes and sizes.
 4. Generate and inspect the self-hosted download manifest with a non-beta or
    corrected `ba-package` toolchain.
 5. Create the dedicated `RawCull-AI-Models` release as a draft and upload only

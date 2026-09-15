@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Intelligence and AI Subsystem"
 linkTitle = "Intelligence / AI"
 date = "2026-09-04"
-lastmod = "2026-09-04"
+lastmod = "2026-09-15"
 description = "RawCull's on-device similarity, semantic search, burst analysis, and deep-review architecture."
 tags = ["rawcull", "ai", "similarity", "semantic-search"]
 categories = ["technical details"]
@@ -17,8 +17,9 @@ features live: grouping near-duplicate "burst" shots, ranking them by
 sharpness/subject focus, letting the user search photos by natural-language
 description, and (optionally) running a heavier "Deep Review" AI pass that
 recommends a winner within a burst. All of it runs **locally** — no photo
-data or embeddings leave the machine, and every optional model requires an
-explicit license acceptance and download before RawCull will use it.
+data or embeddings leave the machine. Optional models are downloaded before
+use; models whose verified licence descriptor requires acceptance (currently
+SAM 3) must also be explicitly accepted.
 
 This subsystem depends on sibling packages that own the actual model
 execution, and the CLIP/segmentation models themselves are run through
@@ -245,9 +246,9 @@ just have zero matches" from ambiguous nil/empty checks.
 
 Deep Review is an optional, user-triggered, heavier analysis of a *single*
 burst group: it segments the subject in each frame using PhotoAIKit's
-CoreAI-backed segmentation (SAM3 or EfficientSAM, whichever the user
-selected — both are `CoreAI`/`CoreAIImageSegmenter` model families exposed
-via `CoreAISAM3Backend`/`CoreAIEfficientSAMBackend`) and scores focus
+Core AI-backed segmentation. The package supports SAM 3 and EfficientSAM, but
+the current production inclusion policy exposes SAM 3 and excludes
+EfficientSAM. It scores focus
 specifically on that subject region (`SubjectMaskFocusScorer`, from
 `PhotoAnalysisKit`, edge-energy based — not a CoreAI model), then
 recommends which frame in the group is sharpest **on the subject**, which
@@ -267,6 +268,13 @@ Progress is modeled as `DeepAIReviewPresentationState` (`checking` →
 `deepAIReviewController.isRunning(groupID:)` while a specific group is being
 analyzed.
 
+The current SAM 3 provider uses the exhaustive semantic probability map when
+available and otherwise unions every instance mask, so a plural prompt can
+retain all matching subjects. Completed results keep their mask candidates and
+the controller indexes them by file ID. Loupe, zoom, the burst workspace, and
+the review sheet can then render a cached subject contour through
+`DeepAIReviewMaskOutlineRenderer` without rerunning segmentation.
+
 ## Model management and licensing
 
 `RawCullAIModelManagementModel` and `RawCullAISettingsModel`
@@ -281,10 +289,9 @@ multi-GB downloads the user opts into:
 - **`RawCullAIModelDownloadService`** — an `actor`-based coordinator
   integrating with Apple's Background Assets framework so large downloads
   survive app relaunch/backgrounding.
-- **`RawCullAIModelLicenceAcceptance`** — persists which model licenses the
-  user has explicitly accepted (with RawCull version + timestamp) to
-  `ModelLicenceAcceptances.json`; a model isn't used until its license is
-  accepted, even if already downloaded.
+- **`RawCullAIModelLicenceAcceptance`** — persists acceptance for descriptors
+  that require it (currently SAM 3), binding the record to model and licence
+  identity in `ModelLicenceAcceptances.json`.
 - **`RawCullAIModelResourceManager`** — a generic actor that validates a
   downloaded bundle and constructs the concrete provider for it, caching the
   validated provider so re-validation doesn't happen on every use.

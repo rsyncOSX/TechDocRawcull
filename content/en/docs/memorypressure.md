@@ -3,6 +3,7 @@ title: Memory Pressure
 description: How RawCull measures memory and reacts to macOS pressure events
 weight: 30
 mermaid: true
+lastmod: 2026-09-15
 ---
 
 # Memory Pressure
@@ -16,7 +17,6 @@ RawCull can hold many images in memory while scanning and culling. The memory-pr
 | `Actors/SharedMemoryCache.swift` | Owns cache limits, memory-pressure dispatch source, pressure counters, and cache clearing |
 | `Model/ViewModels/MemoryViewModel.swift` | Samples total system memory, used system memory, app memory, and pressure threshold for the UI |
 | `Model/Cache/CacheConfig.swift` | Contains `CacheRecommendationPolicy` and cache-limit calculation |
-| `Model/ViewModels/MemoryDiagnosticsViewModel.swift` | Writes diagnostics samples for cache/memory review |
 | `Views/Settings/MemoryTab.swift` | Displays memory stats, cache limits, and pressure status |
 | `Views/RawCullSidebarMainView/MemoryWarningLabelView.swift` | Shows the sidebar warning during pressure |
 
@@ -132,40 +132,29 @@ The 50 MB critical cap applies to the preview cache. Critical handling clears th
 
 ## Why Pressure State Is Lock-Backed
 
-`currentPressureLevel` is read by UI and diagnostics without `await`. The value is stored in an `OSAllocatedUnfairLock`, which makes the read/write contract explicit while avoiding a main-actor or cache-actor hop during frequent sampling.
+`currentPressureLevel` is read by the UI without `await`. The value is stored in an `OSAllocatedUnfairLock`, which makes the read/write contract explicit while avoiding a main-actor or cache-actor hop during frequent sampling.
 
-The same pattern is used for pressure counters, demand/boomerang counters, and cache cost/count mirrors. The synchronous surface is deliberately narrow: pressure snapshots, `NSCache` lookups/inserts, and lock-backed counters. Configuration, disk-cache access, monitoring setup, and handler ownership remain actor-isolated or explicitly run in detached tasks. This design does not imply that arbitrary cache operations may bypass actor isolation merely because `NSCache` itself is thread-safe.
+The same pattern is used for the cache cost/count mirrors. The synchronous surface is deliberately narrow: pressure snapshots, `NSCache` lookups/inserts, and lock-backed cache totals. Configuration, disk-cache access, monitoring setup, and handler ownership remain actor-isolated or explicitly run in detached tasks. This design does not imply that arbitrary cache operations may bypass actor isolation merely because `NSCache` itself is thread-safe.
 
-## Diagnostics Contract
+## Runtime Observability
 
-`MemoryDiagnosticsViewModel` samples every five seconds while its console is open and can export the session as TSV. Limit changes must be evaluated with both caches and both kinds of pressure evidence:
+`MemoryTab` refreshes `MemoryViewModel` once per second while the settings view is active. It displays total physical memory, the app's definition of used system memory, the RawCull process footprint, the informational 85-percent threshold, and the kernel-reported pressure level.
 
-| Measurement | What it proves |
-|---|---|
-| `mem_cost_MB`, `mem_items`, `mem_limit_MB` | Preview occupancy against the saved maximum |
-| `grid_cost_MB`, `grid_items`, `grid_limit_MB` | Grid occupancy against the saved maximum |
-| `live_limit_MB` | The preview cache's actual live cap, including a warning shrink that differs from settings |
-| `pressure`, `pressure_warns`, `pressure_crits` | Current sampled state plus cumulative events that may occur between samples |
-| `mem_evictions`, `grid_evictions`, `unk_evictions` | Which cache produced eviction traffic; unknown should stay zero |
-| `demand_total`, `cold_extracts`, `boomerang_misses`, `true_hit_rate_pct`, `cold_rate_pct` | Whether a smaller limit causes repeated disk/source work instead of useful eviction |
-| `app_MB`, `used_MB`, `free_MB`, `headroom_MB` | Whether the change lowers process footprint without consuming system headroom |
-| Thumbnail contention and AI/grid start counters | Whether memory tuning coincides with duplicate work or competing pipelines |
-
-The saved maximum columns are not proof of the current live limit. During pressure, use `live_limit_MB` for preview and corroborate grid behavior with `grid_cost_MB`, eviction deltas, and the pressure counters.
+`SharedMemoryCache` also maintains lock-backed current cost and item-count totals for the preview and grid caches. `CacheDelegate` decrements those mirrors when `NSCache` evicts an item, which keeps the values shown in settings accurate. There is no separate memory-diagnostics console or TSV-export pipeline in the current source tree.
 
 ## Validation When Limits Change
 
 Run the cache-policy tests in `RawCullTests/ThumbnailProviderTests.swift`. They currently cover the production/testing relationship, explicit `CacheConfig` values, the 16 GB baseline, expansion and tier caps, user maxima, and warning-state rounding. Add fixtures for every new RAM tier, clamp, rounding rule, or pressure branch.
 
-Also retain the concurrency test in `RawCullVerifyTestsDataRaceDetectionTests.swift`, which samples `currentPressureLevel` concurrently, and the diagnostics schema assertion in `ThumbnailContentionTests.swift`, which protects TSV consumers when columns change.
+Also retain the concurrency test in `RawCullVerifyTestsDataRaceDetectionTests.swift`, which samples `currentPressureLevel` concurrently.
 
 For an operational limit change, capture a diagnostics session with the same representative catalog and workflow before and after the change:
 
 1. Record idle, initial grid population, sustained scrolling, loupe/preview use, and recovery after induced or observed pressure.
-2. Compare peak `app_MB`, preview/grid cost and item counts, live limits, per-cache evictions, boomerang misses, cold rate, and time to first usable grid.
+2. Compare peak process footprint, preview/grid cost and item counts, live limits, and time to first usable grid using Instruments or temporary development instrumentation.
 3. Confirm warning shrinks both live caches without deleting disk data.
 4. Confirm critical clears both RAM caches, preview falls to the 50 MB cap, counters record the event, and `.normal` restores adaptive limits.
-5. Reject a larger limit if it only raises footprint without improving hit/boomerang measurements; reject a smaller limit if it creates repeated cold extraction or visible grid/preview churn.
+5. Reject a larger limit if it only raises footprint without improving reuse; reject a smaller limit if it creates repeated cold extraction or visible grid/preview churn.
 
 ## What To Check When Changing This Area
 
@@ -173,6 +162,6 @@ For an operational limit change, capture a diagnostics session with the same rep
 - Do not rely only on the 85 percent UI threshold; the real emergency signal is the kernel pressure event.
 - If cache limits look strange, inspect both user settings and the adaptive tier caps.
 - Treat preview and grid limits separately; a healthy total can hide churn in one cache.
-- If diagnostics miss short pressure spikes, use cumulative pressure counters rather than only sampled pressure labels.
+- The settings display samples state; use Instruments or signposts when a change needs event-level evidence.
 - Critical pressure should free RAM quickly and should not delete disk caches.
 - After recovery, verify both live limits were recalculated from current settings and memory, not merely reset to hard-coded values.

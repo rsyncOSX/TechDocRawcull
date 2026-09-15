@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "Future Features and Competitive Evaluation"
 linkTitle = "Future Features"
 date = "2026-09-01"
-lastmod = "2026-09-01"
-description = "Competitive feature review and a prioritized roadmap for RawCull after version 3.2.0, including an evaluation of additional Core AI models."
+lastmod = "2026-09-15"
+description = "Competitive feature review and a prioritized roadmap for RawCull after version 3.2.2, including an evaluation of additional Core AI models."
 tags = ["roadmap", "features", "culling", "ai", "core-ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
 weight = 55
@@ -12,7 +12,7 @@ weight = 55
 
 # Future Features and Competitive Evaluation
 
-This page evaluates possible RawCull features after version 3.2.0. It compares
+This page evaluates possible RawCull features after version 3.2.2. It compares
 the current implementation with representative professional culling products,
 identifies the most important workflow gaps, and evaluates additional models
 from Apple's Core AI model catalog.
@@ -72,7 +72,7 @@ Future automation should preserve that contract. RawCull should not silently
 delete a file, conceal a low-confidence result, or present a generative
 explanation as measured fact.
 
-## Version 3.0.0 and 3.2.0 Baseline
+## Version 3.0.0 And Current 3.2.2 Baseline
 
 Version 3.0.0 is sometimes described as the non-AI version. More precisely, it
 does not require separately downloaded AI models. It still uses Apple Vision
@@ -80,20 +80,23 @@ feature prints for image similarity and burst grouping, and PhotoAnalysisKit
 uses Vision and Metal-based analysis. It does not provide CLIP text-to-image
 search or segmentation-backed Deep Review.
 
-Version 3.2.0 adds the optional Core AI layer:
+The current 3.2 line adds the optional Core AI layer and later 3.2.2 work
+completes the SAM 3 release path, subject outlines, and batch grid selection:
 
-| Capability | Version 3.0.0 | Version 3.2.0 |
+| Capability | Version 3.0.0 | Version 3.2.2 |
 |---|---|---|
 | Embedded-preview culling | Yes | Yes |
-| Sony ARW and Nikon NEF | Yes | Yes |
+| Sony ARW, Nikon NEF, and Adobe DNG | ARW and NEF | Yes |
 | EXIF and camera AF point | Yes | Yes |
 | Sharpness calibration and focus masks | Yes | Yes |
 | Vision feature-print similarity | Primary backend | Fallback backend |
 | Burst grouping and candidate ranking | Yes | Yes |
 | Local CLIP similarity | No | Optional |
 | Natural-language semantic search | No | Optional; requires CLIP |
-| SAM 3 or EfficientSAM Deep Review | No | Implemented but model-dependent |
+| SAM 3 Deep Review | No | Production-enabled, optional download |
 | Managed model download workflow | No | Yes |
+| Cached Deep Review subject outlines | No | Loupe, zoom, burst workspace, and review sheet |
+| Badge-based batch selection/rating | No | Yes |
 
 The normal culling workflow is deliberately shared. Features such as XMP,
 improved ingest, broader formats, better review queues, and keyboard workflow
@@ -104,7 +107,7 @@ degrade cleanly when no model is present.
 
 Source inspection confirms the following current application behavior:
 
-- catalog discovery for registered Sony ARW and Nikon NEF files;
+- catalog discovery for registered Sony ARW, Nikon NEF, and Adobe DNG files;
 - concurrent EXIF, dimensions, camera, lens, ISO, aperture, and AF metadata;
 - two-tier thumbnail caching plus full-size embedded/developed preview caches;
 - AF overlays and GPU-generated focus masks;
@@ -114,14 +117,16 @@ Source inspection confirms the following current application behavior:
 - manual comparison, burst workspaces, review/defer state, and manual winners;
 - local CLIP image embeddings and text-query embeddings;
 - Vision fallback when CLIP is unavailable or disabled;
-- optional subject-mask Deep Review;
+- optional SAM 3 subject-mask Deep Review, including multi-subject union masks
+  and cached orange subject outlines;
+- badge-based batch selection and rating in the culling grid;
 - reject, neutral keeper, and two- through five-star rating states;
 - persisted ratings, analysis artifacts, burst decisions, cache signatures,
   and settings;
 - embedded or developed JPEG export;
 - rsync-based copying of tagged or minimum-rated RAW files, with progress and
   cancellation; and
-- memory-pressure monitoring and cache diagnostics.
+- memory-pressure monitoring and live cache accounting in Settings.
 
 The application currently stores its rating decisions in RawCull's own JSON
 data rather than writing standard XMP sidecars. This protects source files but
@@ -260,43 +265,41 @@ Sources:
 | Stars/reject state | Internal persistence | Standard | Present but isolated |
 | Color labels and flags | No standard interchange | Common professional workflow | Gap |
 | XMP read/write | No | Essential for Lightroom/Capture One handoff | Highest workflow gap |
-| RAW formats | ARW and NEF | Major RAW families plus JPEG/HEIC | Large addressable-market gap |
+| RAW formats | ARW, NEF, and DNG | Major RAW families plus JPEG/HEIC | Large addressable-market gap remains |
 | Safe card ingest | Selected-folder workflow | Rename, metadata, backup, verification | Partial |
 | Local/offline inference | Yes | Also supported by some competitors | Strong, not unique alone |
 | Exact duplicate files across folders | No | Lightroom catalog function | Low-priority gap |
 
 ## Recommended Roadmap
 
-### P0: Release qualification for 3.2.0
+### P0: Maintain Release Qualification For 3.2.2
 
 Do not add a large new culling feature during the final release window. Finish
 the contract already presented to users:
 
 1. Run the complete automatic and manual acceptance matrix on representative
-   ARW and NEF catalogs.
-2. Verify a clean install, both CLIP downloads, cancellation, removal, relaunch,
-   invalid-model recovery, and Vision fallback on the release candidate.
-3. Decide whether Deep Review is a shipped feature, a manual-install preview,
-   or a future feature, and make every UI and documentation statement agree.
-4. Correct package-version and model-server documentation drift.
+   ARW, NEF, and DNG catalogs.
+2. Verify clean DataComp CLIP and SAM 3 installs, cancellation, removal,
+   relaunch, invalid-model recovery, explicit SAM licence acceptance, and Vision
+   fallback on the release candidate.
+3. Exercise Deep Review multi-subject masks and cached subject outlines across
+   loupe, zoom, comparison, and the review sheet.
+4. Run model-provenance and release-metadata gates against the published `v3`
+   archives and manifest.
 5. Record performance and peak memory for small, medium, and large catalogs.
 6. Preserve a non-AI path whose basic culling workflow does not depend on model
    availability.
 
-At the time of this review, the production code points to the GitHub `v2`
-model manifest and both CLIP descriptors are ready. The README text still says
-that the server is a non-routable placeholder. SAM 3 remains excluded by the
-`includeSAM3 = false` product switch and is blocked for managed redistribution.
-
-The AI dependency-boundary verifier passed. The smoke manifest enumerated 208
-unique tests. The smoke run had one failure: the project and lockfile use
-RawParserKit 1.3.0 while the RawCull README still documents 1.2.9. The observed
-functional smoke tests passed; the failure was the release-metadata consistency
-test.
+The current production code points to the GitHub `v3` model manifest and
+filters the catalog to DataComp CLIP and Meta SAM 3. Both descriptors are
+ready; SAM 3 requires acceptance of the checksum-verified bundled licence.
+OpenAI CLIP and EfficientSAM remain prepared but excluded. Release validation
+is implemented in `make verify-model-provenance` and `make release-preflight`.
 
 ### P1: XMP interoperability
 
-This should be the first substantial feature after 3.2.0.
+This remains a strong candidate for the first substantial interoperability
+feature after 3.2.2.
 
 #### Required behavior
 

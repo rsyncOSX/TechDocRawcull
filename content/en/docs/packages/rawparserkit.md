@@ -3,9 +3,9 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
-tags = ["raw", "arw", "nef", "makernote", "imageio", "swift-package", "architecture"]
+tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 40
@@ -13,13 +13,13 @@ weight = 40
 
 # How RawParserKit Is Constructed
 
-> **Revision audited:** RawCull resolves RawParserKit `1.2.9` at
-> `26327d983a3f0216c460684ad91944b9543af420`.
+> **Revision audited:** RawCull resolves RawParserKit `1.3.0` at
+> `d2175ed880d39021bdb5f5a2a842b460af0b316c`.
 
-RawParserKit is RawCull's camera-file boundary. It knows how Sony ARW and Nikon
-NEF files are structured, how to locate their embedded JPEGs and AF metadata,
-and how to turn those sources into orientation-normalized images and
-display-ready metadata.
+RawParserKit is RawCull's camera-file boundary. It knows how Sony ARW, Nikon
+NEF, and Adobe DNG files are structured, how to locate their embedded JPEGs and
+AF metadata, and how to turn those sources into orientation-normalized images
+and display-ready metadata.
 
 The package stops at decoding. It does not score sharpness, generate embeddings,
 group bursts, cache application results, or decide which photo should be kept.
@@ -29,7 +29,7 @@ group bursts, cache application results, or decide which photo should be kept.
 RawParserKit owns:
 
 - vendor-neutral RAW format dispatch;
-- Sony ARW and Nikon NEF format knowledge;
+- Sony ARW, Nikon NEF, and Adobe DNG format knowledge;
 - TIFF IFD and vendor MakerNote traversal;
 - focus-location and embedded-JPEG offset parsing;
 - RAW and rendered-image thumbnails and previews;
@@ -53,7 +53,7 @@ RawParserKit supplies inputs to higher layers without importing them:
 
 ```mermaid
 flowchart LR
-    File["ARW, NEF, JPEG, PNG, or TIFF"] --> Parser["RawParserKit"]
+    File["ARW, NEF, DNG, JPEG, PNG, or TIFF"] --> Parser["RawParserKit"]
     Parser --> Image["CGImage or NSImage"]
     Parser --> Metadata["RawImageMetadata + RawFocusPoint"]
     Image --> Host["RawCull adapters"]
@@ -83,7 +83,8 @@ The source is arranged in layers:
 RawImageLoader                         high-level deduplicated facade
 ├── RawFormatRegistry + RawFormat      vendor-neutral dispatch
 │   ├── SonyRawFormat
-│   └── NikonRawFormat
+│   ├── NikonRawFormat
+│   └── DNGRawFormat
 ├── thumbnail and preview extractors   ImageIO + binary fallback
 ├── MakerNote parsers                  TIFF byte traversal
 ├── OrientationNormalizedImageLoader   rendered/embedded image helpers
@@ -111,6 +112,7 @@ Conformers are stateless enums. `RawFormatRegistry.all` currently registers:
 | ---------------- | --------- | ----------------------------------------------------------------------------------------------------- |
 | `SonyRawFormat`  | `.arw`    | Sony extractors, MakerNote parser, compression labels, body thresholds, and full sensor JPEG creation |
 | `NikonRawFormat` | `.nef`    | Nikon extractors, MakerNote parser, compression labels, and body thresholds                           |
+| `DNGRawFormat`   | `.dng`    | DNG TIFF/SubIFD parser, extractors, compression labels, and generic/camera-family thresholds          |
 
 `format(for:)` lowercases a URL's extension and returns a format metatype.
 Callers invoke static protocol requirements on that value without switching on
@@ -239,6 +241,12 @@ it falls back to ImageIO's embedded-thumbnail behavior.
 Both vendor extractors then redraw into an 8-bit premultiplied sRGB bitmap using
 interpolation quality derived from `qualityCost`.
 
+### 6.3 DNG
+
+`DNGThumbnailExtractor` follows the same cancellation-aware contract. Its
+binary fallback uses `DNGMakerNoteParser` and TIFF IFD/SubIFD classification to
+avoid treating JPEG-compressed raw image data as a display preview.
+
 Both APIs run their synchronous ImageIO work through `CancellableImageIOWork`
 and throw `ThumbnailError` for an invalid source, failed generation, or failed
 bitmap context.
@@ -249,7 +257,7 @@ does not force sharpening on every caller.
 
 ## 7. Embedded Preview Extraction Has Two Paths
 
-The two vendors use the same building blocks in a different order.
+The three formats use the same building blocks in a different order.
 `SonyEmbeddedJPEGExtractor` prefers the binary TIFF locator, avoiding RAW
 decoder initialization on affected ARW files, then falls back to ImageIO.
 `NikonEmbeddedJPEGExtractor` inspects ImageIO sub-images first and uses the
@@ -272,6 +280,10 @@ path limits large images to 4320 pixels.
 The Nikon fallback prefers the full-resolution SubIFD preview for full-size
 requests and IFD1 for smaller requests. Sony chooses the largest available JPEG
 first, with preview and thumbnail fallbacks.
+
+DNG prefers standards-classified preview IFDs using `NewSubFileType` and
+`Compression`; files that omit `NewSubFileType` retain the positional fallback
+needed by older or nonconforming writers.
 
 Extractor-level limiters default to two concurrent operations, and a caller can
 inject a shared limiter. This allows a host facade to enforce one budget across
@@ -354,6 +366,20 @@ largest preview and IFD1 JPEG.
 As on Sony, focus parsing starts with 4 MB and falls back to the full file.
 Embedded-location parsing uses a 1 MB fast path followed by a full-file retry
 when required.
+
+### 10.1 DNG TIFF And SubIFD Parsing
+
+DNG uses the same neutral focus-location string but has no single camera-vendor
+MakerNote layout. `DNGMakerNoteParser` walks TIFF IFD0 and SubIFDs, uses standard
+EXIF focus evidence when present, and exposes `DNGEmbeddedJPEGLocations` with
+thumbnail, preview, and full-JPEG candidates. Standards-classified previews are
+selected from TIFF `NewSubFileType` and `Compression` values; positional rules
+are used only when the classification tag is absent.
+
+`DNGRawFormat` reports container-appropriate compression names for uncompressed,
+JPEG, Deflate, PackBits, Lossy DNG, and JPEG XL values. Its size-class policy is
+megapixel-based with small camera-family overrides because DNG is a cross-vendor
+container rather than a single body line.
 
 ## 11. Diagnostics Report The Failed Stage
 
@@ -464,6 +490,8 @@ byte buffers. The suite covers:
   embedded JPEG locations, and diagnostics;
 - Nikon Type-3 MakerNote and AFInfo2 layouts, SubIFDs, IFD1 JPEGs, offset rules,
   and diagnostics;
+- DNG TIFF/SubIFD classification, focus and embedded-JPEG locations,
+  compression labels, size classes, and malformed-data behavior;
 - direct reading of embedded JPEG bytes;
 - cancellation before decode and cancellation behavior in vendor extractors;
 - decode-limiter capacity;
@@ -475,7 +503,7 @@ byte buffers. The suite covers:
 - current public naming and format-helper behavior.
 
 Synthetic binary fixtures make edge cases reproducible and avoid committing
-large proprietary ARW and NEF samples. Framework integration is tested with
+large proprietary ARW, NEF, and DNG samples. Framework integration is tested with
 small generated images where needed.
 
 ## 17. How To Add Another Camera Vendor
@@ -502,13 +530,14 @@ Use the existing extension points:
 | ----------------------------------------- | ------------------------------------------------------------------------------------ |
 | Product and concurrency settings          | `Package.swift`                                                                      |
 | Format contract and dispatch              | `Sources/RawParserKit/RawFormat.swift`, `RawFormatRegistry.swift`                    |
-| Vendor conformers                         | `Sources/RawParserKit/SonyRawFormat.swift`, `NikonRawFormat.swift`                   |
+| Format conformers                         | `Sources/RawParserKit/SonyRawFormat.swift`, `NikonRawFormat.swift`, `DNGRawFormat.swift` |
 | High-level facade                         | `Sources/RawParserKit/RawImageLoader.swift`                                          |
 | Metadata and focus values                 | `Sources/RawParserKit/BrowserExifInfo.swift`, `BrowserFocusPoint.swift`              |
 | Sony TIFF and MakerNote parsing           | `Sources/RawParserKit/SonyMakerNoteParser.swift`                                     |
 | Nikon TIFF and MakerNote parsing          | `Sources/RawParserKit/NikonMakerNoteParser.swift`                                    |
-| Embedded preview extraction               | `Sources/RawParserKit/JPGSonyARWExtractor.swift`, `JPGNikonNEFExtractor.swift`       |
-| Thumbnail extraction                      | `Sources/RawParserKit/SonyThumbnailExtractor.swift`, `NikonThumbnailExtractor.swift` |
+| DNG TIFF and preview parsing               | `Sources/RawParserKit/DNGMakerNoteParser.swift`                                      |
+| Embedded preview extraction               | `JPGSonyARWExtractor.swift`, `JPGNikonNEFExtractor.swift`, `DNEmbeddedJPEGExtractor.swift` |
+| Thumbnail extraction                      | `SonyThumbnailExtractor.swift`, `NikonThumbnailExtractor.swift`, `DNGThumbnailExtractor.swift` |
 | Full Sony sensor development              | `Sources/RawParserKit/SonyRAWJPEGCreator.swift`                                      |
 | Orientation and rendered files            | `Sources/RawParserKit/OrientationNormalizedImageLoader.swift`                        |
 | Cancellation bridge                       | `Sources/RawParserKit/CancellableImageIOWork.swift`                                  |

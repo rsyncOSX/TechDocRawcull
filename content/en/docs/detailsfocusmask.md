@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -11,8 +11,8 @@ mermaid = true
 
 # Detailed Focus Mask Computation
 
-This page follows visible focus-mask rendering at **PhotoAnalysisKit 1.2.2**,
-revision **3bf462fab0d82f5e4c315273688933ace68fa737**.
+This page follows visible focus-mask rendering at **PhotoAnalysisKit 1.3.1**,
+revision **2a1466e04d821fa2628d6985296643e0d0c7e465**.
 
 The focus mask is not the camera's AF-point marker. The marker reports where the
 camera attempted focus. The mask is a package-generated bitmap of selected
@@ -100,12 +100,12 @@ These change only the rendered overlay or its visibility:
 | Value                           | Current default | Effect                                                              |
 | ------------------------------- | --------------: | ------------------------------------------------------------------- |
 | `threshold`                     |            0.46 | Fallback/floor reference for adaptive visual threshold              |
-| `dilationRadius`                |             1.0 | Connects thresholded edge pixels                                    |
-| `erosionRadius`                 |             1.0 | Removes isolated/small responses before dilation                    |
-| `featherRadius`                 |             2.0 | Softens the clipped mask alpha                                      |
+| `dilationRadius`                |             0.0 | Optionally connects thresholded edge pixels                         |
+| `erosionRadius`                 |             0.0 | Optionally removes isolated/small responses                         |
+| `featherRadius`                 |             0.5 | Softens the clipped mask alpha                                      |
 | `showRawLaplacian`              |           false | Debug early return before threshold, patches, color, and morphology |
-| `guaranteeVisibleFocusEvidence` |           false | Allows a second, lower percentile when coverage is too small        |
-| `minimumEvidenceCoverage`       |           0.001 | Coverage target for that optional relaxation                        |
+| `guaranteeVisibleFocusEvidence` |           false | Compatibility property; no longer lowers the render threshold      |
+| `minimumEvidenceCoverage`       |           0.001 | Compatibility property retained with the public configuration       |
 | `isolateMaskToSubject`          |            true | Chooses subject/AF search regions rather than the whole frame       |
 
 The final mask uses a single warm red/orange color matrix: red 1.0, green 0.22,
@@ -182,8 +182,21 @@ broad AF, saliency, then global.
 
 ## Stage 3: Scale And Build The Primary Laplacian
 
-The input `CIImage` is transformed by the requested mask scale. The package
-builds the shared amplified Laplacian:
+The input `CIImage` is transformed by the requested mask scale. RawCull's
+`FocusMaskAnalysisResolutionPolicy.prepare` returns every decoded preview pixel,
+so view code must choose an appropriate decode before this call. The package
+builds a dedicated native-pixel focus-mask detail image with clamped edges and
+the following pre-blur:
+
+```text
+focus-mask pre-blur = max(0.35, primary preBlurRadius * 0.52)
+```
+
+Native-mask mode disables resolution scaling and preserves the input extent.
+The scalar scoring path continues to use its resolution-aware primary and
+optional fine-detail passes.
+
+The underlying scalar edge pipeline is:
 
 ```text
 ISO factor:
@@ -238,15 +251,10 @@ AF and saliency separately. Global/none searches the whole image. With subject
 isolation disabled, the whole image becomes the saliency-shaped selection and
 the search is effectively global.
 
-When AF evidence is available, a finer Laplacian is built:
-
-```text
-fine pre-blur = max(0.35, primary preBlurRadius * 0.52)
-```
-
-AF regions use this fine source, optionally center-weighted around the AF point.
-This fine factor is **mask selection policy**; scalar quality's second pass uses
-a different 0.58 factor and blend.
+Every focus-mask region uses the same native-pixel detail source described in
+Stage 3. The mask is not center-weighted around the AF point. This 0.52 factor
+is **mask selection and rendering policy**; scalar quality's second pass uses a
+different 0.58 factor and blend.
 
 ## Stage 5: Generate Candidate Patches
 
@@ -310,12 +318,13 @@ with overlap ratio 0.55 or greater, and keeps at most three.
 These rankings are visual-evidence selection and diagnostics. Scalar scoring
 does use the best AF-local and salient-interior patch's **robust tail score** as
 a conservative 25% refinement of broad subject evidence, but it does not use the
-rendered mask threshold, morphology, color, or coverage relaxation.
+rendered mask threshold, morphology, color, or rendered coverage.
 
 ## Stage 7: Choose The Visual Threshold
 
-Samples are collected only from the selected patch rectangles. The adaptive
-threshold is:
+Samples are collected from the full selected search regions. Ranked patches
+summarize and order local evidence, but no longer truncate the visible focus
+map. The adaptive threshold is:
 
 | Evidence                     | Percentile | Floor from config threshold | May exceed fallback? |
 | ---------------------------- | ---------: | --------------------------: | -------------------- |
@@ -324,15 +333,8 @@ threshold is:
 
 The floor is at least 0.01 and the final threshold is at most 0.95.
 
-If `guaranteeVisibleFocusEvidence` is enabled and coverage is below
-`minimumEvidenceCoverage`, the package tries percentile 0.70, with floor 0.16
-times the current threshold and capped at the current threshold. It applies the
-relaxed value only when it is lower, and records the new coverage and
-`relaxedForVisibility = true`.
-
-That relaxation is presentation-only. In RawCull, views enable it when an
-existing normalized badge classifies the file as sharp but the normal overlay
-would be too sparse.
+The threshold is not relaxed for visibility. `relaxedForVisibility` is always
+false in the current renderer, and weak images may return an empty mask.
 
 ## Stage 8: Render And Clip
 
@@ -342,14 +344,14 @@ The package performs this sequence:
 2. apply `CIColorThreshold`;
 3. apply morphology minimum with `erosionRadius`, when positive;
 4. apply morphology maximum with `dilationRadius`, when positive;
-5. apply a morphology minimum of 0.6 to restore narrow lines;
-6. colorize to warm red/orange with alpha 0.92;
-7. clip the result to the union of selected patch rectangles;
-8. Gaussian-feather with `featherRadius`, when positive;
-9. crop to the scaled image extent and create the output `CGImage`.
+5. colorize to warm red/orange with alpha 0.92;
+6. clip the result to the union of the selected search regions;
+7. Gaussian-feather with `featherRadius`, when positive;
+8. crop to the scaled image extent and create the output `CGImage`.
 
-If no viable patches are selected, there are no patch rectangles to retain and
-the rendered evidence is empty.
+After morphology and feathering, GPU area reductions compute visible-alpha
+coverage within the selected regions. This final rendered coverage—not a
+pre-render sample estimate—is stored in the evidence.
 
 ## Stage 9: Return Diagnostics
 
@@ -366,9 +368,14 @@ The mask result updates `FocusEvidence` with:
 Confidence rules are intentionally readable:
 
 - no viable patch -> low;
-- AF anchored within normalized distance 0.05 -> high, otherwise low;
+- rendered coverage below 0.001, robust-tail below 0.01, micro-contrast below
+  0.005, or patch coverage below 0.001 -> low;
+- AF anchored within normalized distance 0.05 with strong detail -> high;
+- AF aligned with measurable but weaker detail -> medium;
+- AF farther than 0.05 -> low;
 - global with composite at least 0.10 -> medium, otherwise low;
-- non-AF subject with silhouette below 0.20 and dominance at least 1.08 -> high;
+- non-AF subject with strong detail, silhouette below 0.20, and dominance at
+  least 1.08 -> high;
 - other usable subject evidence -> medium.
 
 The diagnostic facade also records `FocusMaskRegionSource` and the visual
@@ -395,12 +402,11 @@ the owning SwiftUI task is the final stale-result boundary.
 3. Compare AF-center, AF-neighborhood, broad AF, saliency, and global scores.
 4. Inspect sorted patch composite components, especially AF distance,
    silhouette, linear-edge, and below-AF penalties.
-5. Check effective visual threshold, coverage, and whether visibility was
-   relaxed.
+5. Check effective visual threshold and final rendered coverage.
 6. Enable raw Laplacian mode to separate edge-energy input from threshold and
    morphology.
 7. Remember that a strong scalar score and a sparse mask are compatible: the
-   mask deliberately shows at most three localized evidence patches.
+   mask is permitted to be empty when the evidence gates are not met.
 
 ## Protecting Tests
 
@@ -408,6 +414,7 @@ the owning SwiftUI task is the final stale-result boundary.
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | `RawCullTests/PhotoAnalysisKitIntegrationTests.swift`          |
 | Public analyze/mask/calibration behavior and cancellation                               | `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift`               |
+| Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | `PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift`           |
 | Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | `PhotoAnalysisKitTests/SharpnessMetricsTests.swift`            |
 | Descriptor excludes mask-only presentation and includes scalar policy                   | `PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift` |
 | Bounded input loading and analysis cancellation                                         | `PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift`          |

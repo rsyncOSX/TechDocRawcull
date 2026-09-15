@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-08-31"
+lastmod = "2026-09-15"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
@@ -22,10 +22,12 @@ RawCull exposes four related results, but they are not interchangeable:
 
 The scalar score and the overlay share edge-energy and evidence machinery in
 PhotoAnalysisKit, but showing more red pixels does not increase a stored score.
-Mask presentation can be relaxed without changing scalar analysis.
+Mask presentation does not change scalar analysis. A weak or unfocused image is
+allowed to produce an empty overlay; the renderer does not lower its threshold
+merely to manufacture visible evidence.
 
-RawCull pins **PhotoAnalysisKit 1.2.2**, revision
-**3bf462fab0d82f5e4c315273688933ace68fa737**. The package owns sharpness,
+RawCull pins **PhotoAnalysisKit 1.3.1**, revision
+**2a1466e04d821fa2628d6985296643e0d0c7e465**. The package owns sharpness,
 saliency, calibration, focus evidence, and mask algorithms. RawCull owns UI
 settings, file decoding/source selection, workflow lifetime, normalization, and
 persistence.
@@ -95,7 +97,7 @@ longest side to the effective size.
 
 `PhotoAnalyzer.sharpnessDescriptor(for:)` produces
 `SharpnessAnalysisDescriptor`, the package-owned identity for non-mask scalar
-analysis. At the pinned PhotoAnalysisKit 1.2.2 revision it has:
+analysis. At the pinned PhotoAnalysisKit 1.3.1 revision it has:
 
 - descriptor schema version 1;
 - scalar algorithm version 4;
@@ -196,8 +198,9 @@ configuration snapshot. RawCull adapts the package breakdown only to add
 `SharpnessScoringSource`; it does not reinterpret the numeric fields.
 
 Presentation-only controls include threshold, dilation, erosion, feathering,
-raw-Laplacian display, subject isolation, minimum visible coverage, and
-guaranteed-visible evidence. Some shared values such as pre-blur, border inset,
+raw-Laplacian display, and subject isolation. The legacy
+`guaranteeVisibleFocusEvidence` and `minimumEvidenceCoverage` properties remain
+source-compatible but no longer relax rendering. Some shared values such as pre-blur, border inset,
 AF radii, ISO, and aperture affect the evidence image or regions used by both
 paths. See [Detailed Focus Mask Computation](../detailsfocusmask/) for the exact
 stage classification.
