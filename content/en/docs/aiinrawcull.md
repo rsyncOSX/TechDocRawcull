@@ -184,6 +184,45 @@ Qwen and refreshes CLIP and SAM 3 capabilities. See
 [The RawCull Intelligence Runtime](../runtime/) for the complete lifetime and
 reconfiguration path.
 
+### Why Qwen has its own inference runtime
+
+It may look simpler to put Qwen's provider, loaded model, and inference methods
+directly inside `RawCullAIModelRuntime`. The two types have different jobs,
+however, and keeping those jobs separate makes their concurrency and lifetimes
+clear.
+
+Think of `RawCullAIModelRuntime` as the coordinator for the application's model
+room. It knows which resources are installed, validates capabilities, selects
+the services that RawCull should expose, and publishes those choices on the
+main actor. `QwenInferenceRuntime`, by contrast, is the specialist operating
+one machine in that room. Its actor protects Qwen-specific mutable state: the
+validated provider, the lazily loaded vision-language model, and the generation
+counter used to reject work from a model that has since been removed or
+replaced. It also owns Qwen-specific work such as creating sessions, building
+prompts, running generation, and decoding responses.
+
+This boundary matters because Qwen inference can suspend for comparatively
+long operations such as loading the model and generating a response. Those
+operations should be serialized by the Qwen actor without turning the
+main-actor `RawCullAIModelRuntime` into the place where heavy inference runs.
+It also keeps Qwen's two-stage lifecycle—validate a lightweight provider now,
+then load the heavy model only when it is first used—independent of the CLIP
+and SAM 3 resource lifecycles.
+
+Separate does not mean unrelated. `RawCullAIModelRuntime.init` creates one
+`QwenInferenceRuntime` and retains it as `qwenInference`. During application
+assembly, that exact instance is passed to `RawCullQwenAnalysisFeature`.
+Consequently, there is one owner of Qwen's provider and loaded model, while the
+model runtime remains the composition point that creates and coordinates the
+application's complete collection of AI backends. In short:
+
+- `RawCullAIModelRuntime` answers **which AI capabilities are available and
+  how they fit into the application**;
+- `QwenInferenceRuntime` answers **how one Qwen request is safely executed**;
+  and
+- constructing the latter inside the former guarantees a single, shared Qwen
+  runtime rather than independent copies with competing model state.
+
 ## Model Discovery, Validation, and Provider Construction
 
 CLIP and SAM 3 use one
@@ -580,4 +619,3 @@ When debugging a model problem, follow the layer that owns the decision:
 The central architectural rule is that model runtimes create typed evidence;
 RawCull's feature and policy layers decide how that evidence affects ranking,
 grouping, presentation, and user actions.
-

@@ -623,4 +623,3 @@ while application feature identities remain stable for the session.
 The runtime's central rule is simple: validate and replace model-dependent
 services behind stable state owners, then accept results only when revision,
 generation, catalog, and backend identities still match.
-
