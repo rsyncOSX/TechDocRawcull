@@ -436,7 +436,7 @@ sequenceDiagram
     UI->>Settings: change CLIP/model/segmenter preference
     Settings->>Settings: persist and increment revision
     Settings->>Runtime: apply(complete snapshot)
-    Runtime->>Runtime: reject stale; compare identity
+    Runtime->>Runtime: reject stale revisions and compare identity
     opt segmentation changed
         Runtime->>Models: setSelectedSegmentationModel
     end
