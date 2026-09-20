@@ -1,4 +1,4 @@
-i+++
++++
 author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
