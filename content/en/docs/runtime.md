@@ -1,86 +1,127 @@
 +++
 author = "Thomas Evensen"
-title = "The RawCull Intelligence Runtime"
+title = "The RawCull AI Runtime"
+linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-15"
-description = "How RawCullIntelligenceRuntime provides stable AI object lifetimes, applies configuration changes, and avoids rebuilding the application graph when settings change."
+lastmod = "2026-09-20"
+description = "How RawCull constructs, validates, activates, reconfigures, and tears down its CLIP, SAM 3, Qwen, Vision, and feature runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection"]
 categories = ["technical details"]
 mermaid = true
 +++
 
-# The RawCull Intelligence Runtime
+# The RawCull AI Runtime
 
-`RawCullIntelligenceRuntime` is RawCull's long-lived AI lifetime container and
-configuration coordinator. It is created once when RawCull starts and retained
-until the application releases its root state. It is not a background process, a
-thread, an inference engine, or a temporary task created when a user opens the
-Settings window.
+RawCull's AI runtime is the long-lived object graph that connects downloaded
+model assets to stable application features. It is not one model, one thread,
+or a background daemon. It is a set of objects with deliberately different
+lifetimes and actor-isolation rules.
 
-The word _runtime_ describes the live set of AI-facing application objects used
-during one RawCull session:
+The current implementation has two runtime layers:
+
+| Runtime | Primary responsibility |
+| --- | --- |
+| `RawCullAIModelRuntime` | Own concrete provider/resource lifecycles: CLIP, SAM 3, Qwen, Vision, model capability snapshots, mask stores, and segmentation-service installation. |
+| `RawCullIntelligenceRuntime` | Own stable application feature lifetimes and apply complete, revisioned settings decisions without rebuilding the graph. |
+
+That distinction replaces the older, broader `RawCullAIIntegration` shape. The
+authoritative sources are
+[`RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift)
+and
+[`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
+For model algorithms and data products, see
+[AI Models in RawCull](../aiinrawcull/).
+
+## Runtime Topology
 
 ```mermaid
 flowchart TD
-    App["RawCullApp"] --> Runtime["RawCullIntelligenceRuntime<br/>one stable session object"]
-    Runtime --> Integration["RawCullAIIntegration"]
+    App["RawCullApp"] --> AppState["RawCullApplicationState"]
+    AppState --> VM["RawCullViewModel"]
+    AppState --> Runtime["RawCullIntelligenceRuntime"]
+
+    Runtime --> ModelRuntime["RawCullAIModelRuntime"]
     Runtime --> Settings["RawCullAISettingsModel"]
-    Runtime --> Management["RawCullAIModelManagementModel"]
+    Runtime --> Downloads["RawCullAIModelDownloadsModel"]
     Runtime --> Similarity["RawCullSimilarityFeature"]
     Runtime --> Semantic["RawCullSemanticSearchFeature"]
     Runtime --> Review["DeepAIReviewController"]
+    Runtime --> Qwen["RawCullQwenAnalysisFeature"]
+
+    ModelRuntime --> CLIP["CLIP resource managers/providers"]
+    ModelRuntime --> SAM["SAM 3 resource manager/provider"]
+    ModelRuntime --> QwenActor["QwenInferenceRuntime actor"]
+    ModelRuntime --> Vision["Vision fallback"]
+    ModelRuntime --> Masks["Mask repository/stores/selector"]
+
+    Similarity --> SharedModel["SimilarityScoringModel"]
+    Semantic --> SharedModel
+    Review --> DeepFeature["DeepAIReviewFeature"]
+    Qwen --> QwenActor
 ```
 
-These objects keep their identities while settings and provider selections
-change. Reconfiguration changes selected dependencies inside the established
-graph; it does not replace the graph.
+The arrows above mix ownership and collaboration. The precise ownership rules
+are discussed below; notably, callbacks from a child toward an owner are weak.
 
-## What The Runtime Is Responsible For
+## What Each Layer Owns
 
-The runtime has two closely related responsibilities.
+### `RawCullAIModelRuntime`
 
-First, it strongly retains the stable AI objects needed by the application:
+The model runtime is `@MainActor` because model selection and provider
+installation must be coordinated with observable feature state. Heavy work is
+still isolated elsewhere: its resource managers and Qwen runtime are actors,
+and PhotoAIKit's CLIP and SAM 3 providers are actor-owned.
+
+It owns:
+
+- application AI paths;
+- three `RawCullAIModelResourceManager` actors: SAM 3, DataComp CLIP, and
+  OpenAI CLIP;
+- a single `QwenInferenceServing` actor;
+- the always-available `VisionFeaturePrintBackend` and Vision similarity
+  service;
+- dictionaries of validated CLIP and segmentation providers;
+- resolved CLIP model locations used to create replacement providers;
+- memory and optional disk subject-mask stores;
+- the current `SubjectMaskRepository`, `SegmentationService`, and
+  `SubjectMaskSelector`;
+- the selected segmentation model and active model identity; and
+- the latest `RawCullAICapabilities` snapshot.
+
+Views do not traverse this object. They receive the focused feature surfaces
+from `RawCullIntelligenceRuntime`.
+
+### `RawCullIntelligenceRuntime`
+
+The intelligence runtime owns the objects whose identities must remain stable:
 
 ```swift
-@MainActor
-final class RawCullIntelligenceRuntime:
-    RawCullIntelligenceConfigurationApplying
-{
-    let integration: RawCullAIIntegration
-    let similarityFeature: RawCullSimilarityFeature
-    let semanticSearchFeature: RawCullSemanticSearchFeature
-    let deepAIReviewController: DeepAIReviewController
-    let settingsModel: RawCullAISettingsModel
-    let modelManagementModel: RawCullAIModelManagementModel
-}
+let modelRuntime: RawCullAIModelRuntime
+let similarityFeature: RawCullSimilarityFeature
+let semanticSearchFeature: RawCullSemanticSearchFeature
+let deepAIReviewController: DeepAIReviewController
+let qwenAnalysisFeature: RawCullQwenAnalysisFeature
+let settingsModel: RawCullAISettingsModel
+let modelDownloadsModel: RawCullAIModelDownloadsModel
 ```
 
-Second, it receives complete, revisioned settings configurations and applies
-only meaningful changes. It is the controlled point through which settings can
-replace the active similarity service, semantic-search service, or segmentation
-selection.
+It also records the last accepted configuration revision and identity. Its
+single mutation entry point is `apply(configuration:)`.
 
-The runtime deliberately does not own general application behavior such as the
-current catalog, selected files, navigation, ratings, culling decisions, or
-undo. Those responsibilities remain in `RawCullViewModel`.
+### `RawCullViewModel`
 
-## How The Runtime Is Created
+The main view model owns product and catalog policy, not model runtimes. It
+answers questions such as which files are selected, what the current catalog
+identity is, what burst ranks and sharpness scores exist, and whether an AI
+operation conflicts with other work. Narrow protocols expose only the pieces
+the AI features need.
 
-`RawCullApp.init()` asks the application composition root to create the live
-state:
+## Construction: From App Launch to a Live Graph
 
-```swift
-let applicationState = RawCullApplicationState.live()
-
-_viewModel = State(initialValue: applicationState.viewModel)
-_intelligenceRuntime = State(
-    initialValue: applicationState.intelligenceRuntime
-)
-```
-
-`RawCullApplicationState` is an assembly value. The app extracts and retains its
-two stable roots separately in SwiftUI `@State`:
+[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Main/RawCullApp.swift#L111)
+calls `RawCullApplicationState.live()`. SwiftUI retains the returned view model
+and intelligence runtime in separate `@State` properties:
 
 ```text
 RawCullApp
@@ -88,313 +129,498 @@ RawCullApp
  └─ strong → RawCullIntelligenceRuntime
 ```
 
-`RawCullApplicationState.make(...)` constructs their shared dependencies in a
-deterministic order:
+`live()` constructs a default `RawCullAIModelRuntime`, then delegates to the
+injectable `RawCullApplicationState.make(...)`. The factory accepts stores,
+preferences, scanners, download catalog/coordinator, and version information as
+parameters so tests can build the same graph with deterministic substitutes.
 
-1. Create `RawCullAIIntegration`, which composes the concrete Vision, CLIP, SAM
-   3, and EfficientSAM implementations behind narrow services.
-2. Create `RawCullAIModelManagementModel`.
-3. Create `RawCullAISettingsModel` with that exact model-management instance.
-4. Ask settings for the initial typed configuration.
-5. Create one `SimilarityScoringModel` from the initial similarity and semantic
-   services.
-6. Create `RawCullSimilarityFeature` over the scoring model.
-7. Create `RawCullSemanticSearchFeature` over the same scoring model and the
-   same similarity feature.
-8. Create `DeepAIReviewController` around the integration's existing
-   `DeepAIReviewFeature`.
-9. Create `RawCullViewModel` with those exact feature objects. Its initializer
-   also creates the burst coordinator.
-10. Create `RawCullIntelligenceRuntime` with the already-created objects.
-11. Bind the narrow weak coordination edges.
-12. Assert shared object identity before returning the application state.
+### Phase 1: initialize the model runtime
 
-The identity assertions are architectural checks. They verify, for example, that
-the view model and runtime expose the exact same similarity feature rather than
-two equivalent-looking instances.
+`RawCullAIModelRuntime.init` performs only synchronous, bounded setup:
 
-## Stable Identity Matters
+1. Store `RawCullAIPaths` and the Qwen inference actor.
+2. Create SAM 3 and CLIP resource-manager actors with their PhotoAIKit
+   factories. Managed URLs are initially unset.
+3. Create one Vision provider and wrap it in
+   `RawCullVisionSimilarityService`.
+4. Create `SubjectMaskMemoryStore`.
+5. Attempt to create `SubjectMaskDiskStore` at
+   `Caches/no.blogspot.RawCull/SAM3Masks`. Failure is represented as a
+   capability state; it does not prevent the application from launching.
+6. Build the list of usable stores: memory always, disk when construction
+   succeeded.
+7. Create an `UnavailableSegmentationProvider`, repository, segmentation
+   service, and selector. This placeholder gives the graph a complete shape
+   before SAM validation.
+8. Publish an initial capability snapshot: Vision available, model resources
+   checking, and mask-storage status known.
 
-Several parts of RawCull keep references to the same feature objects:
+No CLIP, SAM 3, or Qwen model engine is loaded in this initializer.
 
-```mermaid
-flowchart LR
-    App["RawCullApp"] --> Runtime["Runtime"]
-    App --> VM["View model"]
-    Runtime --> Similarity["Same similarity feature"]
-    VM --> Similarity
-    Runtime --> Semantic["Same semantic feature"]
-    VM --> Semantic
-    Runtime --> Review["Same Deep Review controller"]
-    VM --> Review
-```
+### Phase 2: assemble stable features
 
-The runtime and view model retaining the same object is intentional. The runtime
-guarantees the intelligence lifetime; the view model uses the feature when
-application policy requires it. SwiftUI views also receive these feature
-references and observe their existing state.
+`RawCullApplicationState.make` then performs the following order:
 
-Stable identity preserves:
+1. Create `RawCullAIModelDownloadsModel` from runtime paths and the production
+   model catalog.
+2. Create `RawCullQwenAnalysisFeature` with `modelRuntime.qwenInference`.
+3. Create `DeepAIReviewFeature` with the initial mask-generation capability.
+4. Bind that exact feature to the model runtime. The runtime installs an actual
+   pipeline later when a segmentation provider becomes available.
+5. Create `RawCullAISettingsModel` with model runtime, downloads model, Qwen
+   feature, user defaults, and saved-burst-evidence scan.
+6. Ask settings for a synchronous revision-0 configuration.
+7. Create one `SimilarityScoringModel` from the selected similarity service,
+   semantic capability/service, and persistent artifact store.
+8. Wrap it in `RawCullSimilarityFeature` and
+   `RawCullSemanticSearchFeature`. Both wrappers refer to the same scoring model.
+9. Wrap the Deep Review feature in `DeepAIReviewController`.
+10. Create `RawCullViewModel` with those exact feature/controller instances.
+11. Create `RawCullIntelligenceRuntime` and bind the similarity feature's weak
+    application context.
+12. Bind semantic search to the view model and settings to the runtime.
 
-- active tasks and cancellation handles;
-- operation and catalog generations used to reject stale completions;
-- observable progress and presentation state;
-- the shared similarity artifact and semantic-search state;
-- cached Deep Review results and per-file completed mask candidates used by
-  subject-outline presentation;
-- view bindings to the current feature objects;
-- testable identity across the application graph.
+The final settings binding immediately publishes the first configuration. This
+happens only after every receiver exists.
 
-Changing a service inside a stable feature preserves all unrelated state and
-lets the feature explicitly invalidate only the work made obsolete by that
-change.
+### Phase 3: verify graph identity
 
-## How A Setting Change Is Applied
+Debug assertions verify that:
 
-Suppose the user changes the preferred similarity backend from Vision to CLIP.
-The existing object graph handles the change as a value flowing through a
-controlled path:
+- view model and runtime share the same similarity feature;
+- semantic search and similarity share the same scoring model/feature identity;
+- view model and runtime share the same semantic and Deep Review objects;
+- controller and model runtime refer to the same Deep Review feature;
+- runtime and Qwen feature share the same Qwen inference actor;
+- settings, runtime, and Qwen feature share the intended model runtime and
+  inference actor; and
+- settings and runtime expose the same downloads model.
 
-```mermaid
-sequenceDiagram
-    participant UI as SettingsView
-    participant Settings as RawCullAISettingsModel
-    participant Runtime as RawCullIntelligenceRuntime
-    participant Feature as RawCullSimilarityFeature
-    participant Model as SimilarityScoringModel
+These are architectural invariants. Two equivalent-looking instances would not
+share task handles, progress, caches, result dictionaries, generation counters,
+or SwiftUI observation.
 
-    UI->>Settings: setUseCLIPForSimilarity(true)
-    Settings->>Settings: persist preference
-    Settings->>Settings: increment revision and build complete snapshot
-    Settings->>Runtime: apply(configuration)
-    Runtime->>Runtime: validate revision and identity
-    Runtime->>Feature: replaceSimilarityService(service)
-    Feature->>Feature: cancel obsolete work
-    Feature->>Model: setSimilarityService(service)
-```
+## Startup Refresh and Installed-Model Activation
 
-`RawCullAISettingsModel.publishConfiguration()` performs the handoff:
+The graph is usable immediately with Vision while disk checks happen later.
+When `RawCullMainView` appears, this task starts the real refresh:
 
 ```swift
-private func publishConfiguration() {
-    guard let configurationConsumer else { return }
-    configurationRevision &+= 1
-    capabilities = configurationConsumer.apply(
-        configuration: configurationSnapshot(
-            revision: configurationRevision
-        )
-    )
+.task {
+    await intelligenceRuntime.settingsModel.refresh()
 }
 ```
 
-The snapshot is complete. It contains the similarity service, compatible
-artifact backend descriptors, semantic-search capability and service, selected
-segmentation model, and a monotonically increasing revision. The runtime does
-not have to combine several callbacks that might describe different moments in
-time.
+The call path is:
 
-When `apply(configuration:)` receives the snapshot, it:
+```mermaid
+sequenceDiagram
+    participant View as RawCullMainView
+    participant Settings as RawCullAISettingsModel
+    participant Downloads as RawCullAIModelDownloadsModel
+    participant Models as RawCullAIModelRuntime
+    participant Resource as Resource-manager actors
+    participant Runtime as RawCullIntelligenceRuntime
 
-1. Rejects a revision older than or equal to the most recently accepted
-   revision, except for the permitted same-revision/same-identity case.
-2. Compares the complete incoming identity with the last applied identity.
-3. Accepts a newer but identical configuration without resetting feature work.
-4. Changes the segmentation provider only when the segmentation identity
-   changed.
-5. Replaces the similarity service only when its backend or accepted artifact
-   backends changed.
-6. Replaces semantic-search configuration only when its capability or backend
-   changed.
-7. Records the accepted identity and revision.
+    View->>Settings: refresh()
+    Settings->>Downloads: refresh()
+    Downloads-->>Settings: applyManagedModelLocations(snapshot)
+    Settings->>Models: applyManagedModelLocations(snapshot)
+    Models->>Models: validate or clear Qwen
+    Models-->>Settings: Qwen status
+    par model validation
+        Settings->>Models: refreshCapabilities()
+        Models->>Resource: load SAM 3 and both CLIP choices
+    and saved evidence
+        Settings->>Settings: scan burst caches
+    end
+    Models-->>Settings: capabilities
+    Settings->>Runtime: apply(revisioned configuration)
+    Runtime-->>Settings: current capabilities
+```
 
-The stable `RawCullSimilarityFeature`, `RawCullSemanticSearchFeature`, and
-`DeepAIReviewController` instances remain in place.
+### One complete location snapshot
 
-## Why RawCull Does Not Recreate Everything On A Setting Change
+`applyManagedModelLocations(_:)` is the only activation path for a complete set
+of installed locations. It gives the current SAM and CLIP URLs to their resource
+managers. A missing Qwen URL calls `qwenInference.clear()`; a present URL is
+standardized and validated.
 
-It might appear simpler to construct a new integration, scoring model, feature
-objects, controllers, and view model whenever a setting changes. In a stateful
-SwiftUI application, however, reconstruction changes much more than the selected
-backend.
+Using a complete snapshot avoids a transient mixture such as “new CLIP, old
+SAM, removed Qwen still active.” Every invocation describes one model-install
+state.
 
-| Stable runtime reconfiguration                                    | Recreate the graph after each change                                      |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Existing feature identities remain valid.                         | Every existing view and owner must receive replacement references.        |
-| Only the dependency affected by the setting is replaced.          | Unrelated models and controllers are also recreated.                      |
-| Active work can be cancelled by the object that owns it.          | Old tasks may continue on objects that are no longer presented.           |
-| Generation counters remain available to reject late results.      | New objects may not know the generations owned by the old objects.        |
-| Observable UI state has one continuing owner.                     | Old and new observable objects can temporarily produce split UI state.    |
-| Shared scoring-model identity is preserved.                       | Similarity and semantic search can accidentally receive different stores. |
-| Cached and in-memory results survive unrelated changes.           | Reconstruction discards state unless every value is manually migrated.    |
-| One complete configuration is applied atomically on `@MainActor`. | Multiple replacements can expose partially updated combinations.          |
-| Tests can assert exact shared instances and focused invalidation. | Tests must account for graph-wide replacement and rebinding.              |
+### Generation-gated refresh
 
-### The split-graph problem
+Settings increments `refreshGeneration` before beginning work. The generation
+is checked after Qwen validation and after the concurrent capability/evidence
+work. A later refresh therefore supersedes an earlier one; the earlier result
+cannot publish merely because its disk work finished last.
 
-Consider a view that already holds a similarity feature:
+The `defer` that clears `isScanningSavedBurstData` also checks the generation,
+so an obsolete refresh cannot hide the current refresh's progress indicator.
+
+### Concurrent capability validation
+
+`RawCullAIModelRuntime.refreshCapabilities()` starts SAM 3, DataComp CLIP, and
+OpenAI CLIP loads with `async let`. Each resource-manager actor computes a
+lightweight recursive metadata snapshot. When unchanged, the previous validated
+capability/provider result is reused. When changed, PhotoAIKit validates the
+bundle and constructs a provider.
+
+After all three complete, the main-actor runtime atomically replaces its
+provider dictionaries and resolved location dictionaries, translates package
+statuses into RawCull statuses, builds semantic-search readiness separately,
+stores one new capability snapshot, and activates the selected segmentation
+provider.
+
+## Capability State Is More Than “Loaded”
+
+`RawCullAICapabilityStatus` distinguishes:
+
+| State | Meaning |
+| --- | --- |
+| `checking(expectedLocations:)` | Validation is pending. |
+| `available(location:)` | Bundle validation and provider construction succeeded, or an always-available service such as Vision is ready. |
+| `missing(expectedLocations:)` | No candidate bundle was found. |
+| `invalid(location:reason:)` | A candidate exists but validation or provider construction failed. |
+| `unavailable(reason:)` | The runtime cannot offer the capability for another explicit reason. |
+
+CLIP model availability and semantic-search readiness are separate. A provider
+must expose the text/image contracts before semantic search is `.ready`. Vision
+remains a valid similarity service but can never satisfy semantic text search.
+
+Qwen uses an internal `QwenModelStatus` with not-configured, checking,
+available, missing, and invalid states. Settings translates it to the common
+capability presentation and updates the Qwen feature at the same time.
+
+## Resource Managers and Their Cache
+
+`RawCullAIModelResourceManager<Provider>` is an actor because filesystem
+inspection, cryptographic bundle validation, and provider initialization must
+not run on the main actor or race with a managed-location change.
+
+The resource cache has two keys:
+
+- `RawCullAIModelResourceSnapshot`, a sorted list of path, file kind, byte
+  count, modification time, and symlink target; and
+- the resulting capability, optional provider, and optional provider-init
+  failure.
+
+`setManagedCandidateURL` invalidates both when the URL changes. `load()` also
+detects modifications within the same directory. The snapshot only decides
+whether validation may be reused. PhotoAIKit's resolver remains responsible for
+metadata, required files, asset extension, fingerprint, and checksum validity.
+
+Bundle validity and provider construction are reported separately. A bundle can
+be structurally valid yet fail to initialize its concrete runtime; RawCull maps
+that case to `.invalid` with the provider error so Settings can explain the
+actual stage that failed.
+
+## Selecting the Similarity Runtime
+
+`RawCullAIModelRuntime.similarityService(prefersCLIP:clipModel:)` has a strict
+selection order:
+
+1. If the user disabled CLIP, return the existing Vision service.
+2. If the selected CLIP provider is absent, log the expected/resolved path and
+   return Vision.
+3. If the provider exists but its resolved location is missing, return Vision.
+4. Otherwise return a new `RawCullCLIPSimilarityService` around the validated
+   provider and supply a factory that can reconstruct a provider from the exact
+   validated location for finite-vector recovery.
+
+The service value can change while `RawCullSimilarityFeature` and
+`SimilarityScoringModel` retain their identities. Backend descriptors determine
+whether existing artifacts are still compatible.
+
+Semantic search is constructed only from a currently validated CLIP provider.
+The provider itself satisfies both `TextEmbeddingProviding` and
+`ImageTextSimilarityComparing`, so `RawCullCLIPSemanticSearchService` can use
+the same model identity as the cached image embeddings.
+
+## Installing and Replacing the Segmentation Runtime
+
+The model runtime retains the selected `RawCullSegmentationModel`, currently
+SAM 3. Selection and availability changes converge on
+`activateSelectedSegmentationProvider(availability:)`.
+
+When a provider is available, `installSegmentationProviderIfNeeded` compares
+its `ModelIdentity` with the active identity. A change rebuilds:
+
+1. `SubjectMaskRepositoryConfiguration` with prompt, model identity, and maximum
+   input side;
+2. `SubjectMaskRepository` over the retained stores;
+3. `SegmentationService` over the new provider and stores; and
+4. `SubjectMaskSelector` over the matching repository and service.
+
+When unavailable, the runtime installs the placeholder provider only if a real
+identity was previously active. Identity checks prevent needless reconstruction
+on repeated equivalent refreshes.
+
+The stable `DeepAIReviewFeature` then receives:
+
+- a new `RawCullDeepAIReviewPipeline` when the provider exists;
+- a disk-mask loader when disk storage exists; and
+- the current availability state.
+
+If availability disappears during a review, `DeepAIReviewFeature.install`
+cancels the active operation. Stored feature identity and already completed
+results remain under one owner.
+
+## Qwen Runtime Lifetime
+
+Qwen intentionally does not use the generic resource-manager actor. Its
+`QwenInferenceRuntime` owns two lazy layers:
+
+1. `CoreAIQwenProvider`, created during validation; and
+2. `CoreAIVisionLanguageModel`, created on the first assessment and retained for
+   subsequent sessions.
+
+Every validation or clear increments `modelGeneration`. `assess` captures that
+generation before an asynchronous model load and checks it after every
+suspension. If Settings removes or replaces the model during loading or
+generation, the old operation throws cancellation instead of publishing through
+an obsolete model.
+
+`RawCullQwenAnalysisFeature` separately owns a batch generation and task. It
+processes images one at a time, isolates per-file failures, and cancels if model
+status becomes unavailable. The feature and inference actor thus protect two
+different races: batch/UI lifetime and provider/model lifetime.
+
+## Revisioned Configuration Application
+
+Settings publishes one complete `RawCullIntelligenceConfiguration` containing:
+
+- a monotonically increasing revision;
+- the selected similarity service;
+- semantic-search capability and optional service; and
+- the selected segmentation model.
+
+Its `identity` contains values, not provider references:
+
+- selected similarity backend descriptor;
+- accepted artifact backend descriptors;
+- semantic capability;
+- semantic backend descriptor; and
+- segmentation selection.
+
+Concrete services stay on `@MainActor`; only descriptor-based identity is
+`Sendable`.
+
+### The apply algorithm
+
+`RawCullIntelligenceRuntime.apply(configuration:)` follows this order:
+
+1. Compute incoming identity.
+2. Reject a revision less than or equal to the last accepted revision. A
+   same-revision/different-identity assertion catches a broken publisher.
+3. If a newer revision describes the same identity, record the newer revision
+   without resetting any work.
+4. If segmentation selection changed, ask the model runtime to activate it.
+5. If similarity backend or accepted artifact descriptors changed, replace the
+   similarity service through the stable feature.
+6. If semantic capability or semantic backend changed, replace semantic
+   configuration through that same stable similarity feature.
+7. Record the accepted identity and revision.
+8. Return the model runtime's current capability snapshot to Settings.
+
+```mermaid
+sequenceDiagram
+    participant UI as Settings UI
+    participant Settings as RawCullAISettingsModel
+    participant Runtime as RawCullIntelligenceRuntime
+    participant Models as RawCullAIModelRuntime
+    participant Feature as RawCullSimilarityFeature
+
+    UI->>Settings: change CLIP/model/segmenter preference
+    Settings->>Settings: persist and increment revision
+    Settings->>Runtime: apply(complete snapshot)
+    Runtime->>Runtime: reject stale; compare identity
+    opt segmentation changed
+        Runtime->>Models: setSelectedSegmentationModel
+    end
+    opt similarity changed
+        Runtime->>Feature: replaceSimilarityService
+    end
+    opt semantic configuration changed
+        Runtime->>Feature: replaceSemanticSearchConfiguration
+    end
+    Runtime-->>Settings: current capabilities
+```
+
+Revision and identity solve different problems. Revision orders decisions;
+identity determines whether a newer decision requires work.
+
+## What Service Replacement Invalidates
+
+`RawCullSimilarityFeature.replaceSimilarityService` first compares complete
+backend identities. For a real change it:
+
+1. asks the application context to cancel and reset burst analysis tied to the
+   old backend;
+2. installs the new service in `SimilarityScoringModel`;
+3. cancels existing image hydration;
+4. advances the image-hydration generation; and
+5. rehydrates the current catalog for the new accepted descriptors.
+
+Semantic replacement updates semantic capability/service, cancels semantic
+hydration, advances its independent generation, and rehydrates compatible
+artifacts. Image similarity and semantic search use separate task handles and
+generations so changing one concern does not confuse completion from the other.
+
+Catalog hydration performs image and semantic hydration in order and finally
+checks the current catalog identity. Ranking captures operation generation,
+catalog identity, and backend identity. A late completion must match all three
+before it is accepted.
+
+## Stable Identity: Why the Graph Is Not Rebuilt
+
+Several views and owners retain the same feature objects:
 
 ```text
-Before setting change
-
-View ────────────────→ SimilarityFeature A
-ViewModel ───────────→ SimilarityFeature A
-Runtime ─────────────→ SimilarityFeature A
+RawCullApp ───────────→ RawCullIntelligenceRuntime
+RawCullViewModel ─────→ RawCullSimilarityFeature A
+Runtime ──────────────→ RawCullSimilarityFeature A
+SwiftUI view ─────────→ RawCullSimilarityFeature A
 ```
 
-If settings create a new feature and update only the runtime, the application
-becomes inconsistent:
+On a model switch RawCull keeps `A` and changes its service. Rebuilding would
+create a split graph where an existing view observes `A` while runtime commands
+reach `B`. The objects might have the same type, but they would not share:
 
-```text
-After incomplete reconstruction
+- active task handles;
+- cancellation and generation state;
+- indexing/search progress;
+- hydrated artifacts and distances;
+- Deep Review results and mask-candidate history;
+- Qwen results and current batch;
+- SwiftUI observation registrations; or
+- application-context bindings.
 
-View ────────────────→ SimilarityFeature A  (old)
-ViewModel ───────────→ SimilarityFeature A  (old)
-Runtime ─────────────→ SimilarityFeature B  (new)
-```
+Keeping the stateful owner stable also lets the owner make a precise
+invalidation decision. Reconstructing everything would either lose unrelated
+state or risk copying backend-specific state into an incompatible runtime.
 
-The two instances may have the same type and initial values, but they do not
-have the same identity, tasks, progress, results, or observation registrations.
-Some UI can continue reading the old backend while new commands use the new one.
+## Ownership and Weak Coordination Edges
 
-RawCull instead keeps `SimilarityFeature A` and calls:
-
-```swift
-similarityFeature.replaceSimilarityService(newService)
-```
-
-Every existing reference continues to reach the same feature, which now uses the
-accepted service.
-
-### The orphaned-task problem
-
-Feature objects own task handles and generation counters. Replacing an entire
-feature does not automatically make work started by the previous feature safe.
-That work may still finish and attempt to publish an obsolete result.
-
-The stable feature can cancel its own tasks, advance its generations, compare
-catalog/backend identity, and discard late completions. It has the historical
-state required to decide whether a result is still current.
-
-### The state-migration problem
-
-Rebuilding would require deciding which state should be copied into every new
-object. Copying too little loses progress, cached results, and UI state. Copying
-too much can carry backend-specific artifacts into an incompatible
-configuration. Updating a dependency in place makes that invalidation decision
-local to the feature that understands the state.
-
-## Why Settings Calls Back To The Runtime Weakly
-
-The runtime strongly owns its settings model:
-
-```text
-Runtime ──strong──→ SettingsModel
-```
-
-Settings must send configurations back to the runtime, but it must not keep its
-owner alive. Its stored consumer is therefore explicitly declared `weak`:
+The runtime strongly owns Settings, but Settings must call back to the runtime.
+That callback is weak:
 
 ```swift
 @ObservationIgnored private weak var configurationConsumer:
     (any RawCullIntelligenceConfigurationApplying)?
 ```
 
-The protocol is constrained to `AnyObject`, because Swift weak storage applies
-only to class instances. The property is optional because Swift automatically
-sets a weak reference to `nil` after its target is deallocated.
+`AnyObject` permits weak protocol storage. `@ObservationIgnored` prevents a
+coordination detail from becoming UI state; it does not affect ownership.
 
-The resulting graph has one ownership direction and one non-owning callback:
+Other coordination edges follow the same rule:
 
-```text
-Runtime ──strong──→ SettingsModel
-Runtime ←──weak──── SettingsModel
-```
+| Strong owner/child relation | Weak or per-run callback |
+| --- | --- |
+| Intelligence runtime → Settings | Settings → `RawCullIntelligenceConfigurationApplying` |
+| Settings → Downloads model | Downloads model → `RawCullAIManagedModelLocationsApplying` |
+| Runtime/view model → Similarity feature | Similarity feature → `RawCullSimilarityApplicationContext` |
+| Runtime/view model → Semantic feature | Semantic feature → `RawCullSemanticSearchApplicationTarget` |
+| Runtime/view model → Deep Review controller | Controller → `DeepAIReviewApplicationContext` |
+| View model → Burst coordinator | Per-run closures capture `[weak self]` |
 
-If the callback were strong, runtime and settings would retain each other:
+This produces one clear ownership direction and prevents retain cycles in both
+the full application session and shorter-lived tests.
 
-```text
-Runtime ──strong──→ SettingsModel
-Runtime ←─strong─── SettingsModel
-```
+## Actor Isolation and Work Placement
 
-Releasing the app's runtime root would then leave both objects alive. The fact
-that both objects normally last for the complete application session does not
-remove the cycle: they must still be releasable when that session ends, and
-shorter-lived tests must be able to prove that deallocation occurs.
+| Component | Isolation | Why |
+| --- | --- | --- |
+| `RawCullAIModelRuntime` | `@MainActor` | Atomically publishes capabilities and installs services used by observable features. |
+| `RawCullIntelligenceRuntime` | `@MainActor` | Applies ordered settings decisions to stable UI-facing objects. |
+| Settings/features/controllers/scoring model | `@MainActor` | Own observable state, tasks, progress, and presentation. |
+| `RawCullAIModelResourceManager` | actor | Serializes location/cache state while keeping filesystem and provider setup off the main actor. |
+| `CoreAICLIPProvider` | actor | Owns lazy Core AI model/tokenizer state and serial inference. |
+| `CoreAISAM3Provider` | actor | Owns lazy segmentation engine/tokenizer state. |
+| `SegmentationService` | actor | Coordinates provider access and mask stores. |
+| `QwenInferenceRuntime` | actor | Owns provider, loaded VLM, and model generation. |
+| Pure scoring/ranking functions | `@concurrent` or nonisolated | Run CPU-heavy work without making observable state unsafe. |
 
-`weak` also expresses the design contract: settings may notify the runtime, but
-settings does not own the runtime. `@ObservationIgnored` has a separate purpose;
-it prevents this binding detail from being treated as observable UI state. It
-does not make the property weak.
+The main actor coordinates; it does not perform model hashing, model execution,
+image vector comparison, or pixel-level subject-detail scoring itself.
 
-## Other Weak Coordination Edges
+## Cancellation and Stale-Result Defences
 
-The same ownership rule is used elsewhere in the graph:
+RawCull uses several independent tokens because they protect different scopes:
 
-| Owner              | Strongly retained child         | Weak callback toward                                        |
-| ------------------ | ------------------------------- | ----------------------------------------------------------- |
-| Runtime            | `RawCullAISettingsModel`        | Runtime through `RawCullIntelligenceConfigurationApplying`  |
-| Settings           | `RawCullAIModelManagementModel` | Settings through `RawCullAIManagedModelLocationsApplying`   |
-| Runtime/view model | `RawCullSimilarityFeature`      | View model through `RawCullSimilarityApplicationContext`    |
-| Runtime/view model | `RawCullSemanticSearchFeature`  | View model through `RawCullSemanticSearchApplicationTarget` |
-| Runtime/view model | `DeepAIReviewController`        | View model through `DeepAIReviewApplicationContext`         |
-| View model         | `BurstAnalysisCoordinator`      | No stored callback; per-run closures capture `[weak self]`  |
+| Counter or identity | Rejects |
+| --- | --- |
+| Settings `refreshGeneration` | An older model/evidence refresh finishing after a newer one. |
+| Runtime configuration revision | An older settings decision arriving after a newer decision. |
+| Similarity hydration generations | Results from tasks invalidated by service or catalog changes. |
+| Similarity ranking generation + catalog/backend identity | Ranking for an old anchor, catalog, or backend. |
+| Deep Review generation | Progress/results after cancellation or restart. |
+| Qwen feature generation | Batch results after cancellation/restart. |
+| Qwen model generation | A lazy load or response using a removed/replaced provider. |
 
-These protocols expose only the small amount of application behavior each
-feature needs. A feature can request a catalog snapshot or selection update
-without owning the complete view model.
+Task cancellation is cooperative, so the generation and identity checks are
+essential. Cancellation requests work to stop; generations prevent late work
+that did not stop immediately from becoming current state.
 
-## Runtime, Integration, And View Model
+## Failure and Fallback Policy
 
-The three layers answer different questions:
+Runtime fallback is explicit:
 
-| Type                         | Primary question                                                                                                        |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `RawCullIntelligenceRuntime` | Which stable AI application objects exist, and which complete configuration should they use now?                        |
-| `RawCullAIIntegration`       | How are concrete Vision, CLIP, SAM 3, and EfficientSAM providers validated and composed behind narrow services?         |
-| `RawCullViewModel`           | Which catalog and files are active, and how should selection, navigation, ratings, culling, review, and results behave? |
+- If CLIP is disabled, missing, invalid, or fails provider construction,
+  similarity uses Vision.
+- Once a CLIP indexing pass begins, individual failures do **not** receive
+  Vision artifacts. Valid CLIP results remain; failed files stay unavailable.
+- Semantic search is unavailable without a compatible text-capable CLIP
+  provider and compatible cached image artifacts.
+- Deep Review is unavailable without the selected segmentation provider. A
+  failed candidate does not prevent later candidates from being evaluated.
+- Disk mask-cache creation failure leaves memory storage usable, while the
+  capability reports the disk failure.
+- Qwen absence clears its runtime; an invalid or text-only bundle is reported,
+  and an active batch is cancelled when status becomes unavailable.
 
-The runtime does not perform every AI operation itself. Views call the focused
-similarity, semantic-search, and Deep Review surfaces. Those features delegate
-to the shared scoring model or backend services and use narrow weak application
-contexts only when RawCull-specific policy is required.
+This distinction between **service-selection fallback** and **within-operation
+fallback** prevents heterogeneous artifacts and misleading results.
 
-## Lifetime Summary
-
-The complete lifecycle is:
+## Runtime Lifecycle Summary
 
 ```mermaid
-flowchart TD
-    Launch["RawCull launches"] --> Assemble["Assemble one application graph"]
-    Assemble --> Retain["App retains view model and runtime in @State"]
-    Retain --> Use["Views use stable focused feature objects"]
-    Use --> Change{"Setting changes?"}
-    Change -->|"yes"| Snapshot["Publish complete revisioned configuration"]
-    Snapshot --> Apply["Runtime updates only changed dependencies"]
-    Apply --> Use
-    Change -->|"no"| Use
-    Use --> End["Application root is released"]
-    End --> Deallocate["Strong children deallocate; weak callbacks become nil"]
+stateDiagram-v2
+    [*] --> GraphBuilt: construct stable graph
+    GraphBuilt --> VisionReady: synchronous initial configuration
+    VisionReady --> Checking: refresh installed locations
+    Checking --> ProvidersReady: validate bundles and construct providers
+    Checking --> PartialAvailability: some bundles missing or invalid
+    ProvidersReady --> Configured: publish newer configuration
+    PartialAvailability --> Configured: publish explicit capabilities/fallbacks
+    Configured --> Running: feature operations
+    Running --> Rechecking: download/remove/setting change
+    Rechecking --> Configured: identity-diffed apply
+    Configured --> [*]: app releases both stable roots
 ```
 
-The central rule is simple: create the stateful application objects once, keep
-their identities stable, and reconfigure their replaceable dependencies through
-one controlled boundary.
+The important invariant is that provider availability may change many times,
+while application feature identities remain stable for the session.
 
 ## Source Map
 
-| Concern                                                    | RawCull source                                                             |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Application startup                                        | `RawCull/Main/RawCullApp.swift`                                            |
-| Assembly, runtime ownership, and configuration application | `RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`        |
-| Concrete provider composition                              | `RawCull/Intelligence/Composition/RawCullAIIntegration.swift`              |
-| Settings publication and weak runtime consumer             | `RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`        |
-| Model-location refresh and weak settings consumer          | `RawCull/Intelligence/ModelManagement/RawCullAIModelManagementModel.swift` |
-| Similarity lifetime and weak application context           | `RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`           |
-| Semantic-search lifetime and weak application target       | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift`   |
-| Deep Review request construction                           | `RawCull/Intelligence/DeepReview/DeepAIReviewController.swift`             |
-| Main view-model assembly and burst coordinator             | `RawCull/Model/ViewModels/RawCullViewModel.swift`                          |
+| Concern | Source |
+| --- | --- |
+| App retention and startup refresh | [`RawCull/Main/RawCullApp.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Main/RawCullApp.swift) |
+| Model/provider runtime | [`RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) |
+| Assembly and stable runtime | [`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) |
+| Runtime paths/capabilities | [`RawCull/Intelligence/Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Contracts/RawCullAIModels.swift) |
+| Resource-manager actor/cache | [`RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) |
+| Settings refresh/config publication | [`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) |
+| Downloads and location snapshot | [`RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) |
+| Stable similarity operations | [`RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) |
+| Shared similarity/search state | [`RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| Deep Review service installation/state | [`RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) |
+| Qwen provider/model actor | [`RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) |
 
-For the surrounding modular architecture, see
-[Modular AI Integration](../modularaiintegration/). For actor isolation, task
-ownership, and background execution, see [Concurrency](../concurrency-revised/).
+The runtime's central rule is simple: validate and replace model-dependent
+services behind stable state owners, then accept results only when revision,
+generation, catalog, and backend identities still match.
+
