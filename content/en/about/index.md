@@ -4,29 +4,26 @@ linkTitle: About
 menu: {main: {weight: 10}}
 ---
 
-{{% blocks/cover title="About RawCull" height="auto" %}}
+{{% blocks/cover title="About" height="auto" %}}
 
 {{% /blocks/cover %}}
 
 {{% blocks/section color="primary" %}}
 
-## About RawCull
 
 Hello!
 
-If you have ideas, feedback, or suggestions about RawCull, please reach out to me at thomeven@gmail.com. I'd love to hear from you.
+RawCull is a macOS app for culling RAW files fast — built by one developer who needed a better way to sort through thousands of ARW files after a day in the field.
 
-### Background
+Got ideas, feedback, or a bug to report? I'd love to hear from you at **thomeven@gmail.com**.
 
-I started RsyncOSX in August 2016 as a way to learn Swift, and after eight years of releases, it was archived in August 2024. RsyncUI, built with SwiftUI, began in late 2020 and continues to be actively developed. RawCull represents my latest venture into building specialized macOS applications with modern Swift technologies.
+Background
 
-I hold a master's degree in computing science, earned in the early 1990s when Linux and the public Internet were emerging. The Web itself was invented just a few years earlier, in 1989 at CERN. As a solo developer, I'm focused on creating stable, usable applications. I'm not a professional UI designer, so I appreciate user feedback that helps improve the interface.
+I started **RsyncOSX** in August 2016 as a way to learn Swift. After eight years of releases, it was archived in August 2024. **RsyncUI**, built with SwiftUI, began in late 2020 and is still actively developed. **RawCull** is my latest project — a fresh take on building focused macOS apps with modern Swift.
 
-I retired in May 2022 at age 62. Outside of coding, I'm an avid [bird photographer](https://birdsofprey.netlify.app) who spends time in the Norwegian mountains. Grandchildren, photography, and cross-country skiing keep me busy alongside my coding projects.
+I hold a master's degree in computing science, earned in the early 1990s, back when Linux and the public Internet were just emerging (the Web itself had been invented only a few years earlier, in 1989 at CERN). I'm a solo developer, not a professional UI designer, so I lean heavily on user feedback to shape the interface.
 
-### Origin of RawCull
-
-Since late 2020, I have been developing another application called RsyncUI, which is now in maintenance mode. As an avid photographer, I needed an application to cull my ARW files from my Sony A1 Mk II camera after returning from photo shoots with several thousand ARW files. This prompted me to start a new project I had been contemplating for some time.
+I retired in May 2022 at age 62. Outside of code, I'm an avid [bird photographer](https://birdsofprey.netlify.app) who spends a lot of time in the Norwegian mountains. Grandchildren, photography, and cross-country skiing round out life alongside the coding projects.
 
 {.text-center}
 
@@ -34,21 +31,17 @@ Since late 2020, I have been developing another application called RsyncUI, whic
 
 {{% blocks/section color="white" %}}
 
-### Development Approach
+Why RawCull exists
 
-Although I've worked as an IT professional for most of my career, much of that time was spent in IT management rather than hands-on development. My coding experience comes from personal projects like RawCull, RsyncUI, and RsyncOSX. I've learned invaluable lessons from documentation, online resources, and studying examples from other developers.
+Since late 2020 I've been building **RsyncUI**, now in maintenance mode. As a photographer, I needed a fast way to cull ARW files from my Sony A1 Mk II after coming home with several thousand shots from a single outing. That itch — combined with a project idea I'd been sitting on for a while — is what became RawCull.
 
-With every Swift, SwiftUI, and Xcode release, I continue learning and improving my craft. Major changes and updates are documented in the [changelog](/blog/releases/). I use quality assurance tools such as [SwiftLint](https://github.com/realm/SwiftLint), [SwiftFormat](https://github.com/nicklockwood/SwiftFormat), and [periphery](https://github.com/peripheryapp/periphery) to maintain high code standards.
+Development approach
 
-Through the development of RsyncUI, I gained a solid foundation in Swift and SwiftUI for macOS. While there are still areas where my knowledge is growing, I want to learn more about Swift Concurrency, so a project like RawCull is an ideal opportunity for me.
+Most of my career was spent in IT management rather than hands-on development. What coding experience I have comes from personal projects — RawCull, RsyncUI, and RsyncOSX. Along the way I've learned a lot from AI tools, documentation, and studying how other developers solve problems.
 
-### Use of AI Tools
+Build & distribution
 
-In March 2026, I enrolled in the Claude Pro service to receive assistance in the development of macOS applications. Despite having several years of experience developing macOS applications, there are still several subjects within Swift and SwiftUI that I am unfamiliar with. The concurrency aspect of RawCull is significantly more advanced than that of RsyncUI (my other macOS application), and Claude has provided valuable assistance in this area. Additionally, there are numerous technical details within Apple's framework regarding images, thumbnails, and extracting JPGs. Another area of interest is the memory model and caching features in RawCull.
-
-There are numerous suggestions regarding the utilization of AI in code generation. All code generated by AI in RawCull undergoes my verification. Furthermore, I am only utilizing AI on a single issue at a time.
-
-Lastly, I have utilized AI to generate documentation and code quality reviews. This has been highly educational. Most technical blog posts are AI-assisted summaries based on the code.
+RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. It's digitally signed and notarized by Apple, so you can trust it hasn't been tampered with and meets Apple's security standards.
 
 {.text-center}
 
@@ -56,18 +49,9 @@ Lastly, I have utilized AI to generate documentation and code quality reviews. T
 
 {{% blocks/section color="primary" %}}
 
-### Build and Distribution
+About this website
 
-RawCull is built with Swift and SwiftUI, utilizing modern macOS APIs. The application is digitally signed and notarized by Apple to ensure security and integrity. This means you can trust that the application hasn't been tampered with and meets Apple's security standards.
-
-RawCull is available for download on the [Apple App Store](https://apps.apple.com/no/app/rawcull/id6759362764?mt=12) or from the [GitHub Repository](https://github.com/rsyncOSX/RawCull/releases). The GitHub release may appear 1-2 days before the App Store version due to the different release processes employed by each platform.
-
-
-### About This Website
-
-This documentation is built with Hugo, a fast and flexible static site generator. The source code is hosted on GitHub, and Netlify automatically detects changes to the main branch, rebuilding the site within seconds. The theme used is [docsy](https://github.com/google/docsy), a clean and responsive documentation theme also hosted on GitHub.
-
-This approach ensures the documentation is always up-to-date and easily maintainable.
+This documentation runs on **Hugo**, a fast static site generator, with the **[Docsy](https://github.com/google/docsy)** theme. The source lives on GitHub; Netlify rebuilds the site automatically within seconds of any change to `main` — so what you're reading is always current.
 
 {.text-center}
 
