@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-09-20"
+lastmod = "2026-09-23"
 description = "A code-level guide to RawCull's local AI models: runtime construction, CLIP similarity and semantic search, SAM 3 Deep Review, and Qwen vision-language analysis."
 weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "architecture", "core-ai"]
@@ -181,8 +181,13 @@ The first asynchronous validation begins from the main view's `.task`:
 `refresh()` asks the downloads model for an installed-location snapshot. That
 snapshot flows through settings to `RawCullAIModelRuntime`, which validates
 Qwen and refreshes CLIP and SAM 3 capabilities. See
-[The RawCull Intelligence Runtime](../runtime/) for the complete lifetime and
-reconfiguration path.
+[The RawCull AI Runtime](../runtime/#development-handoff-photoaikit-objects-to-the-runtime)
+for the concrete PhotoAIKit provider handoff, feature wiring, lifetime, and
+reconfiguration path. In particular, the download snapshot supplies URLs;
+PhotoAIKit factories validate bundles and create typed providers; the model
+runtime retains those providers; and Settings sends selected services in a
+revisioned configuration to the stable intelligence runtime. Qwen follows its
+own actor path and updates its existing analysis feature through model status.
 
 ### Why Qwen has its own inference runtime
 

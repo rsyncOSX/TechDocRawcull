@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-20"
-description = "How RawCull constructs, validates, activates, reconfigures, and tears down its CLIP, SAM 3, Qwen, Vision, and feature runtimes."
+lastmod = "2026-09-23"
+description = "How RawCull wires PhotoAIKit providers into stable CLIP, SAM 3, Qwen, Vision, and feature runtimes, then validates and reconfigures them."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection"]
 categories = ["technical details"]
@@ -199,6 +199,88 @@ Debug assertions verify that:
 These are architectural invariants. Two equivalent-looking instances would not
 share task handles, progress, caches, result dictionaries, generation counters,
 or SwiftUI observation.
+
+## Development Handoff: PhotoAIKit Objects to the Runtime
+
+PhotoAIKit supplies provider factories, typed contracts, workflows, and stores.
+RawCull creates those objects and decides when they become usable. There is no
+package callback that injects providers into `RawCullIntelligenceRuntime`:
+`RawCullAIModelRuntime` owns the provider handoff, while Settings delivers
+selected services to the stable feature objects.
+
+### Declare and construct the package boundary
+
+`RawCullAIModelRuntime.swift` imports `CoreAICLIPBackend`,
+`CoreAISAM3Backend`, `PhotoAIContracts`, `PhotoAIStorage`,
+`PhotoAIWorkflows`, and `VisionFeaturePrintBackend`. At construction it passes
+`CoreAICLIPProvider.factory` and `CoreAISAM3Provider.factory` to separate
+`RawCullAIModelResourceManager` actors. It also creates the Vision provider,
+`SubjectMaskMemoryStore`, optional `SubjectMaskDiskStore`, and an unavailable
+segmentation provider. The latter lets `SegmentationService`,
+`SubjectMaskRepository`, and `SubjectMaskSelector` exist before a SAM bundle is
+validated. Qwen's `CoreAIQwenProvider.factory` is used by the separate
+`QwenInferenceRuntime` actor.
+
+These are the objects crossing the package boundary:
+
+| PhotoAIKit object or contract | RawCull receiver and use |
+| --- | --- |
+| `CoreAICLIPProvider` and `SimilarityBackendDescriptor` | Model runtime retains the validated provider; similarity and semantic services wrap it. The descriptor identifies compatible artifacts. |
+| `CoreAISAM3Provider` as `SubjectSegmenting`, with `ModelIdentity` | Model runtime installs it in a segmentation service and selector, then gives Deep Review a pipeline. Identity determines when the pipeline must be rebuilt. |
+| `VisionFeaturePrintBackend` | Model runtime wraps it in the always-ready Vision similarity service. |
+| `SubjectMaskMemoryStore` and optional `SubjectMaskDiskStore` | Repository and segmentation service share the stores; the disk store also supports Deep Review mask loading. |
+| `CoreAIQwenProvider` | Qwen inference actor retains the validated provider and loads its vision-language model on first use; the Qwen feature holds that same actor. |
+
+### Enable installed models and hand off providers
+
+The development path from a model download to a live feature is:
+
+```text
+Background Assets snapshot (complete model-ID → URL map)
+  → Downloads model → Settings.applyManagedModelLocations
+  → RawCullAIModelRuntime.applyManagedModelLocations
+  → resource-manager actors / QwenInferenceRuntime
+  → PhotoAIKit capability check and provider construction
+  → RawCullAIModelRuntime.refreshCapabilities
+  → Settings.configurationSnapshot → RawCullIntelligenceRuntime.apply
+  → existing feature objects
+```
+
+The model runtime supplies managed URLs to each CLIP and SAM resource manager.
+Each actor checks a metadata snapshot, asks its PhotoAIKit factory to validate
+the candidate bundle, and constructs a provider only for an available resource.
+`refreshCapabilities()` loads those actors concurrently, then stores the
+validated providers, their resolved CLIP URLs, and a capability snapshot on the
+main actor. Qwen instead validates or clears its actor in
+`applyManagedModelLocations`; Settings passes its status to the already-created
+Qwen feature. Validation does not eagerly load Qwen's vision-language model.
+
+The provider reaches a feature through one of three paths:
+
+1. For **image similarity**, Settings calls
+   `modelRuntime.similarityService(prefersCLIP:clipModel:)`. It wraps the selected
+   validated CLIP provider in `RawCullCLIPSimilarityService`, or uses the Vision
+   service. The CLIP service also receives the resolved bundle URL through a
+   replacement-provider factory for finite-vector recovery.
+2. For **semantic search**, Settings calls
+   `modelRuntime.semanticSearchService(clipModel:)`. The same validated CLIP
+   provider backs `RawCullCLIPSemanticSearchService`; a missing provider yields
+   no semantic service. `configurationSnapshot` carries the selected capability
+   and service to `RawCullIntelligenceRuntime.apply(configuration:)`, which
+   updates the shared `SimilarityScoringModel` through its stable feature.
+3. For **Deep Review**, `refreshCapabilities()` activates the selected SAM
+   provider. The model runtime rebuilds the repository, segmentation service,
+   and selector only when `ModelIdentity` changes, then calls
+   `DeepAIReviewFeature.install` with a pipeline, optional disk-mask loader, and
+   availability. The existing controller and feature keep their identities.
+
+The runtime configuration carries selected services and descriptor-based
+identity, not an unvalidated model URL. Its revision prevents an older Settings
+decision from overwriting a newer one. When adding a PhotoAIKit backend, wire
+its factory and managed location into the model runtime, translate its
+capability and provider result, then expose it through the appropriate stable
+feature or configuration path. Keep model-specific inference inside the
+provider or actor and application policy inside RawCull.
 
 ## Startup Refresh and Installed-Model Activation
 
