@@ -3,10 +3,10 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-09-23"
-description = "A code-level guide to RawCull's local AI models: runtime construction, CLIP similarity and semantic search, SAM 3 Deep Review, and Qwen vision-language analysis."
+lastmod = "2026-09-24"
+description = "Code-level guide to local CLIP, Vision, SAM 3, Qwen, Deep Review, and numbered Objects analysis in RawCull."
 weight = 58
-tags = ["ai", "clip", "sam3", "qwen", "architecture", "core-ai"]
+tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
 categories = ["technical details"]
 mermaid = true
 +++
@@ -20,20 +20,20 @@ as interchangeable. Each model family has a deliberately narrow job:
 | --- | --- | --- |
 | DataComp CLIP | Image similarity, burst grouping, semantic search, and coarse subject labels for Deep Review | Normalized image/text embedding vectors and cosine distances/similarities |
 | OpenAI CLIP | Fully implemented alternative CLIP bundle; currently excluded from the production model list | The same typed CLIP artifacts as DataComp, with a different model fingerprint |
-| SAM 3 | Text-prompted subject segmentation for Deep Review | A subject mask, prompt, confidence, geometry, quality, and diagnostics |
-| Qwen3-VL-2B-Instruct | Independent vision-language assessment of selected or tagged photographs | A structured photo assessment or a free-form response |
+| SAM 3 | Prompted subject segmentation for Deep Review and separate instance segmentation for Objects | A chosen subject mask, or up to eight numbered masks per concept |
+| Qwen3-VL-2B-Instruct | Standalone photo assessment; concept discovery and board interpretation in Objects | A photo assessment, validated object concepts and per-object findings, or a visible retryable response failure |
 | Apple Vision feature print | Always-available image-similarity fallback | Opaque Vision feature-print artifacts and native distances |
 
 All inference stays in the application process. The downloadable model assets
 are installed separately because they are large, but the analysis path does not
 send photographs to a remote inference service.
 
-This page follows RawCull commit
-[`3c4315d9`](https://github.com/rsyncOSX/RawCull/tree/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2)
-and the PhotoAIKit revision pinned by that project,
-[`c5c76590`](https://github.com/rsyncOSX/PhotoAIKit/tree/c5c76590c3d79ad508d24d893cd7d8d6aa873355).
-Code links are pinned to those revisions so that the explanation remains tied to
-the implementation it describes.
+This page was checked against the local RawCull `version-3.2.6` working tree
+on September 24, 2026, including the Objects changes from the eight-photo
+puffin evaluation. RawCull source links follow that branch. PhotoAIKit links
+use revision [`77cc1d84`](https://github.com/rsyncOSX/PhotoAIKit/tree/77cc1d84a5d98a485caa15be102c8a55eb3d7698),
+pinned by this checkout. The local working tree may be ahead of the published
+branch until those changes are pushed.
 
 ## Source Catalog: `RawCull/Intelligence`
 
@@ -44,46 +44,64 @@ model per folder. Start with this catalog when tracing the code.
 
 | Source | Responsibility |
 | --- | --- |
-| [`Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) | Owns model-resource managers, validated CLIP and SAM 3 providers, the Vision fallback, Qwen inference runtime, mask stores, and the active segmentation pipeline. |
-| [`Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Assembles the complete application AI graph and preserves stable feature identities while services change. |
-| [`Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Contracts/RawCullAIModels.swift) | Defines model choices, paths, capability states, and saved-artifact evidence. |
+| [`Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) | Owns model-resource managers, validated CLIP and SAM 3 providers, the Vision fallback, Qwen inference runtime, mask stores, and the active segmentation pipeline. |
+| [`Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Assembles the complete application AI graph and preserves stable feature identities while services change. |
+| [`Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Contracts/RawCullAIModels.swift) | Defines model choices, paths, capability states, and saved-artifact evidence. |
 
 ### Model management
 
 | Source | Responsibility |
 | --- | --- |
-| [`RawCullAIModelDownloadCatalog.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift) | Production model inventory, inclusion switches, asset-pack identifiers, versions, byte counts, checksums, licences, and provenance links. |
-| [`RawCullAIModelDownloadService.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift) | Background Assets download coordination and installed-location resolution. |
-| [`RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) | Observable download, licence, progress, removal, and installed-location state. |
-| [`RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) | Actor-isolated validation and provider construction with a metadata snapshot cache. |
-| [`RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) | Applies installed locations, refreshes capabilities, stores user selections, and publishes revisioned runtime configurations. |
+| [`RawCullAIModelDownloadCatalog.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift) | Production model inventory, inclusion switches, asset-pack identifiers, versions, byte counts, checksums, licences, and provenance links. |
+| [`RawCullAIModelDownloadService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift) | Background Assets download coordination and installed-location resolution. |
+| [`RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) | Observable download, licence, progress, removal, and installed-location state. |
+| [`RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) | Actor-isolated validation and provider construction with a metadata snapshot cache. |
+| [`RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) | Applies installed locations, refreshes capabilities, stores user selections, and publishes revisioned runtime configurations. |
 
 ### CLIP, similarity, and semantic search
 
 | Source | Responsibility |
 | --- | --- |
-| [`RawCullVisionSimilarityService.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) | Defines the shared similarity-service boundary, Vision implementation, CLIP implementation, RAW decoding adapter, finite-vector recovery, and artifact validation. |
-| [`SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) | Owns indexed artifacts, hydration, persistence, image ranking, grouping, semantic-search state, and CLIP-based subject classification. |
-| [`RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) | Stable application-facing similarity surface with cancellation and generation gates. |
-| [`RawCullSemanticSearchService.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) | Encodes a text query, admits compatible CLIP artifacts, compares image and text vectors, and ranks deterministically. |
-| [`RawCullSemanticSearchFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift) | Presentation and application-target adapter for semantic search. |
+| [`RawCullVisionSimilarityService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) | Defines the shared similarity-service boundary, Vision implementation, CLIP implementation, RAW decoding adapter, finite-vector recovery, and artifact validation. |
+| [`SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) | Owns indexed artifacts, hydration, persistence, image ranking, grouping, semantic-search state, and CLIP-based subject classification. |
+| [`RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) | Stable application-facing similarity surface with cancellation and generation gates. |
+| [`RawCullSemanticSearchService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) | Encodes a text query, admits compatible CLIP artifacts, compares image and text vectors, and ranks deterministically. |
+| [`RawCullSemanticSearchFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift) | Presentation and application-target adapter for semantic search. |
 
 ### Deep Review with SAM 3 and CLIP
 
 | Source | Responsibility |
 | --- | --- |
-| [`DeepAIReviewController.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/DeepReview/DeepAIReviewController.swift) | Converts the current RawCull selection, burst evidence, sharpness evidence, subject label, and AF point into a review request. |
-| [`DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) | Owns review state and implements the complete decode → prompt → mask → score → recommendation pipeline. |
-| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
-| [`DeepAIReviewMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) | Turns a persisted filled mask into a display outline. |
+| [`DeepAIReviewController.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewController.swift) | Converts the current RawCull selection, burst evidence, sharpness evidence, subject label, and AF point into a review request. |
+| [`DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) | Owns review state and implements the complete decode → prompt → mask → score → recommendation pipeline. |
+| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
+| [`DeepAIReviewMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) | Turns a persisted filled mask into a display outline. |
+
+### Objects: Qwen discovery, SAM 3 instances, Qwen review
+
+| Source | Responsibility |
+| --- | --- |
+| `ObjectAnalysis/RawCullObjectAnalysisFeature.swift` | Batch coordination, availability, cancellation, retry, private capture, and stage timings. |
+| `ObjectAnalysis/ObjectConceptDiscovery.swift` | Automatic prompt, concept validation, and Specific Concepts parsing. |
+| `ObjectAnalysis/ObjectInstanceDeduplicator.swift` | Filters weak masks, merges near-identical masks across concepts, and assigns board IDs. |
+| `ObjectAnalysis/ObjectReviewBoardRenderer.swift` | Renders the 2,048-pixel overview and numbered, outlined crops for Qwen. |
+| `ObjectAnalysis/ObjectJSONEnvelope.swift` and `ObjectAnalysis/ObjectAnalysisResponseDecoder.swift` | Recover one JSON object from a wrapper, then validate fields, confidence, list limits, and board IDs. |
+| `ObjectAnalysis/ObjectAnalysisModels.swift` | Mode, instance, assessment, progress, timing, and result types. |
+| `ObjectAnalysis/ObjectMaskOutlineRenderer.swift` | Detail-view contour from a stored grayscale instance mask. |
+| `Views/AIAnalysis/ObjectAnalysisView.swift` | Controls, status table, numbered overlays, crop, per-object detail, and retry. |
+
+The object-set workflow uses PhotoAIKit's `ObjectSegmentationService`,
+`ObjectMaskMemoryStore`, optional `ObjectMaskDiskStore`, and SAM 3
+`ObjectInstanceSegmenting` contract. Its cache is separate from the Deep
+Review subject-mask cache.
 
 ### Qwen
 
 | Source | Responsibility |
 | --- | --- |
-| [`QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Actor-owned Qwen provider validation, lazy vision-language model loading, session creation, prompt construction, response decoding, and invalidation. |
-| [`RawCullQwenAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift) | Main-actor batch operation, image loading, progress, per-file failure isolation, result retention, and cancellation. |
-| [`QwenPhotoAssessment.swift`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/Qwen/QwenPhotoAssessment.swift) | Structured response schema, validation, free-form fallback, aggregate score, and result types. |
+| [`QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Actor-owned Qwen provider validation, lazy vision-language model loading, session creation, prompt construction, response decoding, and invalidation. |
+| [`RawCullQwenAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift) | Main-actor batch operation, image loading, progress, per-file failure isolation, result retention, and cancellation. |
+| [`QwenPhotoAssessment.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/QwenPhotoAssessment.swift) | Structured response schema, validation, free-form fallback, aggregate score, and result types. |
 
 ### Persistence and burst consumption
 
@@ -96,7 +114,7 @@ burst policy decides what that embedding means for grouping and culling.
 ## The Model Inventory Shipped by RawCull
 
 The authoritative inventory is
-[`RawCullAIModelDownloadCatalog.prepared`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift#L123).
+[`RawCullAIModelDownloadCatalog.prepared`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift#L123).
 `production` filters that inventory through code-only inclusion switches.
 
 | Production model | Asset-pack ID | Installed model path inside pack | Download size | Installed size |
@@ -115,7 +133,7 @@ and Qwen licences do not require an extra acceptance action.
 
 The application has two stable roots: `RawCullViewModel` for general app state
 and `RawCullIntelligenceRuntime` for AI-facing state. They are created once in
-[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/3c4315d9bd1717fdabb1795ee0efa2eaf5ff87c2/RawCull/Main/RawCullApp.swift#L111)
+[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Main/RawCullApp.swift#L111)
 and retained in SwiftUI `@State`.
 
 ```mermaid
@@ -124,6 +142,7 @@ flowchart TD
     State --> Models["RawCullAIModelRuntime"]
     State --> Downloads["RawCullAIModelDownloadsModel"]
     State --> QwenFeature["RawCullQwenAnalysisFeature"]
+    State --> Objects["RawCullObjectAnalysisFeature"]
     State --> DeepFeature["DeepAIReviewFeature"]
     State --> Settings["RawCullAISettingsModel"]
     State --> Scoring["SimilarityScoringModel"]
@@ -134,6 +153,7 @@ flowchart TD
     State --> Runtime["RawCullIntelligenceRuntime"]
     Runtime --> Models
     Runtime --> QwenFeature
+    Runtime --> Objects
     Runtime --> Similarity
     Runtime --> Semantic
     Runtime --> Controller
@@ -148,8 +168,9 @@ The exact construction order in `RawCullApplicationState.make` is significant:
    placeholder unavailable segmentation pipeline.
 2. `RawCullAIModelDownloadsModel` is created with the production catalog and
    application paths.
-3. `RawCullQwenAnalysisFeature` receives the exact Qwen inference actor owned by
-   the model runtime.
+3. `RawCullQwenAnalysisFeature` and `RawCullObjectAnalysisFeature` receive the
+   same Qwen inference actor. Objects also receives its memory and optional
+   disk instance-mask stores.
 4. `DeepAIReviewFeature` starts with the model runtime's current segmentation
    capability. It is bound back to the model runtime so a later SAM provider can
    install a real pipeline without replacing the feature.
@@ -167,7 +188,7 @@ The exact construction order in `RawCullApplicationState.make` is significant:
     the first revision.
 
 Debug assertions verify identity sharing. These checks are not cosmetic: a
-second Qwen inference actor, scoring model, or Deep Review feature would split
+second Qwen inference actor, scoring model, Objects feature, or Deep Review feature would split
 model state, tasks, caches, and UI observation.
 
 The first asynchronous validation begins from the main view's `.task`:
@@ -216,7 +237,8 @@ and SAM 3 resource lifecycles.
 
 Separate does not mean unrelated. `RawCullAIModelRuntime.init` creates one
 `QwenInferenceRuntime` and retains it as `qwenInference`. During application
-assembly, that exact instance is passed to `RawCullQwenAnalysisFeature`.
+assembly, that exact instance is passed to `RawCullQwenAnalysisFeature` and
+`RawCullObjectAnalysisFeature`.
 Consequently, there is one owner of Qwen's provider and loaded model, while the
 model runtime remains the composition point that creates and coordinates the
 application's complete collection of AI backends. In short:
@@ -265,7 +287,7 @@ small closed-set subject-label pass that helps choose SAM prompts.
 ### Provider construction and identity
 
 PhotoAIKit's
-[`CoreAICLIPProvider`](https://github.com/rsyncOSX/PhotoAIKit/blob/c5c76590c3d79ad508d24d893cd7d8d6aa873355/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)
+[`CoreAICLIPProvider`](https://github.com/rsyncOSX/PhotoAIKit/blob/77cc1d84a5d98a485caa15be102c8a55eb3d7698/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)
 is an actor implementing image embedding, artifact generation/comparison, text
 embedding, and image/text comparison. During initialization it:
 
@@ -433,7 +455,7 @@ reported as `specificPromptNotFound`.
 ### 4. SAM 3 inference
 
 PhotoAIKit's
-[`CoreAISAM3Provider`](https://github.com/rsyncOSX/PhotoAIKit/blob/c5c76590c3d79ad508d24d893cd7d8d6aa873355/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)
+[`CoreAISAM3Provider`](https://github.com/rsyncOSX/PhotoAIKit/blob/77cc1d84a5d98a485caa15be102c8a55eb3d7698/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)
 is actor-isolated. It validates the bundle and lazily creates a
 `CoreAISegmentationEngine` plus CLIP-compatible text tokenizer. The prompt text
 is tokenized and sent with the bounded image to the Core AI segmenter. Runtime
@@ -569,6 +591,149 @@ Qwen results currently live in the feature's in-memory `results` array; unlike
 CLIP artifacts and SAM masks, this implementation does not persist them across
 application sessions.
 
+## Objects: instance-level SAM 3 and Qwen analysis
+
+Objects is a third AI Analysis tool beside **SAM 3 + CLIP** and standalone
+**Qwen**. It accepts selected Grid photos or tagged photos. It requires
+installed, validated SAM 3 and vision-capable Qwen. CLIP embeddings and Deep
+Review's single-subject score do not feed this workflow.
+
+### End-to-end stages and ownership
+
+1. The stable, main-actor object feature checks that both model services are
+   available and snapshots the concept mode and photographic criteria.
+2. It loads one bounded RAW or JPEG thumbnail, at most 4,320 pixels on its
+   longest side, and processes files sequentially.
+3. Automatic mode asks Qwen for visible object concepts; Specific Concepts
+   parses the user's comma-separated noun phrases.
+4. PhotoAIKit's object service asks SAM 3 for up to eight instances per concept
+   and checks its separate object-mask caches.
+5. RawCull filters weak/invalid masks, merges near-duplicate regions across
+   concepts, and assigns board-local IDs 1 through 8.
+6. A deterministic 2,048-pixel board shows the original overview above
+   numbered, outlined object crops. Qwen assesses that one photograph.
+7. RawCull extracts one complete JSON object and validates the schema, every
+   expected board ID, values, list caps, and finite confidence. The UI shows
+   per-object findings or a visible, retryable assessment problem.
+
+The availability state distinguishes checking, ready, SAM 3 unavailable,
+Qwen unavailable, and both unavailable. Settings installs the current
+segmentation service and Qwen status into the existing feature after
+validation. A changed service or status cancels active work. Switching AI
+tools or input source also cancels an active batch. Completion, result
+replacement, and cancellation are generation-gated.
+
+### Concept discovery and manual mode
+
+Automatic asks Qwen for zero to six short concept entries. Each entry has
+query, displayName, and reason. Query must be a concrete, visible, whole-object
+noun phrase suitable for SAM 3. SegmentationConcept validates it; normalized
+duplicates collapse. An empty set or invalid JSON is an actionable discovery
+failure, with no guessed fallback concepts. The discovery request cap is 384
+output tokens.
+
+Specific Concepts bypasses discovery. The user enters up to six
+comma-separated queries such as bird, person. Empty or invalid entries fail
+before segmentation; duplicate normalized queries collapse. Both modes can
+add photographic criteria to the final Qwen request.
+
+### SAM 3 instances, filtering, and caches
+
+ObjectSegmentationService uses source file identity, concept, SAM 3 model
+identity, the 4,320-pixel input limit, and the eight-instance limit in its
+cache key. It checks the object-mask memory and optional disk store before
+inference, bounds the image, invokes CoreAISAM3Provider.segmentInstances,
+resizes masks to display dimensions, and saves the typed result. This is
+independent of Deep Review's SegmentationService and SubjectMaskSelector,
+which choose one subject mask from ordered prompt attempts.
+
+RawCull counts the raw SAM 3 candidates. Its deduplicator rejects nonfinite
+or below-0.5 mask scores, invalid boxes, masks with fewer than 64 of
+256-by-256 sampled pixels, and masks covering at least 95% of the sample.
+Candidates sort by score and geometry. Overlapping masks with similar area
+merge when mask intersection-over-union reaches 0.85 or smaller-mask
+containment reaches 0.90; a second concept becomes an alias of the retained
+object. At most eight objects remain. Their board IDs are strings and local to
+that analysis result. A SAM 3 mask score describes segmentation quality; it
+is distinct from Qwen's assessment confidence.
+
+An empty retained set is a successful **No Matching Objects** result and does
+not call Qwen for a board. Genuine no-match photos still need broader
+validation.
+
+### Board geometry and the Qwen contract
+
+ObjectReviewBoardRenderer creates one 2,048-by-2,048 image. Its top half is
+an aspect-fit overview of the source photo. Its bottom half contains up to
+eight padded crops in two rows of four. Each crop and yellow mask outline are
+aspect-fit. A separate dark header carries a large white number without
+covering the subject. The renderer explicitly converts normalized
+bottom-left box coordinates to top-left CGImage crop coordinates.
+
+The prompt tells Qwen that the overview and crops repeat views of one
+photograph, each board ID denotes a different physical subject, and the
+objects array must contain exactly one entry for each ID. Descriptions should
+use the matching numbered crop; relationships should use the overview.
+The assessment request cap is 1,024 output tokens. The requested result has
+an optional scene summary; per-object concept, description, visibility, focus,
+expression, obstructions, strengths, problems, and confidence; and photo-level
+relationships, strengths, problems, preferred IDs, and confidence.
+
+ObjectJSONEnvelope extracts one complete balanced JSON object from a
+recoverable Markdown or prose wrapper, respecting quoted braces. It rejects
+incomplete JSON and multiple objects. The decoder accepts only the narrow
+variations observed from the packaged model: an omitted imageSummary, a
+whole-number board ID normalized to a string, and one short text value in an
+object list field (the exact string "none" becomes an empty list). It still
+requires every board ID exactly once, rejects unknown or duplicate IDs and
+preferred IDs, enforces list limits and enum values, and requires finite
+confidence in 0...1. Free-form prose is not upgraded to a structured judgment.
+
+If Qwen fails this boundary, the detail view retains its response and shows
+a specific assessment error. The results table says **Assessment needs
+retry**. Retry reuses successful SAM 3 masks only when source size/date, Qwen
+model name, concept mode and queries, and cache keys still match. Otherwise
+it segments again. The table labels Qwen confidence; the detail view labels
+SAM 3 mask score separately and shows numbered boxes, cached-mask outlines,
+the selected crop, and its assessment.
+
+### September 24, 2026 packaged-model check
+
+Eight supplied puffin ARW files were processed in both modes with local
+qwen3_vl_2b and sam3_float16.aimodel. Automatic discovered puffin for all
+eight; manual mode used bird. All 16 runs produced structured assessments
+with the expected board ID set. SAM 3 returned seven or eight raw candidates
+per run, filtered to one retained bird on six photos and two birds on two.
+Warm concept discovery took 2.98–3.56 seconds, segmentation 6.59–6.99
+seconds, board rendering 0.028–0.044 seconds, and final Qwen assessment
+10.21–20.14 seconds. The sequential probe took 371.5 seconds; process
+peak resident memory was 9.47 GiB. The first Automatic run included model
+startup and took 45.1 seconds overall.
+
+These measurements came from an in-process macOS feature/model test, not a
+release build, clean install, or TestFlight run. Separate two-bird visual
+checks found a swapped flying/perched description, nearly identical
+descriptions for differently facing birds, and a response claiming three
+birds where the photograph had two. Those errors occurred with schema-valid
+output and Qwen-reported confidence of 0.95–1.00. Valid JSON and IDs verify
+response shape, not visual accuracy or calibrated confidence. Mixed
+categories, touching/overlapping and tiny subjects, genuine no-match cases,
+RAW/JPEG parity, model removal, large tagged batches, and lifecycle checks
+remain open. The per-photo table and gate status are in the
+[RawCull implementation notes](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#163-implementation-checkpoint--september-24-2026).
+
+### Private diagnostics
+
+The feature records raw/retained counts, model identities, and separate
+concept-discovery, segmentation, board-rendering, and assessment durations.
+An explicit RAWCULL_OBJECT_CAPTURE_DIR environment variable enables private
+response capture with file name/ID, stage, model, requested token cap, and
+response character count. The directory must have 0700 permissions and new
+files use 0600. Normal logs do not include full images, prompts, or Qwen
+responses. The runtime exposes neither finish reason nor generated-token
+count, so response length and visible truncation must be inspected directly.
+Remove private capture files after diagnosis.
+
 ## Capability and Failure Behavior
 
 The settings UI distinguishes these states instead of reducing them to one
@@ -597,6 +762,8 @@ own status and cancels an active batch if that status becomes unavailable.
 | SAM 3 masks | Memory store plus `Caches/no.blogspot.RawCull/SAM3Masks` when disk-store construction succeeds | Source identity, prompt, model identity, and max input side |
 | Deep Review recommendations | In-memory feature dictionary keyed by `BurstGroupSignature` | Exact group signature; reset/cancellation generation |
 | Qwen results | In-memory feature array keyed by file UUID | Current batch generation; no cross-launch persistence |
+| Objects masks | Separate object-mask memory store and optional `ObjectMaskDiskStore` | Source identity, concept, SAM 3 model identity, 4,320-pixel input limit, and eight-instance limit |
+| Objects assessments and timings | In-memory feature results keyed by file UUID | Batch generation and board-ID validation; no cross-launch assessment persistence |
 | User model selections | `UserDefaults` | Inclusion lists sanitize choices no longer shipped |
 | Model assets | Managed Background Assets locations | Catalog ID, model bundle validation, and asset fingerprint/checksum |
 
@@ -620,6 +787,13 @@ When debugging a model problem, follow the layer that owns the decision:
    coverage, AF inclusion, and background-dominance caution.
 8. **Qwen is available but a batch fails:** distinguish thumbnail decoding,
    lazy model load, session response, empty response, and per-file result decode.
+9. **Objects fails before SAM 3:** inspect concept discovery and its exact JSON
+   or concept-validation error; Specific Concepts isolates that boundary.
+10. **Objects has masks but no structured judgment:** inspect the assessment
+    error, rendered board, and board-ID set. Retry may reuse cached masks.
+11. **Objects text disagrees with the photo:** compare the source, numbered crop,
+    outline, and description. High model-reported confidence does not settle a
+    grounding error.
 
 The central architectural rule is that model runtimes create typed evidence;
 RawCull's feature and policy layers decide how that evidence affects ranking,
