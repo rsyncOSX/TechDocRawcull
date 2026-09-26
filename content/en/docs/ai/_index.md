@@ -3,9 +3,9 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-09-15"
-description = "Learning guide to PhotoAIKit and RawCull's AI integration."
-tags = ["ai", "clip", "sam3", "photoaikit"]
+lastmod = "2026-09-26"
+description = "RawCull AI architecture, model downloads, and Objects test-release status."
+tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
@@ -32,18 +32,22 @@ revision in `Package.resolved`. RawCull intelligence code lives under
 | This overview                                                  | Where does AI belong in the system?                    | You need the vocabulary and responsibility split                                                                     |
 | [AI Model Downloads](aimodeldownloads/)                        | Where do model assets come from?                       | You are changing download, acceptance, or installation behavior                                                      |
 | [AI Model Licence and Provenance Clearance](licenceprocedure/) | What evidence is required before a model can ship?     | You are reviewing licences, provenance, redistribution, or release readiness                                         |
-| [Publishing New RawCull AI Models](newmodels/)                 | How is an approved model packaged and published?       | You are preparing a model release or updating the download manifest                                                  |
+| [Publishing and Testing RawCull AI Models](newmodels/)                 | How are models published and Objects tested?       | You are preparing a model release or updating the download manifest                                                  |
 
-PhotoAIKit contains three backend families used by RawCull:
+PhotoAIKit and RawCull use these AI backends:
 
 - **CLIP image embeddings** for visual similarity and semantic search.
 - **SAM 3 and EfficientSAM subject segmentation** for subject masks.
 - **Apple Vision feature prints** for always-available image similarity.
+- **Qwen3-VL** for local photo analysis and for concept discovery and assessment
+  of numbered SAM 3 objects.
 
-The current production download catalog exposes DataComp CLIP and Meta SAM 3.
-OpenAI CLIP remains implemented but excluded, while EfficientSAM remains a
-blocked prepared descriptor. SAM 3 requires acceptance of its verified bundled
-licence before download.
+The 3.2.6 production download catalog exposes DataComp CLIP, Meta SAM 3,
+and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
+a production download. SAM 3 requires acceptance of its verified bundled
+licence before download. The App Store build uses Apple-hosted Managed
+Background Assets; the Direct/Developer ID build retains a self-hosted `v3`
+manifest. See [AI Model Downloads](aimodeldownloads/) for the exact distinction.
 
 Vision is the startup and service-selection fallback: RawCull uses it when CLIP
 is disabled or the selected CLIP bundle cannot produce a validated provider. A
@@ -56,6 +60,18 @@ similarity and burst-analysis features. The package architecture document also
 covers the SAM 3 contracts, workflows, and storage so that the complete package
 design is understandable. Not every reusable package capability is necessarily
 exposed as a finished RawCull user workflow.
+
+## Objects test-release status
+
+The maintainer is preparing a user test of **AI Analysis → Objects**. The
+feature combines Qwen concept discovery, separate SAM 3 masks, and Qwen
+assessment of numbered crops. The structural decoder checks board IDs and
+response fields; it cannot verify that generated text matches the photograph.
+A recent two-puffin result had two retained objects but an invented third bird
+in its summary, and a separate two-puffin result has an unresolved
+crop/description mismatch. Treat Objects output as advisory and verify it
+against the source. See [Publishing and Testing RawCull AI Models](newmodels/)
+for the known issues, tester checks, and release evidence still needed.
 
 ## The Central Design Idea
 

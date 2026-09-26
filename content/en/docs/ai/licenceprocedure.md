@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "AI Model Licence and Provenance Clearance"
 linkTitle = "AI Licence and Provenance"
 date = "2026-08-22"
-lastmod = "2026-09-15"
-description = "Current model-distribution evidence and the reusable RawCull clearance procedure."
+lastmod = "2026-09-26"
+description = "Current catalog status and historical model-clearance evidence."
 tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
 weight = 30
@@ -12,16 +12,37 @@ weight = 30
 
 # AI model licence and provenance clearance procedure
 
-Status: DataComp CLIP and SAM 3 enabled in production `v3`; OpenAI CLIP and
-EfficientSAM excluded
+Current code status (September 26, 2026): the 3.2.6 production catalog
+enables Apple-hosted DataComp CLIP, Meta SAM 3, and Qwen3-VL-2B-Instruct.
+The Direct/Developer ID configuration retains the historical self-hosted `v3`
+manifest. OpenAI CLIP is excluded and EfficientSAM is not a production pack.
+The detailed clearance evidence below is a **September 15 historical snapshot**
+for the earlier two-pack self-hosted release; it has not been re-reviewed as a
+legal or provenance opinion on the current Apple-hosted Qwen pack. For current
+pack IDs, hashes, licences, and test-release steps, see
+[Publishing and Testing RawCull AI Models](../newmodels/) and the application
+repository `ModelAssets/README.md`.
 
-Technical repository evidence reviewed: 2026-09-15
+Technical repository evidence in the historical snapshot: 2026-09-15
 
 Evidence record owner: Thomas Evensen, RawCull maintainer
 
-## Current recorded distribution status
+## September 26 code snapshot
 
-This section is a dated status snapshot. It describes RawCull's current product
+| Production pack | Recorded licence | Explicit in-app acceptance | Current evidence location |
+|---|---|---|---|
+| DataComp CLIP | OpenCLIP/DataComp MIT notice | No | Catalog descriptor and `ModelAssets/Notices/CLIP-DataComp` |
+| Meta SAM 3 | SAM License, November 19, 2025 | Yes, with a verified bundled text | Catalog descriptor and `ModelAssets/Notices/SAM3` |
+| Qwen3-VL-2B-Instruct | Apache License 2.0 | No | Catalog descriptor and `ModelAssets/Notices/Qwen` |
+
+The three descriptors are `.ready` in the current code and their archive
+checksums are recorded in the [model release guide](../newmodels/). This table
+reports repository metadata, not independent legal clearance or an App Review
+decision. Reassess the notices and provenance for the exact packs submitted.
+
+## Historical distribution-status snapshot (September 15, 2026)
+
+This section is a dated status snapshot. It describes the September 15 product
 and repository records; it is not a legal conclusion and must not be copied into
 a later release without a fresh evidence review.
 
@@ -33,7 +54,7 @@ a later release without a fresh evidence review.
 | EfficientSAM | `.blocked` in the prepared catalog, excluded from production | Source/checkpoint/conversion/licence metadata are prepared | Final converted fingerprint and archive size/SHA-256 are absent | Keep excluded until its descriptor and provenance pass the complete gate |
 
 The application catalog and `ModelAssets` records are the authoritative account
-of what RawCull currently ships: production `v3` contains DataComp and SAM 3.
+of what that self-hosted `v3` release contained: DataComp and SAM 3.
 OpenAI CLIP and EfficientSAM do not pass the inclusion flags into the production
 catalog or manifest template. A `.ready` value proves only
 that the product gate was opened. Model availability, a public archive, or a
