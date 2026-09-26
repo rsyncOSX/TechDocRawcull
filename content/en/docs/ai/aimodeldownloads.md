@@ -101,3 +101,5 @@ categories, overlap, tiny subjects, and no-match cases.
 See [Publishing and Testing RawCull AI Models](../newmodels/) for the model-pack
 runbook and the advisory Objects test-release checklist. The technical
 packaging commands live in the RawCull repository's `Docs/newmodels.md`.
+For a copy-and-paste rebuild from Hugging Face sources through all three local
+`.aar` files, see [Download and Prepare the Three AI Model Packs](../aimodeldownloadandprepare/).

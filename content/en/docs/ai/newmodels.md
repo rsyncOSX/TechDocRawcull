@@ -172,3 +172,6 @@ contains the packaging manifest, `xcrun altool`, provenance, and TestFlight
 commands. Use its current revision with the release checkout. The older
 self-hosted `v3` and draft `v4` recipes are historical; do not use their IDs,
 URLs, or manual Qwen setup instructions for the Apple-hosted 3.2.6 catalog.
+For terminal commands beginning with pinned Hugging Face downloads and ending
+with three locally built `.aar` files, see
+[Download and Prepare the Three AI Model Packs](../aimodeldownloadandprepare/).
