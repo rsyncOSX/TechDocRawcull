@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-24"
+lastmod = "2026-09-26"
 description = "How RawCull owns and refreshes local CLIP, SAM 3, Qwen, Vision, Deep Review, and Objects runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "objects"]
@@ -521,6 +521,12 @@ the optional disk store. A detail view retrieves masks using the stored SAM 3
 model identity and the same source/concept/cache parameters, then generates
 yellow outlines without regenerating a model result.
 
+Board rendering must produce a crop and matching mask crop for every retained
+object. If either crop cannot be prepared, `ObjectReviewBoardRenderer` throws
+`reviewBoardUnavailable`; the feature records a per-photo failure before Qwen
+is asked to interpret the board. This keeps the board's numbered panels and
+the set of IDs requested from Qwen in agreement.
+
 ### No-match, response failure, and retry
 
 An empty retained instance set completes as No Matching Objects and skips the
@@ -540,11 +546,18 @@ and generation checks keep a superseded result from publishing.
 The results table labels whole-photo Qwen confidence. The detail view labels
 each SAM 3 mask score independently. The exact board-ID check establishes that
 the response describes the expected number of objects; it cannot prove that
-the descriptions correctly match those objects. The September 24 puffin
-evaluation produced 16/16 structured results yet still exposed a swapped
-two-bird description and false scene claims. See
+the descriptions correctly match those objects. The displayed object count is
+the number of retained SAM 3 matches for the requested concepts, not a census
+of the whole photograph. The September 24 puffin evaluation produced 16/16
+structured results yet still exposed a swapped two-bird description and false
+scene claims. In later in-app checks, `_DSC3028.ARW` showed opposing crop and
+description associations for two birds, with the source of the mismatch still
+unresolved. `_DSC3031.ARW` retained two birds but its Complete, 95%-confidence
+Qwen summary invented a third. The detail panel displays only the currently
+selected object's assessment. See
 [AI Models in RawCull](../aiinrawcull/#objects-instance-level-sam-3-and-qwen-analysis)
-for the prompt, mask filtering, board layout, timings, and release-gate limits.
+for the prompt, mask filtering, board layout, timings, in-app observations, and
+remaining validation work.
 
 ## Qwen Runtime Lifetime
 
@@ -766,7 +779,8 @@ Runtime fallback is explicit:
 - Objects requires both SAM 3 and Qwen. Its availability names the missing
   dependency; it does not silently substitute CLIP, Vision, or generic prose.
   An empty SAM 3 object set is a successful no-match result. An invalid Qwen
-  assessment after segmentation stays visible and retryable.
+  assessment after segmentation stays visible and retryable. A missing board
+  crop is reported as a per-photo failure before Qwen assessment.
 
 This distinction between **service-selection fallback** and **within-operation
 fallback** prevents heterogeneous artifacts and misleading results.

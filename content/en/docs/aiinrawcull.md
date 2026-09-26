@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-09-24"
+lastmod = "2026-09-26"
 description = "Code-level guide to local CLIP, Vision, SAM 3, Qwen, Deep Review, and numbered Objects analysis in RawCull."
 weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
@@ -29,9 +29,10 @@ are installed separately because they are large, but the analysis path does not
 send photographs to a remote inference service.
 
 This page was checked against the local RawCull `version-3.2.6` working tree
-on September 24, 2026, including the Objects changes from the eight-photo
-puffin evaluation. RawCull source links follow that branch. PhotoAIKit links
-use revision [`77cc1d84`](https://github.com/rsyncOSX/PhotoAIKit/tree/77cc1d84a5d98a485caa15be102c8a55eb3d7698),
+on September 26, 2026, including the packaged-model evaluation and later
+in-app Objects observations. RawCull source links follow that branch.
+PhotoAIKit links use revision
+[`77cc1d84`](https://github.com/rsyncOSX/PhotoAIKit/tree/77cc1d84a5d98a485caa15be102c8a55eb3d7698),
 pinned by this checkout. The local working tree may be ahead of the published
 branch until those changes are pushed.
 
@@ -81,14 +82,14 @@ model per folder. Start with this catalog when tracing the code.
 
 | Source | Responsibility |
 | --- | --- |
-| `ObjectAnalysis/RawCullObjectAnalysisFeature.swift` | Batch coordination, availability, cancellation, retry, private capture, and stage timings. |
-| `ObjectAnalysis/ObjectConceptDiscovery.swift` | Automatic prompt, concept validation, and Specific Concepts parsing. |
-| `ObjectAnalysis/ObjectInstanceDeduplicator.swift` | Filters weak masks, merges near-identical masks across concepts, and assigns board IDs. |
-| `ObjectAnalysis/ObjectReviewBoardRenderer.swift` | Renders the 2,048-pixel overview and numbered, outlined crops for Qwen. |
-| `ObjectAnalysis/ObjectJSONEnvelope.swift` and `ObjectAnalysis/ObjectAnalysisResponseDecoder.swift` | Recover one JSON object from a wrapper, then validate fields, confidence, list limits, and board IDs. |
-| `ObjectAnalysis/ObjectAnalysisModels.swift` | Mode, instance, assessment, progress, timing, and result types. |
-| `ObjectAnalysis/ObjectMaskOutlineRenderer.swift` | Detail-view contour from a stored grayscale instance mask. |
-| `Views/AIAnalysis/ObjectAnalysisView.swift` | Controls, status table, numbered overlays, crop, per-object detail, and retry. |
+| [`ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) | Batch coordination, availability, cancellation, retry, private capture, and stage timings. |
+| [`ObjectAnalysis/ObjectConceptDiscovery.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectConceptDiscovery.swift) | Automatic prompt, concept validation, and Specific Concepts parsing. |
+| [`ObjectAnalysis/ObjectInstanceDeduplicator.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectInstanceDeduplicator.swift) | Filters weak masks, merges near-identical masks across concepts, and assigns board IDs. |
+| [`ObjectAnalysis/ObjectReviewBoardRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectReviewBoardRenderer.swift) | Renders the 2,048-pixel overview and numbered, outlined crops for Qwen; fails if a numbered crop cannot be prepared. |
+| [`ObjectAnalysis/ObjectJSONEnvelope.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectJSONEnvelope.swift) and [`ObjectAnalysis/ObjectAnalysisResponseDecoder.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisResponseDecoder.swift) | Recover one JSON object from a wrapper, then validate fields, confidence, list limits, and board IDs. |
+| [`ObjectAnalysis/ObjectAnalysisModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisModels.swift) | Mode, instance, assessment, progress, timing, and result types. |
+| [`ObjectAnalysis/ObjectMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectMaskOutlineRenderer.swift) | Detail-view contour from a stored grayscale instance mask. |
+| [`Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) | Controls, status table, numbered overlays, crop, per-object detail, and retry. |
 
 The object-set workflow uses PhotoAIKit's `ObjectSegmentationService`,
 `ObjectMaskMemoryStore`, optional `ObjectMaskDiskStore`, and SAM 3
@@ -670,6 +671,11 @@ aspect-fit. A separate dark header carries a large white number without
 covering the subject. The renderer explicitly converts normalized
 bottom-left box coordinates to top-left CGImage crop coordinates.
 
+If the source or mask crop for a retained object cannot be made, rendering
+throws `reviewBoardUnavailable`. The feature records the per-photo failure
+before asking Qwen to assess a board; it does not submit a board with a
+numbered ID whose crop was silently omitted.
+
 The prompt tells Qwen that the overview and crops repeat views of one
 photograph, each board ID denotes a different physical subject, and the
 objects array must contain exactly one entry for each ID. Descriptions should
@@ -697,6 +703,14 @@ it segments again. The table labels Qwen confidence; the detail view labels
 SAM 3 mask score separately and shows numbered boxes, cached-mask outlines,
 the selected crop, and its assessment.
 
+The object count in the table is the number of **retained SAM 3 matches for the
+chosen concepts**, after filtering and deduplication. It is not a count of all
+subjects in the photograph. A Complete row means the response passed the
+schema and board-ID checks; the photographer still needs to compare its
+descriptions, count claims, and confidence with the source image. The detail
+panel shows the assessment for the currently selected object, not all object
+descriptions at once.
+
 ### September 24, 2026 packaged-model check
 
 Eight supplied puffin ARW files were processed in both modes with local
@@ -721,6 +735,31 @@ categories, touching/overlapping and tiny subjects, genuine no-match cases,
 RAW/JPEG parity, model removal, large tagged batches, and lifecycle checks
 remain open. The per-photo table and gate status are in the
 [RawCull implementation notes](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#163-implementation-checkpoint--september-24-2026).
+
+### September 24–26, 2026 in-app observations
+
+In-app Automatic runs showed all eight puffin photos and all eight photos in a
+mixed-subject batch as Complete. The mixed batch included landscape, deer,
+muskox, horse, bird, rabbit, and puffin photographs. These screenshots show the
+workflow operating in the app on those selections, but do not identify the
+installed model-pack fingerprints or establish a clean-install TestFlight run.
+
+Two visual checks remain unresolved. In `_DSC3028.ARW`, clicking the two
+numbered puffins showed crops and descriptions associated with opposite birds;
+the source of the mismatch, whether Qwen's board grounding or the UI's
+object-to-crop association, has not been established. In `_DSC3031.ARW`, SAM 3
+retained two puffins and Qwen's object details described two positions, while
+its image summary claimed a third puffin on the ground. That Complete result
+reported 95% Qwen confidence. The invented third bird is a prose error, not a
+third SAM 3 instance or a missing board ID.
+
+Objects is being treated as an advisory test feature while users report issues.
+The two photographs are regression cases for visual grounding and object
+mapping. Before treating the broader validation as complete, the signed build
+and hosted model packs still need a clean-install run covering launch, analyze,
+cancel, remove, and reinstall, with build, model identities, macOS version, and
+memory recorded. See the [in-app validation and follow-up](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#in-app-automatic-validation--september-24-2026)
+and [September 26 observation](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#additional-in-app-observation-and-public-test-decision--september-26-2026).
 
 ### Private diagnostics
 
