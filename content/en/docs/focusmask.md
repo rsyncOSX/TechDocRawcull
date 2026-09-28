@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-09-15"
+lastmod = "2026-09-28"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
@@ -74,7 +74,11 @@ focusMaskModel.config
 
 RawCull's default focus configuration is `.birdsInFlight`. Photo type maps to
 PhotoAnalysisKit presets: Automatic, Birds and Wildlife, Portrait, Landscape, or
-General Action. Quality maps to Fast, Balanced, or High Precision.
+General Action. Quality maps to Fast, Balanced, or High Precision. Automatic
+preserves the
+shared config rather than selecting a preset from image classification; the
+default `.birdsInFlight` has no explicit weight override, unlike the explicit
+Birds and Wildlife preset.
 
 The selected thumbnail setting is normalized before decode:
 
@@ -118,14 +122,16 @@ the missing host identity in `SharpnessScoringSignature`:
 Legacy signatures without a package descriptor still decode, but compare stale
 to every current signature. On catalog load, RawCull restores a score only when
 the full signature matches and the current file size and modification date match
-(date tolerance is 0.001 seconds). A config, quality, source, size, algorithm,
-or source-file change therefore forces recomputation.
+(date tolerance is 0.001 seconds). A change to scalar-affecting config, quality,
+source, size, algorithm identity,
+or source-file metadata therefore forces recomputation.
 
 ## Calibration Lifetime
 
 Calibration is a **visual-threshold** operation, not catalog normalization of
 the scalar score. Before scoring, RawCull asks `FocusMaskModel` to load inputs
-and call `PhotoAnalyzer.calibrate`. PhotoAnalysisKit:
+and call `PhotoAnalyzer.calibrate`, using a dedicated 1616 px maximum rather
+than the scoring thumbnail size. PhotoAnalysisKit:
 
 1. loads inputs with the same bounded concurrency and source choice as scoring;
 2. applies each file's ISO and aperture;
@@ -181,8 +187,10 @@ denominator floor   -> 1e-6
 ```
 
 Badge consumers clamp `score / maxScore` to 0...1 before mapping it to
-presentation labels. That UI normalization is catalog-relative and is not
-persisted as the package score.
+presentation labels. A lone score above the denominator floor therefore displays as 100%, and
+an all-soft catalog can still produce Sharp labels. The labels are relative to the
+current score set and do not establish absolute focus quality. That UI
+normalization is not persisted as the package score.
 
 ## Focus Mask Presentation
 
