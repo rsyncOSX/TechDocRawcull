@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-26"
+lastmod = "2026-09-30"
 description = "How RawCull owns and refreshes local CLIP, SAM 3, Qwen, Vision, Deep Review, and Objects runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "objects"]
@@ -31,7 +31,7 @@ authoritative sources are
 and
 [`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
 For model algorithms and data products, see
-[AI Models in RawCull](../aiinrawcull/).
+[AI Models in RawCull](/docs/ai/aiinrawcull/).
 
 ## Runtime Topology
 
@@ -555,7 +555,7 @@ description associations for two birds, with the source of the mismatch still
 unresolved. `_DSC3031.ARW` retained two birds but its Complete, 95%-confidence
 Qwen summary invented a third. The detail panel displays only the currently
 selected object's assessment. See
-[AI Models in RawCull](../aiinrawcull/#objects-instance-level-sam-3-and-qwen-analysis)
+[AI Models in RawCull](/docs/ai/aiinrawcull/#objects-instance-level-sam-3-and-qwen-analysis)
 for the prompt, mask filtering, board layout, timings, in-app observations, and
 remaining validation work.
 

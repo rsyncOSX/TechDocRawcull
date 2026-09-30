@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-09-15"
+lastmod = "2026-09-30"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -13,9 +13,12 @@ weight = 10
 
 # How PhotoAIKit Is Constructed
 
-> **Revision audited:** RawCull resolves PhotoAIKit at
-> `20e57359603313af7c2d38cae3e8b6e37f8838ef`. Product names and behavior on this
-> page describe that commit, not a newer sibling checkout.
+> **Revision scope:** This architecture walkthrough was written against
+> PhotoAIKit `20e57359603313af7c2d38cae3e8b6e37f8838ef`. The current RawCull
+> checkout resolves `77cc1d84a5d98a485caa15be102c8a55eb3d7698`.
+> Read the package behavior here as an architectural baseline and use
+> [AI Models in RawCull](/docs/ai/aiinrawcull/) and
+> [The RawCull AI Runtime](/docs/ai/airuntime/) for the current app integration.
 
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
 important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It
@@ -57,7 +60,9 @@ but it would silently encode application policy into the AI layer.
 `PhotoAIKit/Package.swift` declares Swift tools 6.4, macOS 27, Swift 6 language
 mode, seven library products, and one test target. It pins
 `apple/coreai-models` to revision
-`cc812078731871574c9b2eb620aa40734c4b89ee` and declares
+`cc812078731871574c9b2eb620aa40734c4b89ee` in the audited revision;
+RawCull now resolves `coreai-models` at
+`475c585fdb0fe82a83c8f777f259e9414bd44c98`. The manifest declares
 `huggingface/swift-transformers` from 1.3.3 (RawCull currently resolves 1.3.4).
 
 ```mermaid
@@ -466,15 +471,16 @@ results for a newer selection.
 
 ## 9. RawCull Integration And Policy Boundary
 
-RawCull imports every product from this pinned revision and assembles them in
-`RawCullAIIntegration`:
+RawCull imports the package products and assembles concrete providers in
+`RawCullAIModelRuntime`. `RawCullApplicationState` binds those providers to
+stable features owned by `RawCullIntelligenceRuntime`:
 
 | Package contract or implementation                                                               | RawCull adapter/consumer                                                                 | Policy that remains in RawCull                                                                                                                                                     |
 | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `CoreAICLIPProvider`, `ImageSimilarityArtifactProviding`, and `ImageSimilarityArtifactComparing` | `RawCullCLIPSimilarityService`, `SimilarityScoringModel`, and `RawCullSimilarityFeature` | managed model locations, selected CLIP model, RAW decoding, concurrency 1, retry/replacement recovery, per-file persistence, burst thresholds, and subject-mismatch adjustment     |
 | `VisionFeaturePrintBackend`                                                                      | `RawCullVisionSimilarityService`                                                         | always-available startup service, concurrency 4, service selection, cache admission, and UI state                                                                                  |
 | `TextEmbeddingProviding` and `ImageTextSimilarityComparing`                                      | `RawCullCLIPSemanticSearchService` and `RawCullSemanticSearchFeature`                    | query admission, progress, catalog/rating filters, deterministic ties, result count, selection/navigation binding, and ephemeral query lifetime                                    |
-| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector                | `RawCullAIIntegration`, `DeepAIReviewFeature`, and `DeepAIReviewController`              | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, group-signature validation, and culling decisions |
+| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector                | `RawCullAIModelRuntime`, `DeepAIReviewFeature`, and `DeepAIReviewController`              | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, group-signature validation, and culling decisions |
 
 The package owns validation, descriptors, backend actors, mathematical
 comparison, bounded generic workflows, and reusable codecs/stores. The app owns
@@ -574,4 +580,4 @@ it probably belongs in RawCull's adapter layer instead.
 | RawCull semantic-search policy            | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift`, `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift`, `RawCull/Intelligence/Similarity/SimilarityScoringModel.swift` |
 
 Next, follow these abstractions into the host application in
-[How RawCull Enables and Uses CLIP](../../ai/clip-in-rawcull/).
+[How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).

@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-09-26"
+lastmod = "2026-09-30"
 description = "RawCull AI architecture, model downloads, and Objects test-release status."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
@@ -29,10 +29,12 @@ revision in `Package.resolved`. RawCull intelligence code lives under
 
 | Document                                                       | Main question                                          | Start here when                                                                                                      |
 | -------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| This overview                                                  | Where does AI belong in the system?                    | You need the vocabulary and responsibility split                                                                     |
-| [AI Model Downloads](aimodeldownloads/)                        | Where do model assets come from?                       | You are changing download, acceptance, or installation behavior                                                      |
-| [AI Model Licence and Provenance Clearance](licenceprocedure/) | What evidence is required before a model can ship?     | You are reviewing licences, provenance, redistribution, or release readiness                                         |
-| [Publishing and Testing RawCull AI Models](newmodels/)                 | How are models published and Objects tested?       | You are preparing a model release or updating the download manifest                                                  |
+| This overview | Where does AI belong in the system? | You need the vocabulary and responsibility split |
+| [The RawCull AI Runtime](/docs/ai/airuntime/) | How are providers and long-lived features assembled? | You are tracing startup, refresh, or service replacement |
+| [AI Models in RawCull](/docs/ai/aiinrawcull/) | How do CLIP, Vision, SAM 3, Qwen, and Objects work in the app? | You are tracing an analysis from input to result |
+| [Download AI models](/docs/ai/aimodelsdownload/) | How are the three release packs rebuilt? | You are preparing source weights, conversions, or archives |
+| [AI Model Licence and Provenance Clearance](/docs/ai/licenceprocedure/) | What evidence is required before a model can ship? | You are reviewing licences, provenance, or release readiness |
+| [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md) | How are packs published and Objects tested? | You are preparing a model release or updating the download manifest |
 
 PhotoAIKit and RawCull use these AI backends:
 
@@ -47,7 +49,7 @@ and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
 a production download. SAM 3 requires acceptance of its verified bundled
 licence before download. The App Store build uses Apple-hosted Managed
 Background Assets; the Direct/Developer ID build retains a self-hosted `v3`
-manifest. See [AI Model Downloads](aimodeldownloads/) for the exact distinction.
+manifest. See [AI Model Downloads](/docs/ai/aimodelsdownload/) for the exact distinction.
 
 Vision is the startup and service-selection fallback: RawCull uses it when CLIP
 is disabled or the selected CLIP bundle cannot produce a validated provider. A
@@ -55,10 +57,10 @@ selected CLIP indexing pass keeps its valid per-file artifacts and records the
 files that fail; it does not mix Vision artifacts into that pass or
 automatically rerun the whole batch.
 
-The detailed CLIP document follows code that is connected to RawCull's
-similarity and burst-analysis features. The package architecture document also
-covers the SAM 3 contracts, workflows, and storage so that the complete package
-design is understandable. Not every reusable package capability is necessarily
+The [AI Models in RawCull](/docs/ai/aiinrawcull/) guide follows code connected
+to similarity, semantic search, burst analysis, Deep Review, Qwen, and Objects.
+The [PhotoAIKit architecture guide](/docs/packages/photoaikit/) covers SAM 3
+contracts, workflows, and storage so that the package design is understandable. Not every reusable package capability is necessarily
 exposed as a finished RawCull user workflow.
 
 ## Objects test-release status
@@ -70,7 +72,7 @@ response fields; it cannot verify that generated text matches the photograph.
 A recent two-puffin result had two retained objects but an invented third bird
 in its summary, and a separate two-puffin result has an unresolved
 crop/description mismatch. Treat Objects output as advisory and verify it
-against the source. See [Publishing and Testing RawCull AI Models](newmodels/)
+against the source. See [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
 for the known issues, tester checks, and release evidence still needed.
 
 ## The Central Design Idea
@@ -102,7 +104,7 @@ package.
 
 ```mermaid
 flowchart LR
-    UI["RawCull SwiftUI and settings"] --> Integration["RawCullAIIntegration composition root"]
+    UI["RawCull SwiftUI and settings"] --> Integration["RawCullApplicationState composition root"]
     Integration --> AppAdapter["RawCull adapters: paths, RAW decoding, policy"]
     AppAdapter --> Contracts["PhotoAIContracts"]
     Integration --> CLIP["CoreAICLIPBackend"]
@@ -138,15 +140,17 @@ app-specific model folder, or a burst winner means.
 ## Current Runtime Shape
 
 `RawCullApplicationState` is the object-graph assembly boundary. It creates one
-`RawCullAIIntegration`, one shared `SimilarityScoringModel`, the focused
-similarity and semantic-search features, the Deep Review controller, the main
-view model, and one `RawCullIntelligenceRuntime`. Identity assertions protect
-against accidentally constructing parallel observable state.
+`RawCullAIModelRuntime`, one shared `SimilarityScoringModel`, the focused
+similarity and semantic-search features, Deep Review, Qwen and Objects features,
+the main view model, and one `RawCullIntelligenceRuntime`. Identity assertions
+protect against accidentally constructing parallel observable state.
 
-`RawCullAIIntegration` remains the concrete provider composition root. The
-runtime owns stable feature lifetimes and applies complete revisioned
-configurations from settings. Views receive focused feature surfaces instead of
-the composition root or low-level scoring model:
+`RawCullAIModelRuntime` owns concrete providers, resource managers, Qwen
+inference, and separate subject/object mask stores. `RawCullIntelligenceRuntime`
+owns stable feature lifetimes and applies complete revisioned configurations
+from settings. See [The RawCull AI Runtime](/docs/ai/airuntime/) for the full
+construction and refresh sequence. Views receive focused feature surfaces
+instead of the composition root or low-level scoring model:
 
 | Consumer                       | Narrow dependency                                                 | Capability and persistence rule                                                                                                           |
 | ------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -162,7 +166,7 @@ The safe startup and refresh path is:
    model and intelligence runtime as stable `@State` roots.
 2. Assembly creates the shared scoring model and focused features from the
    initial Vision-backed configuration.
-3. `RawCullAISettingsModel.refresh()` asks the integration to validate both CLIP
+3. `RawCullAISettingsModel.refresh()` asks the model runtime to validate both CLIP
    and both segmentation-model candidates.
 4. PhotoAIKit validates model bundles and derives model-asset fingerprints.
 5. Settings publishes a monotonically revisioned configuration. The runtime

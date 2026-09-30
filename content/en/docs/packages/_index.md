@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-09-15"
+lastmod = "2026-09-30"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
@@ -17,31 +17,35 @@ RawCull is the composition root for four architecture packages and four small
 rsync/persistence support packages. The package repositories are separately
 versioned. They are **not** copied source snapshots inside TechDocRawCull; paths
 under `Sources/` and `Tests/` in these guides refer to the named package
-repository at the revision resolved by the app.
+repository. The revision notes at the start of each guide say whether its detailed
+walkthrough was reviewed at the app's current pin. In particular, the PhotoAIKit
+and RawParserKit guides preserve their earlier architecture audits while the
+lockfile table below records what the current app builds.
 
 ## Resolved Dependency Snapshot
 
 This table is derived from
 `RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
+This snapshot is from the current RawCull checkout on September 30, 2026.
 “App” means RawCull links a product directly; “transitive” means another package
 owns the dependency. A revision-only pin has no semantic-version label.
 
 | Identity              | Relationship               | Version/branch | Revision                                   |
 | --------------------- | -------------------------- | -------------- | ------------------------------------------ |
-| PhotoAIKit            | app                        | revision pin   | `20e57359603313af7c2d38cae3e8b6e37f8838ef` |
+| PhotoAIKit            | app                        | revision pin   | `77cc1d84a5d98a485caa15be102c8a55eb3d7698` |
 | PhotoAnalysisKit      | app                        | `1.3.1`        | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
 | RawCullCore           | app                        | `1.1.2`        | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
-| RawParserKit          | app                        | `1.3.0`        | `d2175ed880d39021bdb5f5a2a842b460af0b316c` |
+| RawParserKit          | app                        | `1.3.1`        | `f0e5b02a10294798afd86781da5d6510e146a7ba` |
 | RsyncArguments        | app                        | `1.0.0`        | `0ff6518136c208dfbecc1a918f045048ca79853d` |
 | RsyncProcessStreaming | app                        | `1.0.0`        | `dd86f012b352888fd146e0b6e103740dc237f740` |
 | ParseRsyncOutput      | app                        | `1.0.0`        | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
 | DecodeEncodeGeneric   | app                        | `1.0.0`        | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
-| coreai-models         | transitive from PhotoAIKit | revision pin   | `cc812078731871574c9b2eb620aa40734c4b89ee` |
+| coreai-models         | transitive from PhotoAIKit | revision pin   | `475c585fdb0fe82a83c8f777f259e9414bd44c98` |
 | EventSource           | transitive                 | `1.5.1`        | `86b5096ac59ab46e66bd1f6377c604bc1dab0bc2` |
-| swift-asn1            | transitive                 | `1.7.2`        | `d9a5b37470adc940d22c3bcd5ca6953a516b727f` |
-| swift-collections     | transitive                 | `1.6.0`        | `a0cb0954ecb21e4e31b0070e6ed5674e8556685a` |
+| swift-asn1            | transitive                 | `1.7.3`        | `3b6410f7dee09eb33cdd26260c5fd47fda19b0e2` |
+| swift-collections     | transitive                 | `1.7.1`        | `98ef3c98609a1e31b7e157b5b619579001a789d6` |
 | swift-crypto          | transitive                 | `4.5.2`        | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
-| swift-huggingface     | transitive                 | `0.10.1`       | `b5403ed09403f674601fd1123e07c5b32914d16f` |
+| swift-huggingface     | transitive                 | `0.11.0`       | `f2f99991f2d7d8fdb3187e4fd539cd2facf5c13d` |
 | swift-jinja           | transitive                 | `2.5.1`        | `4588064a20f3fc093c95f2f7d3359999bf30cae5` |
 | swift-transformers    | transitive                 | `1.3.4`        | `c21fdcde390313a6d98d8e33a346f2c3486c3ab0` |
 | xgrammar              | transitive                 | `0.2.2`        | `4d145cc13d878c751ebeed36af1c013074be76bc` |

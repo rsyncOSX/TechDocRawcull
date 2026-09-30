@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Download AI models"
 date = "2026-09-26"
-lastmod = "2026-09-26"
+lastmod = "2026-09-30"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
@@ -25,8 +25,8 @@ weights, intermediate models, three converted bundles, and three archives.
 
 These commands produce **local release candidates**, not App Store approval.
 After packaging, compare the new hashes with the application catalog and follow
-the [publishing runbook](../newmodels/) to update RawCull, upload the packs, and
-test a signed TestFlight build. A fresh conversion may produce different archive
+the [publishing runbook](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
+to update RawCull, upload the packs, and test a signed TestFlight build. A fresh conversion may produce different archive
 bytes even when the same source model was used.
 
 ## 0. What will be produced

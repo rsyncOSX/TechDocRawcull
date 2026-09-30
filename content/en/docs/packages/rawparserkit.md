@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-09-15"
+lastmod = "2026-09-30"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
 tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -13,8 +13,11 @@ weight = 40
 
 # How RawParserKit Is Constructed
 
-> **Revision audited:** RawCull resolves RawParserKit `1.3.0` at
-> `d2175ed880d39021bdb5f5a2a842b460af0b316c`.
+> **Revision scope:** This walkthrough was written against RawParserKit `1.3.0`
+> at `d2175ed880d39021bdb5f5a2a842b460af0b316c`. The current RawCull
+> checkout resolves `1.3.1` at `f0e5b02a10294798afd86781da5d6510e146a7ba`.
+> The detailed examples below document the earlier reviewed source; check the
+> current package revision when changing parser behavior.
 
 RawParserKit is RawCull's camera-file boundary. It knows how Sony ARW, Nikon
 NEF, and Adobe DNG files are structured, how to locate their embedded JPEGs and

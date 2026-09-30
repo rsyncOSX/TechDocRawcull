@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Model Licence and Provenance Clearance"
 linkTitle = "AI Licence and Provenance"
 date = "2026-08-22"
-lastmod = "2026-09-26"
+lastmod = "2026-09-30"
 description = "Current catalog status and historical model-clearance evidence."
 tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -20,8 +20,8 @@ The detailed clearance evidence below is a **September 15 historical snapshot**
 for the earlier two-pack self-hosted release; it has not been re-reviewed as a
 legal or provenance opinion on the current Apple-hosted Qwen pack. For current
 pack IDs, hashes, licences, and test-release steps, see
-[Publishing and Testing RawCull AI Models](../newmodels/) and the application
-repository `ModelAssets/README.md`.
+[Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
+and the application repository `ModelAssets/README.md`.
 
 Technical repository evidence in the historical snapshot: 2026-09-15
 
@@ -36,7 +36,7 @@ Evidence record owner: Thomas Evensen, RawCull maintainer
 | Qwen3-VL-2B-Instruct | Apache License 2.0 | No | Catalog descriptor and `ModelAssets/Notices/Qwen` |
 
 The three descriptors are `.ready` in the current code and their archive
-checksums are recorded in the [model release guide](../newmodels/). This table
+checksums are recorded in the [model release guide](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md). This table
 reports repository metadata, not independent legal clearance or an App Review
 decision. Reassess the notices and provenance for the exact packs submitted.
 

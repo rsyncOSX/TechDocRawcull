@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-09-26"
+lastmod = "2026-09-30"
 description = "Code-level guide to local CLIP, Vision, SAM 3, Qwen, Deep Review, and numbered Objects analysis in RawCull."
 weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
@@ -203,7 +203,7 @@ The first asynchronous validation begins from the main view's `.task`:
 `refresh()` asks the downloads model for an installed-location snapshot. That
 snapshot flows through settings to `RawCullAIModelRuntime`, which validates
 Qwen and refreshes CLIP and SAM 3 capabilities. See
-[The RawCull AI Runtime](../runtime/#development-handoff-photoaikit-objects-to-the-runtime)
+[The RawCull AI Runtime](/docs/ai/airuntime/#development-handoff-photoaikit-objects-to-the-runtime)
 for the concrete PhotoAIKit provider handoff, feature wiring, lifetime, and
 reconfiguration path. In particular, the download snapshot supplies URLs;
 PhotoAIKit factories validate bundles and create typed providers; the model
