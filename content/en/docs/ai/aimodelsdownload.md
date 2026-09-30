@@ -1,6 +1,6 @@
 +++
 author = "Thomas Evensen"
-title = "Download and Prepare the Three AI Model Packs"
+title = "Download AI models"
 date = "2026-09-26"
 lastmod = "2026-09-26"
 weight = 25
