@@ -221,5 +221,5 @@ module:
     extended: true
     min: 0.164.0
   imports:
-    - path: github.com/google/docsy/theme
+    - path: github.com/docsy/docsy/theme
       disable: false
