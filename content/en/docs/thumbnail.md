@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-09-15"
+lastmod = "2026-10-10"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
@@ -147,7 +147,7 @@ then uses this path:
 ```mermaid
 flowchart LR
     A["RAW URL"] --> B{"Preview RAM hit?"}
-    B -->|"yes"| C["Touch preview LRU"]
+    B -->|"yes"| C["Reuse preview thumbnail"]
     B -->|"no"| D{"Disk JPEG hit?"}
     D -->|"yes"| E["Decode oriented JPEG"]
     D -->|"no"| F["RawImageLoading.thumbnailImage"]
@@ -160,8 +160,9 @@ flowchart LR
 
 All three branches populate the dedicated grid cache when needed. Disk and
 source branches **do not** insert into the preview-size RAM cache.
-`RequestThumbnail` is its only admitter, so preview LRU ordering reflects user
-demand instead of scan order. After a cold decode, preload resolves the key
+`RequestThumbnail` is its only admitter, so preview RAM admission follows user
+demand instead of scan order. `NSCache` controls eviction; RawCull does not
+implement an explicit LRU ordering. After a cold decode, preload resolves the key
 again before caching; if the source changed while decoding, the result is
 discarded rather than being stored under stale identity.
 
@@ -171,12 +172,20 @@ to JPEG `Data` before launching the background disk save. This avoids sending
 
 ## The Two Memory Caches
 
-`SharedMemoryCache` owns two `NSCache` instances:
+`SharedMemoryCache` exposes two synchronous `TrackedThumbnailCache` wrappers.
+Each owns a private `NSCache` and serializes storage with count/cost accounting
+under one recursive lock:
 
 | Cache                             | Content                                         | Admission policy                                                |
 | --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------- |
-| Preview cache (`memoryCache`)     | Preview-size images used for detail/list demand | Only `RequestThumbnail` inserts; a hit touches its LRU position |
+| Preview cache (`memoryCache`)     | Preview-size images used for detail/list demand | Only `RequestThumbnail` inserts; lookup uses `NSCache` |
 | Grid cache (`gridThumbnailCache`) | Downscaled 200 px images                        | Preload populates it; grid requests can return immediately      |
+
+Each wrapper owns its eviction delegate, and entry UUIDs prevent a callback
+for a replaced thumbnail from subtracting its replacement's cost. Clears and
+limit changes use the same lock. See
+[Synchronizing Cache Storage and Accounting]({{< relref "cache-accounting.md" >}})
+for the callback ordering and concurrency tests.
 
 Both caches are cost-limited. The preview item count limit is intentionally high
 so byte cost is the normal binding constraint. Under warning memory pressure

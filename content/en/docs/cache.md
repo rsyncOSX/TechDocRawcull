@@ -27,8 +27,8 @@ share keys merely because they originate from the same RAW file.
 | Grid memory cache             | `Actors/SharedMemoryCache.swift`                                                                                        | Small 200 px thumbnails populated by preload                                       |
 | Thumbnail disk cache          | `Actors/DiskCacheManager.swift`                                                                                         | Representation-aware JPEG thumbnail files under the app cache directory            |
 | Full-size JPEG disk cache     | `Actors/FullSizeJPGDiskCache.swift`, `Model/Handlers/ZoomPreviewHandler.swift`                                          | Larger embedded JPEG previews for zoom                                             |
-| Per-file similarity artifacts | `Actors/PerFileAnalysisArtifactStore.swift`                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
-| Burst analysis cache          | `Actors/BurstAnalysisCache.swift`                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
+| Per-file similarity artifacts | `Intelligence/Persistence/PerFileAnalysisArtifactStore.swift`                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
+| Burst analysis cache          | `Intelligence/Persistence/BurstAnalysisCache.swift`                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
 | Cache accounting              | `Model/Cache/TrackedThumbnailCache.swift`, `Actors/SharedMemoryCache.swift`                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
 
 ## Thumbnail Lookup

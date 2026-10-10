@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-09-15"
+lastmod = "2026-10-10"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
@@ -162,6 +162,27 @@ Actor serialization does not make independent work parallel. Where file work can
 overlap, owners use a bounded task group and keep only a sliding window of
 children active.
 
+### Synchronous Cache Storage and Accounting
+
+`SharedMemoryCache` remains an actor for configuration, monitoring, and pressure
+handling. Its `nonisolated let` preview and grid properties expose independent
+`TrackedThumbnailCache` wrappers, so thumbnail access does not require an actor
+hop.
+
+Each wrapper owns its private `NSCache`, metadata, stored cost, and eviction
+delegate. One `NSRecursiveLock` serializes reads, mutations, limit changes, and
+callback accounting. Registering metadata before insertion handles immediate
+eviction; an entry UUID makes callbacks for replaced values harmless. The lock
+is recursive because `NSCache` can call its delegate during an operation that
+already holds it. No locked operation suspends with `await`.
+
+The wrapper's `@unchecked Sendable` conformance relies on this private,
+lock-protected state and the immutability contract of cached thumbnails. It does
+not make `NSImage` mutation safe. Separate accounting reads are not a combined
+snapshot during concurrent writes. See
+[Synchronizing Cache Storage and Accounting]({{< relref "cache-accounting.md" >}})
+for the source walkthrough and delegate teardown rule.
+
 ### Bounded Structured Parallelism
 
 | Operation                              |                                                          Bound |
@@ -279,6 +300,7 @@ idempotent cleanup path.
 | Preload-gate drain and cancellation races                                                                | `RawCullTests/RawCullVerifyTestsConcurrencyTests.swift`                      |
 | Six-slot limit, FIFO transfer, queued cancellation, and cancel-all                                           | `RawCullTests/ThumbnailLoaderConcurrencyTests.swift`                         |
 | Replacement-safe source/representation identity                                                              | `RawCullTests/ThumbnailCacheIdentityTests.swift`                             |
+| Synchronized cache replacement, clear/insert races, and eviction accounting in isolated owners | `RawCullTests/CacheAccountingConcurrencyTests.swift` |
 | Scoring request coalescing and generation-safe completion                                                    | `RawCullTests/SharpnessScoringTests.swift`                                   |
 | Persistence debounce, failed-save dirty state, retry, atomic backup/write, and legacy decode                 | `RawCullTests/CullingModelTests.swift`                                       |
 | Catalog scope idempotence, replacement, failed start, cancellation, and empty catalog                        | `RawCullTests/RawCullVerifyViewModelSecurityScopeTests.swift`                |

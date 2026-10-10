@@ -4,12 +4,13 @@ description:
   Prioritized backlog for keeping RawCull technical documentation aligned with
   the code
 weight: 95
-lastmod: 2026-09-15
+lastmod: 2026-10-10
 ---
 
 # Documentation Update Plan
 
-This page is the working backlog for future TechDocRawCull updates. It is
+This page records completed documentation work and the review checklist for
+future TechDocRawCull updates. It is
 ordered by the risk that stale documentation will teach the wrong architecture,
 not simply by the age or length of an article.
 
@@ -21,7 +22,7 @@ implementation details.
 ## Recently Completed Baseline
 
 The following pages were reconciled with the RawCull source on 15 September 2026
-and form the current learning path:
+and established the architecture learning path:
 
 | Page                                          | Current baseline                                                                                         |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -34,6 +35,24 @@ and form the current learning path:
 These pages still need review whenever their source areas change, but they are
 not part of the immediate stale-document backlog below.
 
+## Cache Documentation Follow-up — 10 October 2026
+
+The cache synchronization follow-up is complete:
+
+| Page | Reconciled behavior |
+| --- | --- |
+| [Synchronizing Cache Storage and Accounting]({{< relref "cache-accounting.md" >}}) | New walkthrough of the owned delegate, recursive lock, replacement IDs, clearing, teardown, and regression tests |
+| [Memory Cache]({{< relref "cache.md" >}}) | Wrapper ownership, synchronized accounting, and current persistence source paths |
+| [Thumbnails]({{< relref "thumbnail.md" >}}) | Preview/grid wrapper integration and admission policy without an explicit LRU guarantee |
+| [Memory Pressure]({{< relref "memorypressure.md" >}}) | Current pressure responses, synchronized cache clearing, accounting observations, and removed diagnostics claims |
+| [Concurrency]({{< relref "concurrency.md" >}}) | Synchronous locking boundary and cache accounting source-to-test mapping |
+
+This follow-up checked the cache-related descriptions against the current source;
+it does not constitute a fresh audit of every package, algorithm, or release
+procedure. The sections below preserve review criteria from the earlier plan.
+Completed criteria are maintenance checks, not outstanding implementation work.
+Planned pages remain proposals until they are added.
+
 ## Priority Definitions
 
 | Priority | Meaning                                                                                                                | Target                                            |
@@ -45,41 +64,29 @@ not part of the immediate stale-document backlog below.
 
 ## P0 — Correct The Core Runtime Model
 
-Status: **Completed**
+Status: **Earlier baseline marked complete; retain these criteria for future review.**
 
 ### 1. Concurrency
 
 Page: [Concurrency](../concurrency-revised/)
 
-Why first:
+Status: **Current architecture coverage present; cache boundary refreshed on
+10 October 2026.**
 
-- The introduction still names the `RawCullAIModels` branch rather than
-  documenting the current repository state.
-- The article predates the latest thumbnail contention work and should
-  explicitly include `ThumbnailPreloadGate`, exact-key request coalescing,
-  waiter cancellation, and replacement-safe cache identity.
-- It should connect application termination, persistence flushing, catalog
-  security scope, JPG export scope, and rsync operation scope to their actual
-  owners.
+Completed coverage:
 
-Required update:
+- Current composition and presentation boundaries at `RawCullApp`,
+  `RawCullMainView`, `RawCullViewModel`, and the intelligence runtime.
+- Catalog, thumbnail, burst, and termination flow diagrams; preload gating,
+  exact-key coalescing, waiter cancellation, generation guards, and scope owners.
+- Actor serialization, bounded task groups, detached work, continuation cleanup,
+  and a source-to-test table.
+- Synchronous `TrackedThumbnailCache` locking and
+  `CacheAccountingConcurrencyTests` for replacements, clearing, and eviction.
 
-- Start at `RawCullApp`, `RawCullMainView`, and the
-  `@MainActor RawCullViewModel` composition and presentation boundaries.
-- Add a hop diagram for catalog load, visible thumbnail demand, burst indexing,
-  and application termination.
-- Distinguish actor serialization, bounded task groups, explicit
-  `Task.detached`, and framework callbacks.
-- Document generation checks, latest-wins behavior, continuation ownership, and
-  cancellation cleanup.
-- Add a source-to-test table for concurrency invariants.
-
-Completion evidence:
-
-- Every named actor and task owner exists in the current source.
-- `ThumbnailProviderTests`, `RawCullVerifyTestsConcurrencyTests`,
-  `RawCullVerifyTestsDataRaceDetectionTests`, persistence tests, and
-  security-scope tests support the documented rules.
+Review these contracts when ownership, cancellation, executor boundaries, or
+cache mutation paths change. The presence of a test reference records coverage;
+it does not claim that the tests were rerun during a documentation update.
 
 ### 2. Focus Mask And Sharpness Overview
 
@@ -92,7 +99,7 @@ Why now:
 - Recent scoring settings, source selection, calibration, and cache-signature
   changes should be reflected before readers use the detailed algorithm pages.
 
-Required update:
+Future review checklist:
 
 - Add an ownership diagram from `SharpnessControlsView` and scoring sheets
   through the main-actor models into PhotoAnalysisKit.
@@ -108,7 +115,7 @@ Required update:
 
 Page: [Detailed Sharpness Scoring](../detailsharpnessscoring/)
 
-Required update:
+Future review checklist:
 
 - Revalidate every constant, default, formula, quality preset, source choice,
   and score range against the pinned PhotoAnalysisKit revision.
@@ -124,7 +131,7 @@ Required update:
 
 Page: [Detailed Focus Mask Computation](../detailsfocusmask/)
 
-Required update:
+Future review checklist:
 
 - Revalidate mask stages, region-selection rules, AF weighting, patch ranking,
   thresholds, and debug modes against PhotoAnalysisKit.
@@ -137,13 +144,13 @@ Required update:
 
 ## P1 — Complete The Architecture Learning Path
 
-Status: **Completed**
+Status: **Earlier baseline marked complete; retain these criteria for future review.**
 
 ### 5. AI Section Overview
 
 Page: [Artificial Intelligence in RawCull](../ai/)
 
-Required update:
+Future review checklist:
 
 - Present `RawCullAIIntegration` as the composition root and list the narrow
   services passed into feature models.
@@ -158,7 +165,7 @@ Required update:
 
 Page: [How RawCull Loads and Uses CLIP](../ai/clip-in-rawcull/)
 
-Required update:
+Future review checklist:
 
 - Verify startup behavior, managed model locations, bundle validation, provider
   reuse, model fingerprints, and settings callbacks.
@@ -173,7 +180,7 @@ Required update:
 
 Page: [RawCull Packages](../packages/)
 
-Required update:
+Future review checklist:
 
 - Derive the package list and revisions from `Package.resolved`.
 - Show which products are imported by the app and which types form each
@@ -187,7 +194,7 @@ Required update:
 
 Page: [How PhotoAIKit Is Constructed](../packages/photoaikit/)
 
-Required update:
+Future review checklist:
 
 - Compare the article with the exact pinned package revision.
 - Recheck product names, contract types, backend actors, artifact descriptors,
@@ -202,7 +209,7 @@ Required update:
 
 Page: [How PhotoAnalysisKit Is Constructed](../packages/photoanalysiskit/)
 
-Required update:
+Future review checklist:
 
 - Reconcile the package facade, analysis descriptors, presets, batch limits,
   calibration, focus evidence, and mask APIs with the pinned revision.
@@ -214,7 +221,7 @@ Required update:
 
 Page: [How RawCullCore Is Constructed](../packages/rawcullcore/)
 
-Required update:
+Future review checklist:
 
 - Verify domain models, `FileItem` typealias boundaries, burst grouping/ranking
   defaults, review states, and histogram behavior.
@@ -227,7 +234,7 @@ Required update:
 
 Page: [How RawParserKit Is Constructed](../packages/rawparserkit/)
 
-Required update:
+Future review checklist:
 
 - Verify format registration, metadata normalization, thumbnail/preview
   strategies, coalescing, decode limits, and cancellation bridges.
@@ -240,7 +247,7 @@ Required update:
 
 Page: [Sony/Nikon MakerNote Parser](../sonymakernoteparser/)
 
-Required update:
+Future review checklist:
 
 - Reconcile parser type names and file locations with RawParserKit.
 - Walk one Sony and one Nikon focus-location result through normalization into
@@ -251,13 +258,13 @@ Required update:
 
 ## P1 — Operational Correctness References
 
-Status: **Completed**
+Status: **Earlier baseline marked complete; retain these criteria for future review.**
 
 ### 13. Security-Scoped URLs
 
 Page: [Security-Scoped URLs](../security/)
 
-Required update:
+Future review checklist:
 
 - Keep the already-current AI indexing and semantic-search scope explanation.
 - Add the selected JPG export destination lifetime and app-termination
@@ -271,21 +278,26 @@ Required update:
 
 Page: [Memory Pressure](../memorypressure/)
 
-Required update:
+Status: **Cache and pressure descriptions refreshed on 10 October 2026.**
 
-- Recheck adaptive cache recommendations, user maxima, warning/critical
-  responses, and recovery behavior.
-- Connect pressure state to both grid and preview caches and to diagnostics
-  counters.
-- Explain the lock-backed synchronous read without teaching that every cache
-  operation bypasses actor isolation.
-- Add the tests and diagnostic measurements used to validate limit changes.
+Completed coverage:
+
+- Adaptive recommendations, user maxima, warning/critical responses, and recovery.
+- Kernel pressure state behind `OSAllocatedUnfairLock`; synchronous cache
+  operations and accounting behind each wrapper's `NSRecursiveLock`.
+- Owned eviction callbacks, replacement IDs, synchronized clearing, estimated
+  cost versus process footprint, and separate-read observation limits.
+- Cache-policy and concurrency test references plus operational measurements.
+- Removal of obsolete pressure-event counters and eviction-history ring claims.
+
+Review policy constants and settings defaults when limits change, and keep the
+cache walkthrough, thumbnail article, and concurrency test map aligned.
 
 ### 15. Synchronous Code
 
 Page: [Synchronous Code](../heavy/)
 
-Required update:
+Future review checklist:
 
 - Audit all current blocking ImageIO, filesystem, RAW parsing, JPEG encoding,
   and process operations.
@@ -297,13 +309,14 @@ Required update:
 
 ## P2 — AI Distribution, Evidence, And Release Procedures
 
-Status: **Completed**
+Status: **Existing procedure pages were marked complete in the earlier baseline;
+the two evaluation pages below remain planned.**
 
 ### 16. AI Model Downloads
 
 Page: [AI Model Download Service](../ai/aimodeldownloads/)
 
-Required update:
+Future review checklist:
 
 - Reconcile the procedure with the current download catalog, downloader target,
   managed locations, activation callbacks, and release metadata tests.
@@ -314,7 +327,7 @@ Required update:
 
 Page: [Publishing New RawCull AI Models](../ai/newmodels/)
 
-Required update:
+Future review checklist:
 
 - Verify archive names, manifest schema, checksums, release tags, model
   identities, and staging paths against `ModelAssets` and current release tests.
@@ -326,7 +339,7 @@ Required update:
 
 Page: [AI Model Licence and Provenance Clearance](../ai/licenceprocedure/)
 
-Required update:
+Future review checklist:
 
 - Separate current legal/provenance status from the reusable clearance
   procedure.
@@ -340,7 +353,7 @@ Required update:
 
 Planned page: **Evaluating CLIP Models** (not yet present)
 
-Required update:
+Future review checklist:
 
 - Verify package revisions, fixture identities, scripts, commands, thresholds,
   and report paths.
@@ -353,7 +366,7 @@ Required update:
 
 Planned page: **CLIP Model Evaluation Results** (not yet present)
 
-Required update:
+Future review checklist:
 
 - Treat this as a dated evidence report rather than timeless architecture.
 - Record exact inputs, model fingerprints, query set, metrics, hardware, and
@@ -369,7 +382,7 @@ Required update:
 
 Page: [Repository Git Workflow](../pushpull/)
 
-Required update:
+Future review checklist:
 
 - Confirm that the documented rebase and fast-forward policy still matches
   repository practice.
