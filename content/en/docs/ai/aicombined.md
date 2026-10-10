@@ -29,6 +29,75 @@ The code's main entry points are:
 
 For the surrounding runtime, see [The RawCull AI Runtime](/docs/ai/airuntime/). For model installation, see [AI Model Downloads](/docs/ai/aimodelsdownload/).
 
+## A verified recovery for a large Sony ARW
+
+An investigation on 10 October 2026 used this actual file:
+
+```text
+/Users/thomas/Pictures_raw/2026/2_okt_2026/_DSC8318.ARW
+```
+
+The open application showed **RAW detail** and this error:
+
+```text
+Resume unavailable: memoryAdmissionDenied. Rerun with current settings.
+```
+
+ImageIO and `CIRAWFilter.nativeSize` both reported **9,984 × 6,656 pixels**. That is **66,453,504 pixels**, well above the default 24,000,000-pixel source limit. At the admission estimate of 80 bytes per pixel, this source requires **5,316,280,320 estimated working bytes**, also above the 2,000,000,000-byte limit. The refusal happens before RAW decoding and model analysis. It is a source-budget rejection, not evidence of a broken Qwen model or insufficient disk space.
+
+To run this image under the current limits:
+
+1. Wait until the run has stopped and its controls are available.
+2. Leave exactly `_DSC8318.ARW` selected.
+3. Inside Combined Review, change **Source** from **RAW detail** to **High-quality preview**. This is the source picker beside Depth, not the Selected/Tagged picker in the header.
+4. Press **Rerun with current settings**. This creates a new run with the preview preference.
+5. Do not press **Resume saved run** for the refused RAW run: Resume uses its frozen RAW-detail preference even after the visible source picker has changed.
+6. Check the source fidelity and limitations in the new result. The evidence comes from the camera preview, with its processing and resolution limitations, rather than a full-resolution RAW demosaic.
+
+The installed-Qwen integration probe passed on this ARW using the default high-quality-preview preference: it produced an available crop observation, a nonempty validated report, and an inspectable retained overview. That probe intentionally omits SAM and CLIP, so it establishes the preview/Qwen path rather than complete provider or photographic qualification.
+
+The open application's complete preview run also passed source preparation, Qwen overview, both SAM requests, masked detail measurement, and overview/crop CLIP. Its declared source was **embeddedCameraPreview, 4,096 × 2,731, sRGB**. That run completed with limitations: crop observation was rejected as `invalidEvidence`, and report synthesis failed, so no synthesized claim was accepted. This is a separate response-validation outcome after successful source loading, not another memory-admission failure. A successful degraded Qwen probe must not be taken as a guarantee that every complete run will accept all generated responses.
+
+The complete isolated probe captured the rejected crop response: it asserted a “sharp eye” despite the unavailable eye localization. It also captured a report citing the literal schema placeholder `exact ID`. The validator correctly rejected both. The implementation update keeps those checks, restricts crop/report prose to supported visual topics, and replaces the misleading placeholder template with a correctly typed example drawn from actual evidence. Report requests now use short evidence aliases, validated against the rows actually supplied, and resolve accepted aliases back to the original stored provenance IDs before detail checks and persistence. This improves model instruction-following without treating an unsupported response as evidence.
+
+The final synthesis also uses original evidence directly rather than feeding reconciliation prose back into another pass. This keeps nested references and repeated model reasoning out of the final request while preserving reconciliation for inspection.
+
+Crop-observation, reconciliation, and report stage versions are now `combined-v2`; the source/render and storage-envelope contracts remain V1. A saved run using the earlier prompt versions requires a new rerun. The already running application uses its installed build until rebuilt and relaunched.
+
+### Verification of the updated full pipeline
+
+The final installed-model run on `_DSC8318.ARW` passed with Qwen, SAM 3, and DataComp CLIP supplied to the isolated probe. All **11 work items completed**, the failure dictionary was empty, and the final report contained **three validated claims**, one inspected region, and no uninspected regions. Crop inspection and reconciliation both completed; accepted report references were resolved to the original observation/measurement IDs. The full model test took approximately **137 seconds on this host**. This is a workflow result for the supplied file, not a photographic accuracy or general performance guarantee.
+
+The same verification command ran the Combined Review feature, source-loading, and run-contract suites: **50 test invocations passed**, including the real-model probe and the regression for preview rerun versus frozen-source resume. The smoke inventory verified **291 unique identifiers**. Formatting, lint error checks, the AI import-boundary check, and whitespace checks passed. These verification steps used Xcode; **Hugo was not compiled**.
+
+After building and relaunching the updated app, select **High-quality preview** and **Rerun with current settings**. The successful probe does not change the saved settings in an older refused run, install the updated app into Applications, or qualify a 66.5-megapixel full-resolution RAW decode. Full RAW detail for this file remains outside the current admission limits.
+
+The source limits remain in place. Increasing available RAM does not by itself change the configured limits, and the implementation does not silently downgrade a refused RAW-detail request. The bounded-preview path is the supported recovery here.
+
+The updated code translates `ReviewImageError.memoryAdmissionDenied` into actionable text explaining the preview choice and rerun. A stopped Resume also reports a stopped progress state instead of leaving “Loading full review source” as though decoding were still active. A regression test verifies that source refusal performs no Qwen calls, changing the picker does not alter Resume's saved preference, and a new preview run succeeds with a fresh run ID. These message changes require a build containing the update; an already running older application can still display the original enum-style error.
+
+### Reproduce the preview/Qwen probe
+
+Use the existing installed model and the image path explicitly:
+
+```sh
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_RUN=1 \
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_QWEN="/Users/thomas/ModelAssets/Release/Models/Qwen/qwen3_vl_2b" \
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_IMAGE="/Users/thomas/Pictures_raw/2026/2_okt_2026/_DSC8318.ARW" \
+make combinedreviewtest
+```
+
+The updated probe can also exercise the installed SAM and CLIP providers by adding these two environment variables to the same command:
+
+```sh
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_SAM3="/Users/thomas/ModelAssets/Release/Models/SAM3"
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_CLIP="/Users/thomas/ModelAssets/Release/Models/CLIP-DataComp"
+```
+
+Pass them as command-prefix assignments alongside the Qwen/image variables. The probe records `combined-review-probe.json` as a test attachment, including source dimensions, planned regions, work states, failures, and raw Qwen request/response pairs. In Xcode, inspect that attachment for the failed test. It distinguishes failure to decode a source from failure to accept generated text; a failed response is never promoted into accepted evidence merely to make the test pass.
+
+The `TEST_RUNNER_` prefix forwards these values into Xcode's test process. The probe uses a temporary artifact store, does not download models, and leaves the original image untouched. Its default source is High-quality preview; this command does not test full-size RAW decoding.
+
 ## 1. Understand the vocabulary first
 
 A **source** is the decoded, orientation-normalized image that this run has declared it will use. It is separate from the grid thumbnail. An **overview** is a smaller representation of that source. A **region** is a rectangle planned in source coordinates; a **crop** is the image cut from that rectangle.
@@ -236,7 +305,7 @@ CLIP preprocessing uses shortest-side resize followed by center crop. Rectangula
 
 Each planned rectangle is cut from the appearance source. Qwen receives that unannotated crop, the criteria, region ID, purpose, and a JSON schema. It does not receive previous overview prose or other crop observations in this request.
 
-The expected result includes `regionID`, `observations`, `uncertainty`, and `insufficientEvidence`. The decoder requires the exact requested region ID and bounded nonempty text. Its conservative substring checks reject observation text containing `eye`, `iris`, or `recover`; these guards can also reject innocent wording that contains those sequences.
+The expected result includes `regionID`, `observations`, `uncertainty`, and `insufficientEvidence`. The revised prompt asks for one short sentence about surface texture and illumination, ignoring anatomy, body parts, gaze, and species; anatomical limitations belong in uncertainty. The decoder requires the exact requested region ID and bounded nonempty text. Its conservative substring checks reject observation text containing `eye`, `iris`, or `recover`; these guards can also reject innocent wording that contains those sequences.
 
 An accepted response with `insufficientEvidence: true` is stored as an **unknown** observation. Its text is visible in the crop disclosure, but it cannot act as available evidence during synthesis. Completing a request therefore does not necessarily mean the region supplied usable evidence.
 
@@ -246,11 +315,11 @@ An accepted response with `insufficientEvidence: true` is stored as an **unknown
 
 Reconciliation runs only when there is at least one measurement and one available crop observation. It asks Qwen to reconcile terminal evidence, note conflicts, or abstain. Accepted reconciliation claims become observations that preserve referenced IDs and explicitly state that the same model is being used.
 
-The report stage then builds evidence rows from available observations and measurements. CLIP values and raw mask confidence are not directly included as report evidence rows in this implementation.
+The report stage then builds evidence rows from the original available overview/crop observations and measurements. Reconciliation observations remain visible in the inspector but are excluded from final synthesis inputs: they repeat the same model's reasoning and contain nested provenance prose rather than independent new evidence. Within each model request, observations and measurements receive short IDs such as `o1` and `m3`. A request-local table maps these aliases to the full evidence IDs. Only aliases for included rows may be cited; accepted aliases are resolved back to the full IDs before claims are checked and stored. The view therefore displays traceable provenance IDs, not temporary model aliases. CLIP values and raw mask confidence are not directly included as report evidence rows in this implementation.
 
 The prompt includes the criteria, source fidelity/dimensions, stage counts, accepted evidence IDs, and these constraints:
 
-- At most six claims, of type `composition`, `exposure`, `visibility`, `detail`, or `suggestion`.
+- The prompt requests at most three claims; the decoder rejects more than six. Accepted types are `composition`, `exposure`, `visibility`, `detail`, or `suggestion`.
 - Cite supplied evidence references; abstain when necessary evidence is missing.
 - Avoid eye localization, RAW recovery, and calibrated quality claims.
 - Treat measurements as render-dependent metrics and suggestions as untested hypotheses.
@@ -264,7 +333,7 @@ instruction UTF-8 bytes + image tokens + output tokens + 256 template tokens
     must fit within the admitted model context
 ```
 
-This is an admission bound, not an exact tokenizer count. Optional evidence rows are added in reverse order, favouring later crop observations over the initial overview. Rows that do not fit are omitted with a visible limitation. Schemas and evidence IDs are not silently truncated.
+This is an admission bound, not an exact tokenizer count. Optional evidence rows are added in reverse order, favouring later crop observations over the initial overview. The updated report prompt also includes a correctly typed example drawn from existing evidence and prioritizes its supporting row first. Remaining rows that do not fit are omitted with a visible limitation. Schemas and evidence IDs are not silently truncated.
 
 ### Validation after generation
 
@@ -385,7 +454,7 @@ After completion, drag a wing area on the retained preview and press **Rerun wit
 | Criteria are rejected | Empty trimmed text or more than 512 UTF-8 bytes. |
 | Review stops during model checks | Required Qwen availability, pinned bundle identity, or capability mismatch. |
 | RAW detail uses a preview | The decoder could not supply an admitted RAW demosaic; inspect the recorded source fidelity and limitation. |
-| A large image is refused | Source pixel or estimated-memory admission limits. |
+| A large image is refused | Source pixel or estimated-memory admission limits. For a large RAW, choose High-quality preview and Rerun with current settings; Resume retains the old source preference. |
 | No subject detail measurement | SAM discovery, mask survival, dimensions, render alignment, or scorer evidence requirements failed. |
 | A crop task completes but provides no report evidence | The structured response can explicitly mark insufficient evidence. |
 | Generated wording is rejected | JSON/schema bounds, unknown IDs, conservative substring guards, or unsupported detail references. |
