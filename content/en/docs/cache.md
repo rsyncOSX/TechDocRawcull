@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-09-15"
+lastmod = "2026-10-10"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
@@ -29,7 +29,7 @@ share keys merely because they originate from the same RAW file.
 | Full-size JPEG disk cache     | `Actors/FullSizeJPGDiskCache.swift`, `Model/Handlers/ZoomPreviewHandler.swift`                                          | Larger embedded JPEG previews for zoom                                             |
 | Per-file similarity artifacts | `Actors/PerFileAnalysisArtifactStore.swift`                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
 | Burst analysis cache          | `Actors/BurstAnalysisCache.swift`                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
-| Cache accounting              | `Model/Cache/CacheDelegate.swift`, `Actors/SharedMemoryCache.swift`                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
+| Cache accounting              | `Model/Cache/TrackedThumbnailCache.swift`, `Actors/SharedMemoryCache.swift`                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
 
 ## Thumbnail Lookup
 
@@ -110,9 +110,9 @@ actor SharedMemoryCache {
 ```
 
 It is still an actor because it owns configuration, pressure monitoring,
-disk-cache references, and statistics. Its two `NSCache` objects are marked
-`nonisolated(unsafe)` because `NSCache` is already thread-safe and the app needs
-synchronous lookup APIs.
+disk-cache references, and statistics. Its two `TrackedThumbnailCache` wrappers are exposed as `nonisolated let`
+properties because the app needs synchronous lookup APIs. Each wrapper protects
+its private `NSCache` and count/cost metadata with one recursive lock.
 
 That gives RawCull both:
 
@@ -154,11 +154,17 @@ baseline, again respecting user limits and minimum settings.
 
 ## Eviction Accounting
 
-`CacheDelegate` is shared by both `NSCache` instances. When an entry is evicted,
-it identifies the originating cache and calls back into `SharedMemoryCache` to
-decrement the corresponding manual cost/count mirrors. This is necessary
-because `NSCache` does not expose current cost or item count. The current tree
-does not maintain a separate eviction-history or hit-rate diagnostics store.
+Each `TrackedThumbnailCache` owns its eviction delegate and serializes storage
+mutations with count/cost accounting. Metadata is registered before insertion,
+and a unique entry ID prevents a callback for a replaced value from subtracting
+the new value's cost. Metadata retains no thumbnail references, so it does not
+keep evicted image memory alive. Clears and limit changes use the same lock.
+
+See [Synchronizing Cache Storage and Accounting]({{< relref "cache-accounting.md" >}})
+for the replacement sequence, recursive-lock rationale, delegate lifetime, and
+concurrency regression tests. `NSCache` does not expose current cost or item
+count; the wrapper supplies those values. The current tree does not maintain a
+separate eviction-history or hit-rate diagnostics store.
 
 ## Memory Pressure
 
@@ -223,7 +229,8 @@ supply migration candidates, but it is not accepted as a current snapshot.
   never fall back to path-only reuse.
 - Keep grid and preview purposes separate and bump the thumbnail schema when
   representation semantics change.
-- Update manual cost/count mirrors whenever adding or removing cache entries.
+- Route memory-cache mutations through `TrackedThumbnailCache` so storage and
+  accounting stay synchronized.
 - Use Instruments or temporary signposts to distinguish eviction churn from
   decoding or I/O regressions; the production tree does not export hit-rate logs.
 - Do not feed zoom-preview images into the normal thumbnail RAM cache unless you
