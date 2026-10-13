@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-09-30"
-description = "RawCull AI architecture, model downloads, and Objects test-release status."
+lastmod = "2026-10-13"
+description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
 mermaid = true
@@ -33,8 +33,11 @@ revision in `Package.resolved`. RawCull intelligence code lives under
 | [The RawCull AI Runtime](/docs/ai/airuntime/) | How are providers and long-lived features assembled? | You are tracing startup, refresh, or service replacement |
 | [AI Models in RawCull](/docs/ai/aiinrawcull/) | How do CLIP, Vision, SAM 3, Qwen, and Objects work in the app? | You are tracing an analysis from input to result |
 | [Download AI models](/docs/ai/aimodelsdownload/) | How are the three release packs rebuilt? | You are preparing source weights, conversions, or archives |
+| [Combined AI Review](/docs/ai/aicombined/) | How do source, masks, observations, report selection, and comparison connect? | You need the multi-stage workflow and saved-run contracts |
+| [AI Diagnostics and Validation](/docs/ai/aidiagnostics/) | Why can inference finish but an analysis fail? | You are inspecting real responses or designing regression tests |
+| [Swift Behind the AI Pipelines](/docs/ai/aiswift/) | How do actors, observation, cancellation, and typed evidence fit together? | You are learning the Swift implementation |
 | [AI Model Licence and Provenance Clearance](/docs/ai/licenceprocedure/) | What evidence is required before a model can ship? | You are reviewing licences, provenance, or release readiness |
-| [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md) | How are packs published and Objects tested? | You are preparing a model release or updating the download manifest |
+| [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md) | How are packs published and Objects tested? | You are preparing a model release or updating the download manifest |
 
 PhotoAIKit and RawCull use these AI backends:
 
@@ -44,7 +47,7 @@ PhotoAIKit and RawCull use these AI backends:
 - **Qwen3-VL** for local photo analysis and for concept discovery and assessment
   of numbered SAM 3 objects.
 
-The 3.2.6 production download catalog exposes DataComp CLIP, Meta SAM 3,
+The current catalog inspected in the 3.3.0 working tree exposes DataComp CLIP, Meta SAM 3,
 and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
 a production download. SAM 3 requires acceptance of its verified bundled
 licence before download. The App Store build uses Apple-hosted Managed
@@ -72,7 +75,7 @@ response fields; it cannot verify that generated text matches the photograph.
 A recent two-puffin result had two retained objects but an invented third bird
 in its summary, and a separate two-puffin result has an unresolved
 crop/description mismatch. Treat Objects output as advisory and verify it
-against the source. See [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
+against the source. See [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md)
 for the known issues, tester checks, and release evidence still needed.
 
 ## The Central Design Idea
@@ -141,7 +144,7 @@ app-specific model folder, or a burst winner means.
 
 `RawCullApplicationState` is the object-graph assembly boundary. It creates one
 `RawCullAIModelRuntime`, one shared `SimilarityScoringModel`, the focused
-similarity and semantic-search features, Deep Review, Qwen and Objects features,
+similarity and semantic-search features, Deep Review, Qwen, Objects, and Combined Review features,
 the main view model, and one `RawCullIntelligenceRuntime`. Identity assertions
 protect against accidentally constructing parallel observable state.
 
@@ -210,3 +213,23 @@ selection, and storage lifecycle.
 | **Composition root**    | The one place where concrete providers, stores, paths, and app adapters are assembled                                                        |
 | **Partial CLIP result** | Valid CLIP artifacts plus per-file failures; failed files remain unavailable to similarity and burst grouping until a later successful index |
 | **Host**                | The application integrating PhotoAIKit; here, RawCull                                                                                        |
+
+## Learning route for the October implementation
+
+1. Read the model-role table in [AI Models in RawCull](/docs/ai/aiinrawcull/).
+   Separate embeddings, masks, generated observations, and deterministic metrics.
+2. Follow composition and provider replacement in [AI Runtime](/docs/ai/airuntime/).
+3. Read [Swift Behind the AI Pipelines](/docs/ai/aiswift/) with the source open.
+4. Trace [Combined Review](/docs/ai/aicombined/) from a frozen run snapshot to
+   independently scoped observations and grounded report selections.
+5. Work through [AI Diagnostics and Validation](/docs/ai/aidiagnostics/),
+   including the six-ARW runs, bounded retries, and the negated-focus regression.
+6. Study model preparation and provenance separately from inference accuracy.
+
+The October 13 tab probes exercise SAM Deep Review, a separate CLIP embedding
+check, standalone Qwen, and Objects. They do not execute Combined Review.
+Passing a JSON contract establishes accepted structure and some consistency;
+it does not establish visual accuracy. The latest inspected run had 17/18
+successful analyses before a subsequent Objects negation fix. That fix passed
+focused unit tests; the next installed-model run was still pending at the time
+of this documentation update.

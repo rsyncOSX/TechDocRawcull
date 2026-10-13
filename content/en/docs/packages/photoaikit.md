@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-09-30"
+lastmod = "2026-10-13"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -13,12 +13,11 @@ weight = 10
 
 # How PhotoAIKit Is Constructed
 
-> **Revision scope:** This architecture walkthrough was written against
-> PhotoAIKit `20e57359603313af7c2d38cae3e8b6e37f8838ef`. The current RawCull
-> checkout resolves `77cc1d84a5d98a485caa15be102c8a55eb3d7698`.
-> Read the package behavior here as an architectural baseline and use
-> [AI Models in RawCull](/docs/ai/aiinrawcull/) and
-> [The RawCull AI Runtime](/docs/ai/airuntime/) for the current app integration.
+> **Revision scope:** Updated against the RawCull dependency pin
+> `7f9adfcd69661c6bae4a640c16a4056dfc7393df` on 13 October 2026.
+> The original walkthrough used `20e57359603313af7c2d38cae3e8b6e37f8838ef`.
+> Current application policy is described in [AI Models in RawCull](/docs/ai/aiinrawcull/)
+> and [AI Runtime](/docs/ai/airuntime/).
 
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
 important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It
@@ -58,12 +57,10 @@ but it would silently encode application policy into the AI layer.
 ## 2. Read `Package.swift` As An Architecture Diagram
 
 `PhotoAIKit/Package.swift` declares Swift tools 6.4, macOS 27, Swift 6 language
-mode, seven library products, and one test target. It pins
-`apple/coreai-models` to revision
-`cc812078731871574c9b2eb620aa40734c4b89ee` in the audited revision;
-RawCull now resolves `coreai-models` at
-`475c585fdb0fe82a83c8f777f259e9414bd44c98`. The manifest declares
-`huggingface/swift-transformers` from 1.3.3 (RawCull currently resolves 1.3.4).
+mode, **eight** library products and one test target. `CoreAIQwenBackend` is the
+eighth backend product. The inspected manifest pins `apple/coreai-models` to
+`1953c4f90ba0214c1abc7bebcb9be5107e329a46`; it declares
+`huggingface/swift-transformers` from 1.3.3 and RawCull resolves 1.3.4.
 
 ```mermaid
 flowchart TD
@@ -72,6 +69,8 @@ flowchart TD
     Efficient["CoreAIEfficientSAMBackend"] --> Contracts
     SAM3["CoreAISAM3Backend"] --> Contracts
     Vision["VisionFeaturePrintBackend"] --> Contracts
+    Qwen["CoreAIQwenBackend"] --> Contracts
+    CoreLM["coreai-models CoreAILM"] --> Qwen
     Workflows["PhotoAIWorkflows"] --> Contracts
     Storage["PhotoAIStorage"] --> Contracts
     CoreAI["apple/coreai-models\nCoreAISegmentation product"] --> CLIP
@@ -581,3 +580,33 @@ it probably belongs in RawCull's adapter layer instead.
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).
+
+## October 13 package additions and application boundaries
+
+`CoreAIQwenBackend` validates and configures a local Qwen provider and constructs
+the model used by the host's inference runtime. RawCull owns session creation,
+request caps, criteria, retries and photo/object schemas. A package backend can
+be correct while an application's generated response fails its stricter contract.
+
+Objects crosses the package boundary through `SegmentationConcept`, instance
+segmentation results and object-mask storage contracts. `ObjectSegmentationService`
+coordinates providers/stores; RawCull chooses concept mode, deduplicates retained
+instances, renders a numbered board and validates Qwen's descriptions. Subject
+mask stores for Deep Review and object-mask stores are separate concerns.
+
+The CLIP provider's descriptor includes model, representation, preprocessing,
+normalization and configuration versions. In the inspected implementation,
+center-crop bicubic preprocessing includes a Pillow-compatible implementation
+version in the effective descriptor. Two embeddings with the same vector length
+but different preprocessing identities are not automatically compatible.
+
+Reusable geometry and mask contracts can carry source-normalized registration,
+foreground and scorer semantics. The host must preserve those identities when
+cropping, measuring, displaying and persisting evidence. A SAM producer box alone
+is not a substitute for decoding foreground against the declared source raster.
+Combined's `ReviewMaskRegistration` performs that application-owned registration.
+
+Study the layers in order: package values/protocols, backend actors, package
+workflows/stores, application feature, SwiftUI presentation. Do not place Qwen
+photo prompt policy into CLIP or segmentation contracts merely because all
+three use a `CGImage`. Their outputs and acceptance conditions differ.

@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-09-30"
+lastmod = "2026-10-13"
 description = "How RawCull owns and refreshes local CLIP, SAM 3, Qwen, Vision, Deep Review, and Objects runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "objects"]
@@ -27,9 +27,9 @@ The current implementation has two runtime layers:
 
 That distinction replaces the older, broader `RawCullAIIntegration` shape. The
 authoritative sources are
-[`RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift)
+[`RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift)
 and
-[`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
+[`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
 For model algorithms and data products, see
 [AI Models in RawCull](/docs/ai/aiinrawcull/).
 
@@ -49,6 +49,9 @@ flowchart TD
     Runtime --> Review["DeepAIReviewController"]
     Runtime --> Qwen["RawCullQwenAnalysisFeature"]
     Runtime --> Objects["RawCullObjectAnalysisFeature"]
+    Runtime --> Combined["CombinedReviewFeature"]
+    Combined --> QwenActor
+    Combined --> Lease["CombinedReviewLease"]
 
     ModelRuntime --> CLIP["CLIP resource managers/providers"]
     ModelRuntime --> SAM["SAM 3 resource manager/provider"]
@@ -127,7 +130,7 @@ the AI features need.
 
 ## Construction: From App Launch to a Live Graph
 
-[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Main/RawCullApp.swift#L111)
+[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Main/RawCullApp.swift#L111)
 calls `RawCullApplicationState.live()`. SwiftUI retains the returned view model
 and intelligence runtime in separate `@State` properties:
 
@@ -809,22 +812,75 @@ while application feature identities remain stable for the session.
 
 | Concern | Source |
 | --- | --- |
-| App retention and startup refresh | [`RawCull/Main/RawCullApp.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Main/RawCullApp.swift) |
-| Model/provider runtime | [`RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) |
-| Assembly and stable runtime | [`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) |
-| Runtime paths/capabilities | [`RawCull/Intelligence/Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Contracts/RawCullAIModels.swift) |
-| Resource-manager actor/cache | [`RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) |
-| Settings refresh/config publication | [`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) |
-| Downloads and location snapshot | [`RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) |
-| Stable similarity operations | [`RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) |
-| Shared similarity/search state | [`RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
-| Deep Review service installation/state | [`RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) |
-| Qwen provider/model actor | [`RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) |
-| Objects feature, cache reuse, and diagnostics | [`RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) |
-| Objects contracts, validation, and board | [`RawCull/Intelligence/ObjectAnalysis`](https://github.com/rsyncOSX/RawCull/tree/version-3.2.6/RawCull/Intelligence/ObjectAnalysis) |
-| Objects view and status | [`RawCull/Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) |
-| PhotoAIKit object workflow | [`PhotoAIWorkflows/ObjectSegmentationService.swift`](https://github.com/rsyncOSX/PhotoAIKit/blob/77cc1d84a5d98a485caa15be102c8a55eb3d7698/Sources/PhotoAIWorkflows/ObjectSegmentationService.swift) |
+| App retention and startup refresh | [`RawCull/Main/RawCullApp.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Main/RawCullApp.swift) |
+| Model/provider runtime | [`RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) |
+| Assembly and stable runtime | [`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) |
+| Runtime paths/capabilities | [`RawCull/Intelligence/Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Contracts/RawCullAIModels.swift) |
+| Resource-manager actor/cache | [`RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) |
+| Settings refresh/config publication | [`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) |
+| Downloads and location snapshot | [`RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) |
+| Stable similarity operations | [`RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) |
+| Shared similarity/search state | [`RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| Deep Review service installation/state | [`RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) |
+| Qwen provider/model actor | [`RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) |
+| Objects feature, cache reuse, and diagnostics | [`RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) |
+| Objects contracts, validation, and board | [`RawCull/Intelligence/ObjectAnalysis`](https://github.com/rsyncOSX/RawCull/tree/version-3.3.0/RawCull/Intelligence/ObjectAnalysis) |
+| Objects view and status | [`RawCull/Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) |
+| PhotoAIKit object workflow | [`PhotoAIWorkflows/ObjectSegmentationService.swift`](https://github.com/rsyncOSX/PhotoAIKit/blob/7f9adfcd69661c6bae4a640c16a4056dfc7393df/Sources/PhotoAIWorkflows/ObjectSegmentationService.swift) |
 
 The runtime's central rule is simple: validate and replace model-dependent
 services behind stable state owners, then accept results only when revision,
 generation, catalog, and backend identities still match.
+
+## October 13: Combined Review and shared inference admission
+
+`RawCullIntelligenceRuntime` now constructs a stable `CombinedReviewFeature`
+alongside the existing analysis features. A backend factory takes the currently
+installed Qwen and optional SAM/CLIP services and admits model snapshots for a
+run. The feature owns its source loader, artifact store, run manifest, per-image
+results and selection report. See [Combined Review](/docs/ai/aicombined/).
+
+Two coordination mechanisms protect different scopes:
+
+| Mechanism | Owner/scope | Purpose |
+| --- | --- | --- |
+| `CombinedReviewLease` | Main-actor application workflow | Reserves sibling AI Analysis workflows while Combined owns a worker |
+| `QwenGenerationGate` | Shared inference actor | Serializes complete model generations across callers despite actor reentrancy |
+
+Combined's startup hook cancels and drains standalone Qwen, Objects and Deep
+Review before proceeding. A sibling's start checks the held lease. Cancelling
+Combined requests termination; the lease is released when its worker finishes.
+A reservation is therefore not released just because a button was pressed.
+
+An actor serializes access to its isolated state, but an async actor method can
+suspend and admit another caller. `QwenGenerationGate.acquire()` waits with
+short cancellable suspensions until it can mark itself held. `respond(to:)`
+captures the model generation before queuing, checks it again on admission,
+and releases the gate on success and error. A queued request for a replaced
+model fails rather than silently using the new provider.
+
+`QwenInputCapabilities` records context/output limits, one image per request,
+metadata SHA-256 and declared encoder side/patch/tokens/normalization. Its
+`encoderGeometryVerified` remains false: reading metadata is configuration
+inspection, not observation of the actual encoder tensor. Combined admission
+and compatibility checks must distinguish those facts.
+
+## October 13: bounded tab repairs and lifecycle safety
+
+Standalone Qwen retries one rejected structured photo response. Objects retries
+one invalid board response, preserving the same board, descriptors and masks.
+Objects captures `assessment` and `assessment-retry` separately when optional
+capture is enabled; the real-model recorder stores every request/response pair.
+Both paths retain their sequential file processing and cancellation checks.
+
+The automatic repair is inside one file operation. Manual Objects Retry Failed
+is a later operation: it can reuse segmentation only after source/model/concept
+and mask-cache checks. These two forms of retry should not be confused.
+
+The recent changes live in the tab feature/Objects validator. They do not alter
+Combined's independent stage prompts, budget, source admission, run-contract
+versions, or synthesis rules. Sharing a Qwen actor means sharing model lifetime
+and inference admission, not sharing response schemas.
+
+For the step-by-step Swift explanation, including draining workers and generation
+checks after suspension, see [Swift Behind the AI Pipelines](/docs/ai/aiswift/).

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Download AI models"
 date = "2026-09-26"
-lastmod = "2026-09-30"
+lastmod = "2026-10-13"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
@@ -25,7 +25,7 @@ weights, intermediate models, three converted bundles, and three archives.
 
 These commands produce **local release candidates**, not App Store approval.
 After packaging, compare the new hashes with the application catalog and follow
-the [publishing runbook](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
+the [publishing runbook](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md)
 to update RawCull, upload the packs, and test a signed TestFlight build. A fresh conversion may produce different archive
 bytes even when the same source model was used.
 
@@ -635,7 +635,7 @@ candidate. The files are at:
    leave the old archive SHA-256 in the app catalog for new `.aar` files.
 4. If uploading, use the existing `rawcull-clip-datacomp`, `rawcull-sam3`, and
    `rawcull-qwen3-vl-2b` App Store Connect records. Follow
-   [`RawCull/Docs/newmodels.md`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/newmodels.md)
+   [`RawCull/Docs/newmodels.md`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md)
    for `xcrun altool`, API-key handling, processing checks, and TestFlight
    verification. The `AppStore` build must use Apple hosting and the matching
    App Group. A successful local `.aar` build does not test runtime inference.
@@ -657,3 +657,43 @@ The source commands and pack layout come from [PhotoAIKit's export tools](https:
 [Apple's managed pack documentation](https://developer.apple.com/documentation/backgroundassets/creating-managed-asset-packs),
 and the RawCull release runbook linked above. Verify the exact checkout used
 for a release: repository `main` branches and tool versions can change.
+
+## October 13: verify an installed candidate before interpreting success
+
+The conversion workbook above preserves its September build procedure. The
+current application snapshot is the `version-3.3.0` working tree with PhotoAIKit
+`7f9adfcd69661c6bae4a640c16a4056dfc7393df` and Core AI models
+`1953c4f90ba0214c1abc7bebcb9be5107e329a46`. Recheck exporter command-line options
+at the revisions actually used for a new conversion; application dependency
+pins do not silently update an already exported model or its provenance.
+
+There are independent gates:
+
+1. Archive integrity: recorded bytes, SHA-256, selected files and notices.
+2. Installation/provider admission: required assets, metadata and modality.
+3. Inference: finite vectors, usable masks, or nonempty generated responses.
+4. Contract acceptance: IDs, enums, evidence ownership and response limits.
+5. Visual qualification: annotations, source comparisons and useful judgments.
+
+A successful archive or model load does not imply the later gates passed.
+The app's catalog hash describes a specific release archive, not every future
+conversion of the same upstream weights.
+
+The local diagnostic runner uses the existing release layout by default:
+
+```sh
+python3 Scripts/RunAIAnalysis.py --directory /Users/thomas/tmp --limit 6
+```
+
+Run from the RawCull repository, with already installed `SAM3`, `CLIP-DataComp`,
+and `Qwen/qwen3_vl_2b` directories under `~/ModelAssets/Release/Models`.
+`--models` selects a different root. Preflight confirms directories and RAW
+selection; real provider validation and inference happen in the test process.
+No source weight download or model conversion is part of this runner.
+
+Retain `evidence.inputs.json`, `models.txt`, `diagnostic.json`, request PNGs,
+response text, `evidence.log` and the `.xcresult` bundle as separate evidence
+from packaging. Request images show supplied CGImages, not the final tensors.
+See [AI Diagnostics and Validation](/docs/ai/aidiagnostics/) for reproducibility,
+privacy, interpretation and regression tests. Running this probe is separate
+from testing Apple-hosted installation in a signed release build.

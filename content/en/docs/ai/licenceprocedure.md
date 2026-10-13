@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Model Licence and Provenance Clearance"
 linkTitle = "AI Licence and Provenance"
 date = "2026-08-22"
-lastmod = "2026-09-30"
+lastmod = "2026-10-13"
 description = "Current catalog status and historical model-clearance evidence."
 tags = ["ai", "models", "downloads", "background-assets", "self-hosting", "apple-hosting"]
 categories = ["technical details"]
@@ -828,3 +828,35 @@ These observations are evidence inputs, not legal conclusions.
 
 Recheck all licence text, model-card metadata, gates, contacts, and official
 links immediately before release because they can change.
+
+## October 13: separate provenance from behavior evidence
+
+This update documents the engineering boundary observed in the local 3.3.0
+working tree; it does not replace the historical correspondence, grant a new
+permission, or re-date the September clearance records. The current catalog
+still describes DataComp CLIP, SAM 3 and Qwen3-VL-2B-Instruct as the production
+packs. SAM's descriptor requires explicit acceptance of its bundled licence.
+OpenAI CLIP and EfficientSAM remain outside the production three-pack list.
+
+For a release record, retain independently:
+
+| Record | What it establishes | What it does not establish |
+| --- | --- | --- |
+| Upstream revision and checkpoint identity | Which source was selected | Permission for every distribution scenario |
+| Licence/notice bytes and recorded acceptance policy | Which text the release presented | Model accuracy |
+| Exporter/dependency revisions and conversion settings | How a candidate was produced | Equality to another conversion's archive bytes |
+| Archive size/SHA-256 and installed bundle identity | Integrity and reproducible identification | Visual correctness of generated claims |
+| Installed-model diagnostic results | Behavior on recorded inputs/build | Legal clearance, general accuracy or App Store approval |
+
+The six-ARW probes in [AI Diagnostics and Validation](/docs/ai/aidiagnostics/)
+are behavior evidence. They do not change licence descriptors or authorise
+redistribution. A prompt or validator update can change acceptance behavior
+without changing weights; record the app commit and schema/pipeline versions
+alongside the model identity so that the behavior record is not mistaken for a
+new model conversion.
+
+Request/response diagnostics may contain private photographs, local paths and
+personal content. Keep them in private local evidence storage; public technical
+documentation should contain aggregate outcomes or deliberately selected,
+non-identifying schema examples. Publishing raw fixtures is a separate decision
+from keeping a model provenance record.

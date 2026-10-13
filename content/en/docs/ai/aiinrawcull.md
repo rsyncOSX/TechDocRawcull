@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-09-30"
+lastmod = "2026-10-13"
 description = "Code-level guide to local CLIP, Vision, SAM 3, Qwen, Deep Review, and numbered Objects analysis in RawCull."
 weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
@@ -28,13 +28,17 @@ All inference stays in the application process. The downloadable model assets
 are installed separately because they are large, but the analysis path does not
 send photographs to a remote inference service.
 
-This page was checked against the local RawCull `version-3.2.6` working tree
-on September 26, 2026, including the packaged-model evaluation and later
-in-app Objects observations. RawCull source links follow that branch.
-PhotoAIKit links use revision
-[`77cc1d84`](https://github.com/rsyncOSX/PhotoAIKit/tree/77cc1d84a5d98a485caa15be102c8a55eb3d7698),
-pinned by this checkout. The local working tree may be ahead of the published
-branch until those changes are pushed.
+This guide was checked against the local `version-3.3.0` working tree on
+13 October 2026. PhotoAIKit is pinned to
+`7f9adfcd69661c6bae4a640c16a4056dfc7393df`; `coreai-models` is pinned to
+`1953c4f90ba0214c1abc7bebcb9be5107e329a46`. Branch links can move, and local
+changes can precede publication. `Package.resolved` identifies the dependency
+revision used by a particular build.
+
+For a chronological debugging workbook and the limits of the recent six-ARW
+checks, see [AI Diagnostics and Validation](/docs/ai/aidiagnostics/).
+For Swift ownership and cancellation, see [Swift Behind the AI Pipelines](/docs/ai/aiswift/).
+Combined Review has a separate [code guide](/docs/ai/aicombined/).
 
 ## Source Catalog: `RawCull/Intelligence`
 
@@ -45,51 +49,51 @@ model per folder. Start with this catalog when tracing the code.
 
 | Source | Responsibility |
 | --- | --- |
-| [`Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) | Owns model-resource managers, validated CLIP and SAM 3 providers, the Vision fallback, Qwen inference runtime, mask stores, and the active segmentation pipeline. |
-| [`Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Assembles the complete application AI graph and preserves stable feature identities while services change. |
-| [`Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Contracts/RawCullAIModels.swift) | Defines model choices, paths, capability states, and saved-artifact evidence. |
+| [`Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) | Owns model-resource managers, validated CLIP and SAM 3 providers, the Vision fallback, Qwen inference runtime, mask stores, and the active segmentation pipeline. |
+| [`Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Assembles the complete application AI graph and preserves stable feature identities while services change. |
+| [`Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Contracts/RawCullAIModels.swift) | Defines model choices, paths, capability states, and saved-artifact evidence. |
 
 ### Model management
 
 | Source | Responsibility |
 | --- | --- |
-| [`RawCullAIModelDownloadCatalog.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift) | Production model inventory, inclusion switches, asset-pack identifiers, versions, byte counts, checksums, licences, and provenance links. |
-| [`RawCullAIModelDownloadService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift) | Background Assets download coordination and installed-location resolution. |
-| [`RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) | Observable download, licence, progress, removal, and installed-location state. |
-| [`RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) | Actor-isolated validation and provider construction with a metadata snapshot cache. |
-| [`RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) | Applies installed locations, refreshes capabilities, stores user selections, and publishes revisioned runtime configurations. |
+| [`RawCullAIModelDownloadCatalog.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift) | Production model inventory, inclusion switches, asset-pack identifiers, versions, byte counts, checksums, licences, and provenance links. |
+| [`RawCullAIModelDownloadService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift) | Background Assets download coordination and installed-location resolution. |
+| [`RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) | Observable download, licence, progress, removal, and installed-location state. |
+| [`RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) | Actor-isolated validation and provider construction with a metadata snapshot cache. |
+| [`RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) | Applies installed locations, refreshes capabilities, stores user selections, and publishes revisioned runtime configurations. |
 
 ### CLIP, similarity, and semantic search
 
 | Source | Responsibility |
 | --- | --- |
-| [`RawCullVisionSimilarityService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) | Defines the shared similarity-service boundary, Vision implementation, CLIP implementation, RAW decoding adapter, finite-vector recovery, and artifact validation. |
-| [`SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) | Owns indexed artifacts, hydration, persistence, image ranking, grouping, semantic-search state, and CLIP-based subject classification. |
-| [`RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) | Stable application-facing similarity surface with cancellation and generation gates. |
-| [`RawCullSemanticSearchService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) | Encodes a text query, admits compatible CLIP artifacts, compares image and text vectors, and ranks deterministically. |
-| [`RawCullSemanticSearchFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift) | Presentation and application-target adapter for semantic search. |
+| [`RawCullVisionSimilarityService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) | Defines the shared similarity-service boundary, Vision implementation, CLIP implementation, RAW decoding adapter, finite-vector recovery, and artifact validation. |
+| [`SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) | Owns indexed artifacts, hydration, persistence, image ranking, grouping, semantic-search state, and CLIP-based subject classification. |
+| [`RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) | Stable application-facing similarity surface with cancellation and generation gates. |
+| [`RawCullSemanticSearchService.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) | Encodes a text query, admits compatible CLIP artifacts, compares image and text vectors, and ranks deterministically. |
+| [`RawCullSemanticSearchFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift) | Presentation and application-target adapter for semantic search. |
 
 ### Deep Review with SAM 3 and CLIP
 
 | Source | Responsibility |
 | --- | --- |
-| [`DeepAIReviewController.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewController.swift) | Converts the current RawCull selection, burst evidence, sharpness evidence, subject label, and AF point into a review request. |
-| [`DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) | Owns review state and implements the complete decode → prompt → mask → score → recommendation pipeline. |
-| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
-| [`DeepAIReviewMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) | Turns a persisted filled mask into a display outline. |
+| [`DeepAIReviewController.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/DeepReview/DeepAIReviewController.swift) | Converts the current RawCull selection, burst evidence, sharpness evidence, subject label, and AF point into a review request. |
+| [`DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) | Owns review state and implements the complete decode → prompt → mask → score → recommendation pipeline. |
+| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
+| [`DeepAIReviewMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) | Turns a persisted filled mask into a display outline. |
 
 ### Objects: Qwen discovery, SAM 3 instances, Qwen review
 
 | Source | Responsibility |
 | --- | --- |
-| [`ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) | Batch coordination, availability, cancellation, retry, private capture, and stage timings. |
-| [`ObjectAnalysis/ObjectConceptDiscovery.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectConceptDiscovery.swift) | Automatic prompt, concept validation, and Specific Concepts parsing. |
-| [`ObjectAnalysis/ObjectInstanceDeduplicator.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectInstanceDeduplicator.swift) | Filters weak masks, merges near-identical masks across concepts, and assigns board IDs. |
-| [`ObjectAnalysis/ObjectReviewBoardRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectReviewBoardRenderer.swift) | Renders the 2,048-pixel overview and numbered, outlined crops for Qwen; fails if a numbered crop cannot be prepared. |
-| [`ObjectAnalysis/ObjectJSONEnvelope.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectJSONEnvelope.swift) and [`ObjectAnalysis/ObjectAnalysisResponseDecoder.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisResponseDecoder.swift) | Recover one JSON object from a wrapper, then validate fields, confidence, list limits, and board IDs. |
-| [`ObjectAnalysis/ObjectAnalysisModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisModels.swift) | Mode, instance, assessment, progress, timing, and result types. |
-| [`ObjectAnalysis/ObjectMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ObjectAnalysis/ObjectMaskOutlineRenderer.swift) | Detail-view contour from a stored grayscale instance mask. |
-| [`Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) | Controls, status table, numbered overlays, crop, per-object detail, and retry. |
+| [`ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) | Batch coordination, availability, cancellation, retry, private capture, and stage timings. |
+| [`ObjectAnalysis/ObjectConceptDiscovery.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectConceptDiscovery.swift) | Automatic prompt, concept validation, and Specific Concepts parsing. |
+| [`ObjectAnalysis/ObjectInstanceDeduplicator.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectInstanceDeduplicator.swift) | Filters weak masks, merges near-identical masks across concepts, and assigns board IDs. |
+| [`ObjectAnalysis/ObjectReviewBoardRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectReviewBoardRenderer.swift) | Renders the 2,048-pixel overview and numbered, outlined crops for Qwen; fails if a numbered crop cannot be prepared. |
+| [`ObjectAnalysis/ObjectJSONEnvelope.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectJSONEnvelope.swift) and [`ObjectAnalysis/ObjectAnalysisResponseDecoder.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisResponseDecoder.swift) | Recover one JSON object from a wrapper, then validate fields, confidence, list limits, and board IDs. |
+| [`ObjectAnalysis/ObjectAnalysisModels.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisModels.swift) | Mode, instance, assessment, progress, timing, and result types. |
+| [`ObjectAnalysis/ObjectMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ObjectAnalysis/ObjectMaskOutlineRenderer.swift) | Detail-view contour from a stored grayscale instance mask. |
+| [`Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) | Controls, status table, numbered overlays, crop, per-object detail, and retry. |
 
 The object-set workflow uses PhotoAIKit's `ObjectSegmentationService`,
 `ObjectMaskMemoryStore`, optional `ObjectMaskDiskStore`, and SAM 3
@@ -100,9 +104,9 @@ Review subject-mask cache.
 
 | Source | Responsibility |
 | --- | --- |
-| [`QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Actor-owned Qwen provider validation, lazy vision-language model loading, session creation, prompt construction, response decoding, and invalidation. |
-| [`RawCullQwenAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift) | Main-actor batch operation, image loading, progress, per-file failure isolation, result retention, and cancellation. |
-| [`QwenPhotoAssessment.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/Qwen/QwenPhotoAssessment.swift) | Structured response schema, validation, free-form fallback, aggregate score, and result types. |
+| [`QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Actor-owned Qwen provider validation, lazy vision-language model loading, session creation, prompt construction, response decoding, and invalidation. |
+| [`RawCullQwenAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift) | Main-actor batch operation, image loading, progress, per-file failure isolation, result retention, and cancellation. |
+| [`QwenPhotoAssessment.swift`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/Qwen/QwenPhotoAssessment.swift) | Structured response schema, validation, free-form fallback, aggregate score, and result types. |
 
 ### Persistence and burst consumption
 
@@ -115,7 +119,7 @@ burst policy decides what that embedding means for grouping and culling.
 ## The Model Inventory Shipped by RawCull
 
 The authoritative inventory is
-[`RawCullAIModelDownloadCatalog.prepared`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift#L123).
+[`RawCullAIModelDownloadCatalog.prepared`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadCatalog.swift#L123).
 `production` filters that inventory through code-only inclusion switches.
 
 | Production model | Asset-pack ID | Installed model path inside pack | Download size | Installed size |
@@ -134,7 +138,7 @@ and Qwen licences do not require an extra acceptance action.
 
 The application has two stable roots: `RawCullViewModel` for general app state
 and `RawCullIntelligenceRuntime` for AI-facing state. They are created once in
-[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/RawCull/Main/RawCullApp.swift#L111)
+[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/RawCull/Main/RawCullApp.swift#L111)
 and retained in SwiftUI `@State`.
 
 ```mermaid
@@ -288,7 +292,7 @@ small closed-set subject-label pass that helps choose SAM prompts.
 ### Provider construction and identity
 
 PhotoAIKit's
-[`CoreAICLIPProvider`](https://github.com/rsyncOSX/PhotoAIKit/blob/77cc1d84a5d98a485caa15be102c8a55eb3d7698/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)
+[`CoreAICLIPProvider`](https://github.com/rsyncOSX/PhotoAIKit/blob/7f9adfcd69661c6bae4a640c16a4056dfc7393df/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)
 is an actor implementing image embedding, artifact generation/comparison, text
 embedding, and image/text comparison. During initialization it:
 
@@ -449,14 +453,17 @@ The preset and subject label determine ordered attempts:
 | Auto or Head/Face with generic animal label | `animal head`, `animal`, `subject` |
 | No recognized label | `subject` |
 
-The Head/Face preset is considered verified only when the first selected prompt
+The Head/Face preset reports that the requested prompt was obtained only when the first selected prompt
 is `bird head`, `animal head`, or `face`; falling back to a broader mask is
-reported as `specificPromptNotFound`.
+reported as `specificPromptNotFound`. The legacy `promptVerified` field means
+that a usable mask came from the requested prompt. Its preferred reading is
+`requestedPromptObtained`; it does not establish that SAM located verified
+facial anatomy, an eye, or an anatomically correct head.
 
 ### 4. SAM 3 inference
 
 PhotoAIKit's
-[`CoreAISAM3Provider`](https://github.com/rsyncOSX/PhotoAIKit/blob/77cc1d84a5d98a485caa15be102c8a55eb3d7698/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)
+[`CoreAISAM3Provider`](https://github.com/rsyncOSX/PhotoAIKit/blob/7f9adfcd69661c6bae4a640c16a4056dfc7393df/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)
 is actor-isolated. It validates the bundle and lazily creates a
 `CoreAISegmentationEngine` plus CLIP-compatible text tokenizer. The prompt text
 is tokenized and sent with the bounded image to the Core AI segmenter. Runtime
@@ -559,7 +566,10 @@ when the request is a photo assessment. The schema contains:
 
 - subject description;
 - composition, exposure, and subject-visibility scores from 1 through 5;
-- optional `eyesOpen`;
+- criterion evidence for each supplied score, or null score/evidence pairs
+  when unsupported;
+- `eyesOpen`, which must remain null because this path has no qualified
+  anatomical evidence;
 - up to four problems and strengths; and
 - confidence from 0 through 1.
 
@@ -568,10 +578,25 @@ that does not fit the assessment schema, Qwen may answer in ordinary text.
 
 ### Response handling
 
-`QwenModelResponse.decode` trims the response. It first attempts to extract the
-outermost JSON object and decode `QwenPhotoAssessment`. Score ranges and
-confidence are validated. If that structured decode does not succeed but the
-response is nonempty, RawCull retains it as a free-form result.
+`QwenModelResponse.decode` trims the response and attempts a structured
+`QwenPhotoAssessment` first. Schema version 2 requires every declared key,
+finite confidence in 0...1, scores in 1...5 or null, and matching evidence for
+non-null scores. Subject, criterion evidence, and each problem/strength are
+limited to 240 Swift characters. Each list is unique and has at most four items.
+`eyesOpen` must be null.
+
+There are three nonempty outcomes: `.structured`, ordinary `.freeform`, and
+`.rejected`. Output that looks like broken JSON is **rejected**, not promoted to
+successful prose. A genuinely ordinary answer to a non-assessment request can
+still be freeform. The feature retains rejected text for inspection and
+records a failure.
+
+The standalone Qwen feature requests short evidence (preferably under 160
+characters) and retries one rejected structured response using the same image.
+It reports exact overlength fields when discoverable. This is bounded
+regeneration, not truncation of model text or relaxation of validation. A normal
+freeform answer does not trigger that repair. The shared runtime instruction
+and Combined Review prompts are separate from this tab-specific guidance.
 
 The structured `overallScore` is a RawCull presentation value, not a model
 output:
@@ -680,10 +705,20 @@ The prompt tells Qwen that the overview and crops repeat views of one
 photograph, each board ID denotes a different physical subject, and the
 objects array must contain exactly one entry for each ID. Descriptions should
 use the matching numbered crop; relationships should use the overview.
-The assessment request cap is 1,024 output tokens. The requested result has
-an optional scene summary; per-object concept, description, visibility, focus,
-expression, obstructions, strengths, problems, and confidence; and photo-level
-relationships, strengths, problems, preferred IDs, and confidence.
+The assessment request cap is 1,024 output tokens. Schema version 2 includes
+focus evidence plus paired claim/evidence lists. For example, `strengths` and
+`strengthEvidence` must have the same count in matching order. Each evidence
+entry is an object with the owning `cropID` string and an observation. Definite
+sharp/soft/blurred focus requires a focus evidence object; uncertain focus
+requires null. Expression is null because a SAM crop does not independently
+qualify anatomy. Global strengths/problems must be empty: supported judgments
+belong to individual objects with their evidence.
+
+The generation prompt requests at most one strength and one problem per object.
+That is a generation simplification, not a new decoder cap: the structural
+contract still admits its existing bounded lists. Placeholder examples specify
+types without providing a focus sentence to copy. The overview and all crops
+are the same exposure and camera viewpoint, not different angles or moments.
 
 ObjectJSONEnvelope extracts one complete balanced JSON object from a
 recoverable Markdown or prose wrapper, respecting quoted braces. It rejects
@@ -695,7 +730,16 @@ requires every board ID exactly once, rejects unknown or duplicate IDs and
 preferred IDs, enforces list limits and enum values, and requires finite
 confidence in 0...1. Free-form prose is not upgraded to a structured judgment.
 
-If Qwen fails this boundary, the detail view retains its response and shows
+On a structurally invalid assessment, the feature makes one additional request
+against the already rendered board. It neither repeats SAM nor downloads a
+model for this automatic repair. Feedback names mismatched claim counts,
+missing/unsupported focus evidence, invalid visibility choices, and nonempty
+global judgments. `visible` is not an allowed visibility enum: the choices are
+`clear`, `partial`, `obscured`, and `uncertain`. The generation cap remains
+1,024 tokens for each attempt, and the two attempts contribute to assessment
+timing. If repair also fails, the result remains unsuccessful and retryable.
+
+If Qwen fails this boundary after two attempts, the detail view retains its response and shows
 a specific assessment error. The results table says **Assessment needs
 retry**. Retry reuses successful SAM 3 masks only when source size/date, Qwen
 model name, concept mode and queries, and cache keys still match. Otherwise
@@ -734,7 +778,7 @@ response shape, not visual accuracy or calibrated confidence. Mixed
 categories, touching/overlapping and tiny subjects, genuine no-match cases,
 RAW/JPEG parity, model removal, large tagged batches, and lifecycle checks
 remain open. The per-photo table and gate status are in the
-[RawCull implementation notes](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#163-implementation-checkpoint--september-24-2026).
+[RawCull implementation notes](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/sam3qwen.md#163-implementation-checkpoint--september-24-2026).
 
 ### September 24–26, 2026 in-app observations
 
@@ -758,8 +802,8 @@ The two photographs are regression cases for visual grounding and object
 mapping. Before treating the broader validation as complete, the signed build
 and hosted model packs still need a clean-install run covering launch, analyze,
 cancel, remove, and reinstall, with build, model identities, macOS version, and
-memory recorded. See the [in-app validation and follow-up](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#in-app-automatic-validation--september-24-2026)
-and [September 26 observation](https://github.com/rsyncOSX/RawCull/blob/version-3.2.6/Docs/sam3qwen.md#additional-in-app-observation-and-public-test-decision--september-26-2026).
+memory recorded. See the [in-app validation and follow-up](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/sam3qwen.md#in-app-automatic-validation--september-24-2026)
+and [September 26 observation](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/sam3qwen.md#additional-in-app-observation-and-public-test-decision--september-26-2026).
 
 ### Private diagnostics
 
@@ -837,3 +881,23 @@ When debugging a model problem, follow the layer that owns the decision:
 The central architectural rule is that model runtimes create typed evidence;
 RawCull's feature and policy layers decide how that evidence affects ranking,
 grouping, presentation, and user actions.
+
+## Reading confidence and focus without overclaiming
+
+CLIP similarity is a relative vector relationship, not a focus measurement.
+SAM confidence/mask score is backend segmentation evidence, not a probability
+that the photograph is sharp. Qwen confidence is generated text, not calibrated
+certainty. Deep Review confidence describes relative score separation under
+available conditions. None of these values can be converted into the others.
+
+The Objects decoder checks conservative textual consistency. It recognizes
+sharp/crisp wording and equivalent clearly/distinctly resolved detail; rejects
+explicit softness or negation in sharp evidence; and normalizes negated claims
+such as "not sharply focused" before checking description/claim consistency.
+A sentence containing a positive sharpness claim elsewhere still fails for a
+soft object. These checks catch certain contradictions; they do not measure
+pixels or establish photographic truth.
+
+A successful single-candidate Deep Review can recommend that candidate without
+proving it is objectively sharp. Compare meaningful groups under a consistent
+render before interpreting relative scores as a useful ranking.

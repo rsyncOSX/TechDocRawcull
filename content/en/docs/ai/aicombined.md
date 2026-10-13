@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "Combined AI Review: A Step-by-Step Code Guide"
 linkTitle = "Combined AI Review"
 date = "2026-10-10"
-lastmod = "2026-10-10"
-description = "Follow RawCull's Combined view from image selection through source preparation, Qwen observations, SAM masks, measured detail, CLIP relevance, grounded reporting, and saved runs."
+lastmod = "2026-10-13"
+description = "Trace 1–8-image Combined Review through source admission, registered masks, criterion observations, evidence-row reports, comparison, and saved-run compatibility."
 weight = 60
 tags = ["ai", "combined-review", "architecture", "qwen", "sam", "clip", "swift"]
 categories = ["technical details"]
@@ -13,470 +13,355 @@ mermaid = true
 
 # Combined AI Review: A Step-by-Step Code Guide
 
-The **Combined** view brings several local analysis tools into one review of a photograph. Qwen describes visible content, SAM supplies candidate subject masks, a deterministic scorer measures detail inside those masks, and CLIP measures how closely image content relates to the review criteria. Qwen then produces a report whose claims must refer to accepted evidence.
+Combined connects local Qwen observations, SAM masks, deterministic subject-detail
+measurements and CLIP relevance under a frozen review contract. These outputs
+are different kinds of evidence. A mask identifies pixels, CLIP relates content
+to text, a deterministic scorer measures render-dependent detail, and Qwen
+produces observations subject to validation.
 
-This guide follows the implementation on the `version-3.3.0` branch, inspected on 10 October 2026. It explains both the visible controls and the code behind each step. The current feature accepts **exactly one image**. Multi-image comparison, adaptive tiling, and photographic qualification belong to later work; their presence in shared types does not mean that the Combined view implements them.
+This guide was updated against the local `version-3.3.0` working tree on
+13 October 2026. The current UI accepts **1–8 images**, with individual results
+and selection comparison for multiple images. It supersedes the October 10
+single-image description; that day's source-admission recovery is preserved
+below as a historical example. No Combined implementation was changed as part
+of the October 13 standalone Qwen/Objects repairs or this documentation update.
 
-The code's main entry points are:
+## 1. Build a vocabulary before tracing execution
 
-| File, relative to the RawCull repository | What to look for |
+| Term | Meaning |
 | --- | --- |
-| `RawCull/Views/AIAnalysis/AIAnalysisView.swift` | Chooses the analysis tool and the selected/tagged input files. |
-| `RawCull/Views/AIAnalysis/CombinedReviewView.swift` | Controls, progress, task history, input inspection, and evidence presentation. |
-| `RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift` | Observable state, admission, start, resume, cancellation, and initial work plan. |
-| `RawCull/Intelligence/CombinedReview/CombinedReviewExecution.swift` | The actual `prepare → plan → inspect → finish` pipeline. |
-| `RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift` | Connects the pipeline to the real model providers and checks their identities. |
+| Snapshot | Frozen files, criteria, models, source preference, budgets and compatibility versions |
+| Source identity | Declared render and image identity used to qualify crops/masks/evidence |
+| Subject | Registered candidate with a source-normalized mask and provenance |
+| Region | Bounded source rectangle selected for inspection, associated with source/subject |
+| Observation | Accepted model statement with availability, criterion fields and provenance |
+| Measurement | Deterministic render-dependent values with mask/scorer semantics |
+| Report | Validated claims selected from admitted evidence rather than unconstrained rewritten prose |
+| Selection report | Bounded comparison of admitted per-image evidence, with possible abstention |
+| Work item | Persisted task/state/dependency record in the run manifest |
 
-For the surrounding runtime, see [The RawCull AI Runtime](/docs/ai/airuntime/). For model installation, see [AI Model Downloads](/docs/ai/aimodelsdownload/).
+For provider composition and service replacement, read [AI Runtime](/docs/ai/airuntime/).
+For the Swift patterns, read [Swift Behind the AI Pipelines](/docs/ai/aiswift/).
 
-## A verified recovery for a large Sony ARW
+## 2. Start with the visible controls
 
-An investigation on 10 October 2026 used this actual file:
+1. Select or tag 1–8 photographs in the catalog.
+2. Open AI Analysis and choose Combined.
+3. Choose Selected or Tagged in the header to identify the file collection.
+4. Enter criteria, choose depth and source preference, and choose input retention.
+5. Wait for parameter/source availability checking, then start the review.
+6. Inspect each result, its limitations and retained inputs. For multiple files,
+   also inspect the comparison and any shortlist or abstention.
 
-```text
-/Users/thomas/Pictures_raw/2026/2_okt_2026/_DSC8318.ARW
+The header's Selected/Tagged choice determines **which files**. The inner
+High-quality preview/RAW detail control determines **which render** is requested.
+Neither retargets evidence already stored in a frozen run.
+
+`CombinedReviewFeature.prepareParameters` checks the current selection and source
+availability. `canStartReview(for:)` requires that the admitted checked selection
+matches the current files, criteria are valid and the feature is not running or
+checking. More than eight files is not enabled through the current UI; the
+broader snapshot type's expanded-plan field does not make it a supported UI path.
+
+Criteria are nonempty and at most 512 UTF-8 bytes. That byte cap differs from
+Swift-character caps in model response validation. Cropping a user-chosen region
+is admitted for a single-image selection; multi-image selection does not reuse
+one user rectangle indiscriminately for every file.
+
+## 3. Understand depth and budgets
+
+| Depth | Crops per image | Selection crop ceiling | Follow-ups per image / selection | Pair cap |
+| --- | ---: | ---: | --- | ---: |
+| Standard | 3 | 16 | 0 / 0 | 0 |
+| Deep | 8 | 32 | 2 / 8 | 2 |
+| Exhaustive | 16 | 64 | 4 / 16 | 4 |
+
+These are contract ceilings. Actual work depends on admitted candidates,
+available evidence and scheduled stages. A budget entry is not proof that all
+possible follow-up mechanisms execute. `ReviewBudget.cropAllocation` allocates
+round-robin coverage so earlier images cannot consume every crop before another
+image gets its first opportunity.
+
+Budgets distinguish overview, crop, follow-up, reconciliation, report,
+comparison, SAM, CLIP and repair. `consume` checks global and per-image limits
+before recording an attempt. Repair has its own allowance; failed requests
+cannot retry indefinitely. The old crops-plus-three single-image Qwen-pass table
+is not a complete ceiling for today's multi-image and bounded-repair workflow.
+The current frozen request response cap is 768 tokens, with context admission
+against the model's available capabilities.
+
+## 4. Locate the code and long-lived owners
+
+| File under `RawCull/Intelligence` | Responsibility |
+| --- | --- |
+| `Composition/RawCullIntelligenceRuntime.swift` | Creates stable feature and live-backend factory |
+| `Composition/CombinedReviewLiveBackend.swift` | Admits and uses concrete Qwen/SAM/CLIP model services |
+| `CombinedReview/CombinedReviewFeature.swift` | Observable controls, admission, task lifecycle, restore/resume |
+| `CombinedReview/CombinedReviewExecution.swift` | Stage execution, repair, report selection, comparison |
+| `CombinedReview/ReviewRunContract.swift` | Typed IDs, frozen snapshot and compatibility versions |
+| `CombinedReview/ReviewRunManifest.swift` | Persisted work states and evidence history |
+| `CombinedReview/ReviewImageSource.swift` | Source availability, bounded loading and declared render |
+| `CombinedReview/ReviewMaskRegistration.swift` | Registers decoded mask foreground against source raster |
+| `CombinedReview/ReviewSynthesisGrounding.swift` | Accepted observation and claim ownership rules |
+| `CombinedReview/ReviewArtifactStore.swift` | Artifact persistence and retained inputs |
+
+Presentation lives in `RawCull/Views/AIAnalysis/CombinedReviewView.swift` and the
+inspection/evidence views beside it. These are source paths for the inspected
+working tree; a published branch can lag local edits.
+
+`CombinedReviewFeature` is `@Observable @MainActor`. Its backend factory injects
+current services; tests can inject deterministic backends. Stable ownership
+keeps views and runtime commands attached to the same feature instance.
+
+## 5. Reserve resources and freeze admission
+
+Combined acquires its application-owned lease and drains the standalone Qwen,
+Objects and Deep Review workers through `cancelAndWait()`. A shared Qwen generation
+gate also serializes individual model generations. The lease and gate protect
+different scopes; neither is a substitute for the other.
+
+A run snapshots source-file identities, criteria, depth, source preference,
+retention, selected region where applicable, model/runtime/preprocessing
+identities, response cap and stage versions. Catalog access grants survive
+navigation until source work terminates. Source fingerprints are revalidated
+for resume; changed files are not silently interpreted as original evidence.
+
+Model snapshots qualify the admitted backend. Reading metadata such as encoder
+side does not itself verify actual runtime encoder geometry. Backend admission
+keeps declared configuration and observed geometry separate. The inspected
+runtime records PhotoAIKit/Core AI revisions as part of runtime identity.
+
+## 6. Follow the stage graph
+
+```mermaid
+flowchart TD
+    Admit["Check selection, source and models; freeze run"] --> Prepare["Prepare each source and overview"]
+    Prepare --> Plan["Discover candidates; segment and register masks; choose regions"]
+    Plan --> Inspect["Measure masked detail; inspect crops; compute available CLIP relevance"]
+    Inspect --> Finish["Admit criterion rows; reconcile/select report evidence"]
+    Finish --> PerImage["Persist per-image results and limitations"]
+    PerImage --> Compare["Multiple images: bounded selection comparison and pair checks"]
+    Compare --> Manifest["Persist final manifest/history"]
 ```
 
-The open application showed **RAW detail** and this error:
+A stage can fail without erasing unrelated accepted evidence. The result carries
+failures, limitations, inspected/uninspected regions and availability. A completed
+operation with limitations must not be mistaken for complete evidence coverage.
 
-```text
-Resume unavailable: memoryAdmissionDenied. Rerun with current settings.
+## 7. Choose a source before claiming detail
+
+High-quality preview uses a bounded camera-authored preview where available.
+Its sharpening, noise reduction and exposure processing are not fully known.
+RAW detail requests a declared demosaic/render, with resource admission before
+expensive source decoding. Retained source/render settings explain what pixels
+underlie a metric or crop observation.
+
+Default full-source limits are 24,000,000 pixels and 2,000,000,000 estimated
+working bytes. Admission uses 80 estimated bytes per pixel and overflow-safe
+arithmetic. These are configured resource limits, not available disk space or
+an automatic measurement of free RAM. Refused RAW detail does not silently
+switch fidelity; choose preview and create a new rerun.
+
+An exact retained input is the unannotated CGImage submitted to the backend,
+encoded losslessly. It is not original sensor data or the final resized/normalized
+model tensor. Keeping source/render and input identities prevents those levels
+from being confused.
+
+## 8. Register masks and select regions
+
+SAM returns candidate instances. The host decodes foreground against the source
+raster and records source-normalized registration. `ReviewMaskRegistration`
+derives foreground bounds from decoded mask content rather than trusting only
+the producer bounding box. Region ownership, source identity, mask semantics
+and selected subject must remain consistent through inspection and persistence.
+
+A mask score or a requested “head” concept does not qualify anatomy. A usable
+region can still have uncertain specificity. Near-full mask occupancy is explicitly
+limited as uncertain subject specificity rather than promoted to calibrated focus.
+
+`ReviewSubjectPriority` and plan logic govern which candidates receive bounded
+inspection. Context identity, region padding and image geometry must be traced
+from source coordinates; a yellow display outline is presentation, not new
+pixel evidence.
+
+## 9. Distinguish deterministic metrics from model judgments
+
+The scorer measures broad/local/detail information under a declared render and
+mask contract. Finite values and current scorer/mask semantics are validated.
+Results are render-dependent metrics, not calibrated sharp/blur thresholds or
+eye claims. CLIP relevance is separately recorded where an admitted provider
+and geometry permit it. Cosine relevance cannot prove technical focus.
+
+The model does not get to convert a numeric detail score into a photographic
+assertion merely by citing that score. Measurements are displayed deterministically.
+A generated claim needs an eligible independent observation; measurements alone
+do not support model-written prose.
+
+## 10. Understand the current crop observation schema
+
+Crop observation uses one string or null per criterion:
+
+```json
+{
+  "regionID": "the actual admitted region ID",
+  "criteria": {
+    "composition": null,
+    "exposure": null,
+    "visibility": null,
+    "detail": null
+  },
+  "uncertainty": "",
+  "targetIdentified": false
+}
 ```
 
-ImageIO and `CIRAWFilter.nativeSize` both reported **9,984 × 6,656 pixels**. That is **66,453,504 pixels**, well above the default 24,000,000-pixel source limit. At the admission estimate of 80 bytes per pixel, this source requires **5,316,280,320 estimated working bytes**, also above the 2,000,000,000-byte limit. The refusal happens before RAW decoding and model analysis. It is a source-budget rejection, not evidence of a broken Qwen model or insufficient disk space.
+This illustrates shape, not a conclusion that all observations are absent.
+The prompt asks for criterion-specific observations, aiming for 80 characters
+with a hard maximum of 120 per non-null string. Empty strings, repeated criterion
+sentences and `supported/text` response objects are not the requested shape.
 
-To run this image under the current limits:
+Composition describes framing/placement/obstructions; exposure describes
+illumination or tonal contrast; visibility describes extent/occlusion of the
+generic intended target. Detail describes resolved surface texture on that
+target, not background texture, anatomy, focus classification or RAW recovery.
+Unsupported detail is null, not a sentence claiming unresolved texture.
 
-1. Wait until the run has stopped and its controls are available.
-2. Leave exactly `_DSC8318.ARW` selected.
-3. Inside Combined Review, change **Source** from **RAW detail** to **High-quality preview**. This is the source picker beside Depth, not the Selected/Tagged picker in the header.
-4. Press **Rerun with current settings**. This creates a new run with the preview preference.
-5. Do not press **Resume saved run** for the refused RAW run: Resume uses its frozen RAW-detail preference even after the visible source picker has changed.
-6. Check the source fidelity and limitations in the new result. The evidence comes from the camera preview, with its processing and resolution limitations, rather than a full-resolution RAW demosaic.
+`targetIdentified` means a visibly present and distinguishable **generic target**.
+It does not prove species, individual identity, qualified anatomy or fine-detail
+quality. Purpose text alone does not establish that the target is present.
 
-The installed-Qwen integration probe passed on this ARW using the default high-quality-preview preference: it produced an available crop observation, a nonempty validated report, and an inspectable retained overview. That probe intentionally omits SAM and CLIP, so it establishes the preview/Qwen path rather than complete provider or photographic qualification.
+## 11. Report synthesis selects eligible evidence rows
 
-The open application's complete preview run also passed source preparation, Qwen overview, both SAM requests, masked detail measurement, and overview/crop CLIP. Its declared source was **embeddedCameraPreview, 4,096 × 2,731, sRGB**. That run completed with limitations: crop observation was rejected as `invalidEvidence`, and report synthesis failed, so no synthesized claim was accepted. This is a separate response-validation outcome after successful source loading, not another memory-admission failure. A successful degraded Qwen probe must not be taken as a guarantee that every complete run will accept all generated responses.
+Current synthesis is narrower than asking Qwen to rewrite evidence into a new
+report. The request contains admitted observation rows and allowed row IDs for
+composition, exposure, visibility and detail. Qwen returns one eligible row ID
+or null for each category. Code copies that row's criterion text and resolves
+its alias to the original observation provenance.
 
-The complete isolated probe captured the rejected crop response: it asserted a “sharp eye” despite the unavailable eye localization. It also captured a report citing the literal schema placeholder `exact ID`. The validator correctly rejected both. The implementation update keeps those checks, restricts crop/report prose to supported visual topics, and replaces the misleading placeholder template with a correctly typed example drawn from actual evidence. Report requests now use short evidence aliases, validated against the rows actually supplied, and resolve accepted aliases back to the original stored provenance IDs before detail checks and persistence. This improves model instruction-following without treating an unsupported response as evidence.
+```json
+{"composition": null, "exposure": null, "visibility": null, "detail": null}
+```
 
-The final synthesis also uses original evidence directly rather than feeding reconciliation prose back into another pass. This keeps nested references and repeated model reasoning out of the final request while preserving reconciliation for inspection.
+A real response substitutes only IDs actually admitted for that category. Null
+means abstention. The model cannot invent a new observation, borrow another
+category's row, or rewrite a statement into stronger language. Reconciliation
+and report construction use admitted original evidence; reconciliation prose
+is not a new independent visual observation.
 
-Crop-observation, reconciliation, and report stage versions are now `combined-v2`; the source/render and storage-envelope contracts remain V1. A saved run using the earlier prompt versions requires a new rerun. The already running application uses its installed build until rebuilt and relaunched.
+`ReviewSynthesisGrounding` checks source/stage compatibility, availability,
+subject/region registration and reference ownership. For current criterion
+observations, accepted claim text must match the supported criterion text.
+Detail requires one qualified subject and region, a target crop and available
+surface-detail support. Measurements cannot independently support prose; numeric
+metric presentation remains deterministic. Missing criteria become explicit
+coverage limitations. Evidence-only summaries can remain useful when synthesis
+cannot admit a report.
 
-### Verification of the updated full pipeline
+These are structural grounding rules, not a proof of visual truth. A correctly
+referenced observation can itself be mistaken; inspection of source and crop
+still matters.
 
-The final installed-model run on `_DSC8318.ARW` passed with Qwen, SAM 3, and DataComp CLIP supplied to the isolated probe. All **11 work items completed**, the failure dictionary was empty, and the final report contained **three validated claims**, one inspected region, and no uninspected regions. Crop inspection and reconciliation both completed; accepted report references were resolved to the original observation/measurement IDs. The full model test took approximately **137 seconds on this host**. This is a workflow result for the supplied file, not a photographic accuracy or general performance guarantee.
+## 12. Context admission and bounded repair
 
-The same verification command ran the Combined Review feature, source-loading, and run-contract suites: **50 test invocations passed**, including the real-model probe and the regression for preview rerun versus frozen-source resume. The smoke inventory verified **291 unique identifiers**. Formatting, lint error checks, the AI import-boundary check, and whitespace checks passed. These verification steps used Xcode; **Hugo was not compiled**.
+Prompts are checked against admitted model context and requested output tokens.
+Evidence rows are ordered and admitted deliberately; primary subjects and
+overview evidence are not displaced indiscriminately by metric summaries.
+Room is reserved for validation feedback. Repair does not drop the schema or
+required evidence simply to fit another generation.
 
-After building and relaunching the updated app, select **High-quality preview** and **Rerun with current settings**. The successful probe does not change the saved settings in an older refused run, install the updated app into Applications, or qualify a 66.5-megapixel full-resolution RAW decode. Full RAW detail for this file remains outside the current admission limits.
+`CombinedReviewResponse` classifies rejection by owned validation codes/checks.
+One fresh response can repair a malformed request-boundary payload, within the
+run budget. Repairs use the same acceptance conditions. The standalone Objects
+two-attempt board repair is a separate implementation and schema; changes to
+it do not change Combined repair behavior.
 
-The source limits remain in place. Increasing available RAM does not by itself change the configured limits, and the implementation does not silently downgrade a refused RAW-detail request. The bounded-preview path is the supported recovery here.
+## 13. Compare multiple images conservatively
 
-The updated code translates `ReviewImageError.memoryAdmissionDenied` into actionable text explaining the preview choice and rerun. A stopped Resume also reports a stopped progress state instead of leaving “Loading full review source” as though decoding were still active. A regression test verifies that source refusal performs no Qwen calls, changing the picker does not alter Resume's saved preference, and a new preview run succeeds with a fresh run ID. These message changes require a build containing the update; an already running older application can still display the original enum-style error.
+For multi-image selections, the workflow builds bounded comparison inputs and
+validates reports against those per-image results and admitted references.
+A selection report carries comparability, decision, preferred image IDs and
+claims/reason. Deep/exhaustive permit additional pair checks under their pair
+caps; Standard has no extra pair allowance.
 
-### Reproduce the preview/Qwen probe
+If comparison fails validation or exceeds context, the result can abstain with
+insufficient comparability while individual reports remain available. A shortlist
+is advisory; it does not silently apply star ratings or delete photographs.
+Treat changed source fidelity, missing inspections and unavailable evidence as
+comparison limitations, not reasons to invent a confident winner.
 
-Use the existing installed model and the image path explicitly:
+## 14. Persistence, cancellation, resume and rerun
+
+The manifest records frozen inputs and work dependencies. Typed stage evidence
+and retained images have their own policies/limits. Exact inputs are retained
+when requested; compact retention does not mean that no typed evidence persists.
+Masks needed for evidence inspection have their own retention handling.
+Rejected-response retention is independently opt-in; compact diagnostics need
+not persist every raw model response.
+
+Cancellation is cooperative. The lease is released when the owned worker finishes,
+not immediately when cancellation is requested. Restore makes saved evidence
+inspectable; Resume additionally requires compatible files, models, source,
+stage versions and contracts. Rerun creates a new run using current controls.
+Changing a picker does not mutate the frozen preference in an older run.
+
+Current compatibility values on October 13:
+
+| Contract | Version |
+| --- | --- |
+| Overall pipeline | `combined-v21` |
+| Overview stage | `combined-v10` |
+| Crop observation | `combined-v21` |
+| Reconciliation/report/comparison | `combined-v21` |
+| Segmentation/identity/measurement | `combined-v6` |
+| Other stage defaults | `combined-v1` |
+| Render | `review-srgb-v1` |
+
+Compatibility also includes file/render/model/runtime/preprocessing identities,
+source preference, goal-dependent criteria, region, response cap, user regions,
+depth, mask registration and scorer semantics where applicable. An unchanged
+storage-envelope name does not establish compatible stage semantics. Historical
+runs can remain inspectable even when resume is correctly disabled.
+
+## 15. Historical October 10 large-ARW recovery
+
+The earlier investigation used `_DSC8318.ARW`, a Sony RAW measuring
+9,984 × 6,656 = 66,453,504 pixels. At 80 estimated bytes per pixel, admission
+estimated 5,316,280,320 working bytes, above both default source limits.
+The refusal occurred before model analysis. Choosing High-quality preview and
+Rerun with current settings was the supported recovery; Resume preserved the
+old RAW-detail preference and therefore did not apply the new picker choice.
+
+That historical full-model preview probe completed 11 work items with three
+validated report claims and no failures, taking about 137 seconds on that host.
+It used Qwen, SAM and DataComp CLIP and a private artifact store. Those facts
+qualify that file/build/workflow, not today's complete regression inventory,
+full-resolution RAW admission or general photographic accuracy. The original
+fix involved earlier `combined-v2` prompts; current stages are versioned as
+shown above, so those historical prompt versions must not be treated as current.
+
+## 16. Select the appropriate verification
+
+`Scripts/RunAIAnalysis.py` exercises the existing SAM/Qwen/Objects tabs plus a
+separate CLIP embedding probe. It does **not** test Combined. To inspect Combined,
+use its opt-in real-model suite and available Makefile target:
 
 ```sh
 TEST_RUNNER_RAWCULL_COMBINED_REVIEW_RUN=1 \
 TEST_RUNNER_RAWCULL_COMBINED_REVIEW_QWEN="/Users/thomas/ModelAssets/Release/Models/Qwen/qwen3_vl_2b" \
-TEST_RUNNER_RAWCULL_COMBINED_REVIEW_IMAGE="/Users/thomas/Pictures_raw/2026/2_okt_2026/_DSC8318.ARW" \
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_IMAGE="/path/to/selected.ARW" \
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_SAM3="/Users/thomas/ModelAssets/Release/Models/SAM3" \
+TEST_RUNNER_RAWCULL_COMBINED_REVIEW_CLIP="/Users/thomas/ModelAssets/Release/Models/CLIP-DataComp" \
 make combinedreviewtest
 ```
 
-The updated probe can also exercise the installed SAM and CLIP providers by adding these two environment variables to the same command:
-
-```sh
-TEST_RUNNER_RAWCULL_COMBINED_REVIEW_SAM3="/Users/thomas/ModelAssets/Release/Models/SAM3"
-TEST_RUNNER_RAWCULL_COMBINED_REVIEW_CLIP="/Users/thomas/ModelAssets/Release/Models/CLIP-DataComp"
-```
-
-Pass them as command-prefix assignments alongside the Qwen/image variables. The probe records `combined-review-probe.json` as a test attachment, including source dimensions, planned regions, work states, failures, and raw Qwen request/response pairs. In Xcode, inspect that attachment for the failed test. It distinguishes failure to decode a source from failure to accept generated text; a failed response is never promoted into accepted evidence merely to make the test pass.
-
-The `TEST_RUNNER_` prefix forwards these values into Xcode's test process. The probe uses a temporary artifact store, does not download models, and leaves the original image untouched. Its default source is High-quality preview; this command does not test full-size RAW decoding.
-
-## 1. Understand the vocabulary first
-
-A **source** is the decoded, orientation-normalized image that this run has declared it will use. It is separate from the grid thumbnail. An **overview** is a smaller representation of that source. A **region** is a rectangle planned in source coordinates; a **crop** is the image cut from that rectangle.
-
-A **mask** identifies candidate subject pixels. A mask is proposed by a model and does not prove the semantic identity of every pixel. An **observation** is accepted model text with uncertainty and provenance. A **measurement** is a numerical result calculated from pixels. A **claim** is a sentence in the final report that cites observations or measurements.
-
-A **manifest** is the saved record of a run: its frozen settings, work items, dependencies, attempt counters, and artifact references. An **artifact** is a saved typed stage result. **Provenance** records where evidence came from, including its image, work item, source/render identity, compatibility information, and optional retained image reference.
-
-These distinctions matter. A numerical detail metric, a segmentation confidence, and a CLIP relevance value describe different things. They cannot be treated as interchangeable quality scores.
-
-## 2. Start from the visible interface
-
-1. Open a catalog and select one photograph, or tag one photograph.
-2. Open AI Analysis and choose **Combined** in the analysis tool picker.
-3. Choose **Selected** or **Tagged** in the header's source picker. The counts tell you which file collection will be passed to the view.
-4. Enter review criteria, choose depth and image source, and decide whether to retain exact input images.
-5. Press **Start review**. Once a manifest exists, the button reads **Rerun with current settings**.
-6. Watch the progress message and expand task history to follow individual stages.
-7. Read the report alongside crop observations, measurements, and limitations. Inspect retained inputs when you want to see what was actually supplied to a model.
-
-`AIAnalysisView.inputFiles` calls `viewModel.aiAnalysisFiles(for: inputSource)`. The Combined branch passes those files and the long-lived `combinedReviewFeature` into `CombinedReviewView`.
-
-The outer view normally displays an empty state when no input files exist. A Combined result, manifest, or active run counts as stored state, so the interface can remain available even after the selection changes. The displayed evidence belongs to the frozen run's file; changing the current selection does not retarget an existing result.
-
-### The two source pickers have different jobs
-
-The header's **Selected / Tagged** picker chooses *which file* to analyze. Inside Combined, **High-quality preview / RAW detail** chooses *which rendering of that file* to request. Confusing these controls can make the input seem to change unexpectedly.
-
-### Review criteria
-
-The default text is:
-
-> Describe composition, exposure, subject visibility and technical detail.
-
-`analyze(_:)` trims surrounding whitespace and requires nonempty criteria of at most **512 UTF-8 bytes**. Bytes are not the same as characters: some characters occupy several UTF-8 bytes.
-
-The criteria guide crop inspection, CLIP text matching, reconciliation, and report synthesis. The initial overview uses a fixed discovery instruction rather than the criteria. This lets overview discovery describe the scene before later stages interpret it in relation to the user's goal.
-
-### Depth
-
-| Depth | Maximum planned crop inspections | Maximum current Qwen passes |
-| --- | ---: | ---: |
-| Standard | 3 | 6 |
-| Deep | 8 | 11 |
-| Exhaustive | 16 | 19 |
-
-The pass ceiling is crops plus three: one overview, one possible reconciliation, and one final report. Reconciliation only runs when suitable measurements and crop observations exist, and fewer crops may be proposed. These are ceilings, not promised counts.
-
-`ReviewBudget` also contains follow-up and comparison allowances for the broader contract. The current single-image execution does not schedule adaptive follow-up passes or comparison. Increasing depth raises the crop cap; it does not automatically tile every part of the photograph.
-
-### Retain exact inputs
-
-Enabled by default, this chooses the frozen run's `exactInputs` retention policy. Disabling it chooses `compact`: typed evidence still persists, but overview and crop images are not retained by the ordinary retention path. Derived subject masks use forced retention even in compact mode, subject to cache limits.
-
-An “exact input” here means the **unannotated CGImage supplied to the backend**, retained as lossless PNG. It does not mean the original RAW sensor data or the final normalized tensor inside the model. The backend still resizes and normalizes that image.
-
-Controls are disabled during execution. The start button is also disabled unless exactly one file is passed in. The feature repeats the one-image check so correctness does not rely only on the UI.
-
-## 3. Follow the long-lived objects
-
-`RawCullIntelligenceRuntime` creates one `CombinedReviewFeature`. SwiftUI receives that stable feature object rather than building a new pipeline whenever the view redraws.
-
-The feature is `@Observable @MainActor`. Its properties, such as `progress`, `result`, `manifest`, and `isRunning`, drive the interface. `@Bindable` lets controls edit criteria, depth, source preference, and retention state. Main-actor ownership keeps those UI-facing mutations coordinated; it does not mean that every decoder and model operation runs synchronously on the UI thread.
-
-The feature receives a source loader, a subject-detail scorer, an artifact store, a lease, and a backend factory. Production uses real providers. Tests can supply fake providers to exercise the pipeline without downloading or loading models.
-
-The backend factory captures:
-
-- The Qwen inference runtime and installed model URL.
-- An optional segmentation service and SAM identity.
-- An optional CLIP provider and location, preferring DataComp over OpenAI when available.
-
-Before starting inference, `beforeStart` calls `cancelAndWait()` on the standalone Qwen, Objects, and Deep Review workflows. A `CombinedReviewLease` reserves those sibling workflows, and their AI Analysis panels are disabled while it is held. Qwen also retains its existing generation gate.
-
-Cancellation requests termination; the lease is released only when the owned worker has finished. This is why a cancelled run can briefly remain in “Cancelling” while native work unwinds.
-
-## 4. Admission freezes the run
-
-Read `CombinedReviewFeature.analyze(_:)` from top to bottom:
-
-1. Reject a second start while the feature is running.
-2. Require exactly one file and valid criteria.
-3. Create a run UUID and acquire the lease.
-4. Set `isRunning`, clear the failure message, and create the backend.
-5. Capture depth, source preference, retention, and any chosen region.
-6. Start the owned task and await the sibling-workflow shutdown hook.
-7. Freeze the selected file and retain catalog access for the run.
-8. Ask the backend for admitted model snapshots.
-9. Build and validate a `ReviewRunSnapshot`.
-10. Move the preceding manifest into history, clear the old result, create the initial manifest, and save it before execution.
-
-The snapshot records the file identity, criteria, depth, source preference, retention policy, render version, models and runtimes, stage versions, response token limit, pipeline version, creation date, and optional user region. The current response allowance is **768 tokens per Qwen request**.
-
-`ReviewCatalogSession` retains access grants so navigation does not prematurely end file access during native reads. File freezing checks readability and records a fingerprint derived from path, resource identifier, size, and modification date. This is an identity/change check, not a cryptographic hash of the entire photograph.
-
-### Model admission is deliberately specific
-
-`CombinedReviewLiveBackend.models()` requires the verified Qwen configuration: **448 × 448**, **stretch**, **4096 context tokens**, and **196 image tokens**. It hashes the installed bundle and requires the pinned Qwen bundle fingerprint. A model can be installed yet fail Combined admission if its identity or capabilities do not match.
-
-SAM and CLIP are optional. CLIP is admitted only for recognized bundle fingerprints with recorded input geometry: the supported OpenAI and DataComp variants use 224- and 256-pixel encoder sides respectively. Runtime identity also records the operating-system version and pinned dependency identifiers.
-
-This avoids assuming that different model bundles or preprocessors preserve image detail in the same way. Missing required Qwen stops admission; missing optional evidence creates a degraded review with limitations.
-
-## 5. See the pipeline as a sequence
-
-```mermaid
-flowchart TD
-    A[One selected file and settings] --> B[Freeze file and model snapshots]
-    B --> C[Prepare appearance source and overview]
-    C --> D[Qwen overview and concepts]
-    D --> E[SAM candidate masks and head candidates]
-    E --> F[Persist prioritized region plan]
-    F --> G[Compatible technical render and masked measurements]
-    G --> H[CLIP overview and crop relevance]
-    H --> I[Independent Qwen crop observations]
-    I --> J[Optional reconciliation]
-    J --> K[Validated report and limitations]
-    K --> L[Saved manifest and typed artifacts]
-```
-
-This diagram shows the broad flow. In code, overview CLIP runs before the crop loop; each crop's Qwen observation is followed by that crop's CLIP request. The top-level `execute(_:)` calls four methods in order: `prepare`, `plan`, `inspect`, and `finish`.
-
-## 6. Prepare: decode a declared source and inspect its overview
-
-`prepare(_:)` creates the result container, revalidates the file snapshot, and asks `ReviewImageSourceService` for an **appearance** render. It checks that the decoded source's file identity still matches the frozen fingerprint.
-
-### What source preparation does
-
-For raster formats such as JPEG, PNG, TIFF, and HEIF, the source is an orientation-normalized raster. For a camera file, high-quality preview requests a camera-authored embedded JPEG. RAW detail requests a fresh `CIRAWFilter` decode with full scale, draft mode disabled, and SDR output.
-
-If RAW demosaic is unavailable, the service can fall back to an embedded preview and record the limitation. An allocation refusal is not permission to silently substitute a lower-fidelity RAW rendering. Embedded-preview fallback has its own bounded decoding policy and can record reduced dimensions.
-
-The default full-source admission limits are **24 million pixels** and **2,000,000,000 estimated working bytes**, using a conservative estimate of 80 bytes per source pixel. These are admission estimates, not measured guarantees of process or GPU memory usage. Large full rasters and RAW demosaics can be refused before full decoding. The bounded embedded-preview fallback caps its longest edge at 4096 pixels.
-
-The service color-manages output to **sRGB RGBA8 SDR**. Raster HDR inputs use HDR-to-SDR tone mapping. These outputs cannot establish how much highlight or shadow information the original RAW could recover.
-
-An overview is generated with a default maximum dimension of **2048 pixels**. This is distinct from Qwen's later 448 × 448 model input geometry.
-
-### Why source identity matters
-
-The source record contains fidelity, dimensions, orientation, color space, render policy, recorded settings, and limitations. Its render identity distinguishes an appearance rendering from a technical rendering. Two images with the same filename or aspect ratio are not automatically interchangeable.
-
-The source stage persists the record. With exact retention enabled, the overview CGImage is saved too. Qwen receives the unannotated overview and a fixed JSON instruction requesting composition, exposure, subjects, obstructions, uncertainty, and up to three subject concepts.
-
-`CombinedReviewResponse.overview` validates text lengths and concept discovery. Accepted text becomes an overview observation with provenance. If the stage fails, the pipeline records its unavailability and can continue toward independent fallback crop inspection.
-
-The feature also records standing limitations: eyes are not localized, AF mapping is unavailable, edit suggestions are untested hypotheses, and RAW recovery has not been evaluated.
-
-## 7. Plan: find candidates and choose regions
-
-`plan(_:context:)` uses Qwen's concepts as queries for SAM when SAM and a valid overview are available. A concept such as “bird” is a segmentation request, not proof that the region is a bird.
-
-For each concept, the backend segments the **full appearance source**. `ObjectInstanceDeduplicator` retains up to eight candidates. Each retained record stores bounds, confidence, aliases, identity, and a retained mask reference. Candidates are then deduplicated across concepts, again with a maximum of eight surviving subjects.
-
-A separate `head` segmentation request is made when subjects exist. A head candidate must be contained inside exactly one subject and have an area smaller than 60% of that subject's bounding-box area. Ambiguous associations are omitted. A contained head candidate still does not establish eye position or eye sharpness.
-
-The region proposal order is:
-
-1. The user-chosen region, if one was frozen into the snapshot.
-2. Unambiguously associated head candidates.
-3. Whole-subject bounds.
-4. A whole-frame fallback, only when no region proposals exist.
-
-The chosen depth limits how many proposals are admitted. Omitted region IDs are recorded as uninspected coverage. A manual region therefore takes priority and can displace an automatic proposal under a small crop budget.
-
-### Coordinates and padding
-
-Public source rectangles use orientation-normalized pixels with a **top-left origin**. Subject bounds and user selections are normalized coordinates, where the full width and height each span 0 to 1. The service converts normalized bounds into source pixels.
-
-`source.region` uses default padding of 15%, creates an integer-enclosing crop within the source bounds, records clipping, and attaches an encoder geometry trace. Region records distinguish the requested rectangle, padded rectangle, actual source crop, retained encoder coverage, encoder size, and horizontal/vertical scale.
-
-Crops come from the full declared source **before** overview/model resizing. They are not enlargements cut out of a small grid thumbnail. Even so, a crop may need model upscaling, and a full-frame fallback may add little fine detail beyond the overview.
-
-The persisted `CombinedReviewPlan` keeps subjects, selected regions, and omitted region IDs. Planning is separate from later measurements so a saved run can recover the original crop decisions.
-
-## 8. Inspect: measure pixels and observe crops
-
-### Technical render and subject detail
-
-When subjects exist, `inspect` requests a separate **technical** render. For RAW, this records the technical recipe, including sharpness 0, detail 0.6, contrast 1, and exposure 0; decoder noise-reduction defaults are retained and recorded.
-
-Before applying appearance masks to technical pixels, the service checks alignment. Cross-render mapping requires compatible file identity, fidelity, orientation, and dimensions. An embedded preview and RAW demosaic are not considered registered merely because their aspect ratios match. If alignment is unavailable, masked measurement abstains and the limitation is visible.
-
-For each subject, measurement requires a surviving mask with the technical image's dimensions. `SubjectMaskFocusScorer.score` receives `normalizedAFPoint: nil`: this path makes no AF-point-based conclusion.
-
-The scorer converts RGB pixels to luminance, measures a four-neighbour edge response, collects samples inside mask alpha greater than 16, and examines a 6 × 6 patch grid. It combines broad subject response, strongest usable local response, and fine-detail response:
-
-```text
-subjectDetail = 0.40 × broadDetail
-              + 0.40 × (localDetail, or broadDetail when local is unavailable)
-              + 0.20 × fineDetail
-```
-
-If global edge response suggests background dominance, the result is multiplied by 0.82. Patch admission requires enough masked samples; unusable evidence can return no measurement. Nonfinite outputs are rejected.
-
-The view can display `subjectDetail`, `fineDetail`, `maskCoverage`, and optional `broadDetail` and `localDetail`. These are **render-dependent, uncalibrated metrics**. They do not supply a universal sharp/blur threshold, a probability, or an eye-sharpness verdict.
-
-### CLIP relevance
-
-An admitted CLIP provider embeds the overview and review criteria, checks finite matching vector dimensions, and calculates cosine similarity. The same operation is performed for each admitted crop.
-
-CLIP preprocessing uses shortest-side resize followed by center crop. Rectangular inputs can lose edge content, so its recorded geometry differs from Qwen's stretch geometry. The relevance number means similarity to the supplied text, not technical quality, segmentation confidence, or a probability of correctness. The UI displays crop relevance to three decimal places; the overview value is kept in the result but has no separate relevance row in this view.
-
-### Independent crop observations
-
-Each planned rectangle is cut from the appearance source. Qwen receives that unannotated crop, the criteria, region ID, purpose, and a JSON schema. It does not receive previous overview prose or other crop observations in this request.
-
-The expected result includes `regionID`, `observations`, `uncertainty`, and `insufficientEvidence`. The revised prompt asks for one short sentence about surface texture and illumination, ignoring anatomy, body parts, gaze, and species; anatomical limitations belong in uncertainty. The decoder requires the exact requested region ID and bounded nonempty text. Its conservative substring checks reject observation text containing `eye`, `iris`, or `recover`; these guards can also reject innocent wording that contains those sequences.
-
-An accepted response with `insufficientEvidence: true` is stored as an **unknown** observation. Its text is visible in the crop disclosure, but it cannot act as available evidence during synthesis. Completing a request therefore does not necessarily mean the region supplied usable evidence.
-
-“Independent” describes the information supplied to each request. All these passes use the same Qwen model; their agreement is not independent confirmation by different models or human reviewers.
-
-## 9. Finish: reconcile and validate a report
-
-Reconciliation runs only when there is at least one measurement and one available crop observation. It asks Qwen to reconcile terminal evidence, note conflicts, or abstain. Accepted reconciliation claims become observations that preserve referenced IDs and explicitly state that the same model is being used.
-
-The report stage then builds evidence rows from the original available overview/crop observations and measurements. Reconciliation observations remain visible in the inspector but are excluded from final synthesis inputs: they repeat the same model's reasoning and contain nested provenance prose rather than independent new evidence. Within each model request, observations and measurements receive short IDs such as `o1` and `m3`. A request-local table maps these aliases to the full evidence IDs. Only aliases for included rows may be cited; accepted aliases are resolved back to the full IDs before claims are checked and stored. The view therefore displays traceable provenance IDs, not temporary model aliases. CLIP values and raw mask confidence are not directly included as report evidence rows in this implementation.
-
-The prompt includes the criteria, source fidelity/dimensions, stage counts, accepted evidence IDs, and these constraints:
-
-- The prompt requests at most three claims; the decoder rejects more than six. Accepted types are `composition`, `exposure`, `visibility`, `detail`, or `suggestion`.
-- Cite supplied evidence references; abstain when necessary evidence is missing.
-- Avoid eye localization, RAW recovery, and calibrated quality claims.
-- Treat measurements as render-dependent metrics and suggestions as untested hypotheses.
-
-### Context admission
-
-`CombinedReviewResponse.admitted` checks a conservative bound:
-
-```text
-instruction UTF-8 bytes + image tokens + output tokens + 256 template tokens
-    must fit within the admitted model context
-```
-
-This is an admission bound, not an exact tokenizer count. Optional evidence rows are added in reverse order, favouring later crop observations over the initial overview. The updated report prompt also includes a correctly typed example drawn from existing evidence and prioritizes its supporting row first. Remaining rows that do not fit are omitted with a visible limitation. Schemas and evidence IDs are not silently truncated.
-
-### Validation after generation
-
-The decoder checks claim counts, text lengths, allowed evidence references, and prohibited wording. Execution checks allowed claim types. A `detail` claim must cite a crop observation or measurement. If its wording contains `sharp`, `blur`, `soft`, or `focus`, it must cite an available crop observation; numerical measurement alone does not authorize that wording.
-
-These checks reject malformed or ungrounded structures. They do **not** prove that every accepted natural-language claim is photographically correct.
-
-If synthesis fails, the feature creates an incomplete report with no accepted claims and retains completed stage evidence. The user can still inspect those stages. A successful report is marked incomplete when coverage is missing, stages failed, measurements are absent, CLIP evidence is absent, or there are no claims.
-
-Thus **Complete with limitations** is an expected degraded outcome. Even **Complete** should be read with the standing limitations; it does not mean all photographic questions were answered.
-
-## 10. Read the evidence in the view
-
-The filename and source summary identify the frozen image, fidelity, dimensions, and color space. **Inspect overview input** opens the retained unannotated overview.
-
-The preview shows yellow planned crop rectangles. These describe location and coverage, not detected eyes or verified object identities. **Show available subject masks** loads retained subject masks and overlays them at 25% opacity.
-
-The report shows each claim, uncertainty, and evidence IDs. Match those IDs to the observation or measurement disclosures to trace the basis of a statement:
-
-| Visible section | How to interpret it |
-| --- | --- |
-| Independent overview | Broad Qwen description before crop inspection. |
-| Crop observation | Text generated from one source crop, with uncertainty and exact-input inspection. |
-| Evidence reconciliation | Same-model reasoning across completed evidence. |
-| Region purpose | Source crop dimensions, encoder dimensions, clipping, optional CLIP relevance, and crop inspection. |
-| Measured subject detail | Numerical values, metric limitation, and measurement ID. |
-| Limitations and coverage | Missing evidence, unsupported conclusions, and inspected/uninspected counts. |
-
-### Choose a region for the next run
-
-Drag across the retained preview. The view divides drag coordinates by displayed image dimensions, intersects the rectangle with the normalized unit square, and accepts it only when width and height both exceed 0.01. Dragging is ignored while a run is active.
-
-The new rectangle is assigned to `feature.userRegion`. It affects the **next rerun**, not the evidence already displayed. **Clear chosen region** removes that pending choice. There is no separate immediate inspection request or live analysis of the dragged area. Compact retention can leave no preview available to drag on.
-
-## 11. Understand task history and stage persistence
-
-The initial manifest contains source, overview, identity, and report work. SAM, measurement, crop, CLIP, and reconciliation items are added as execution discovers what work is needed. The denominator in “N of M tasks completed” can therefore increase during a run.
-
-Each history row shows stage title, work-ID suffix, state, attempts, and reason. Work states include pending, running, completed, failed, cancelled, and skipped. A saved running row is presented as **Interrupted** when its run is not the active worker. History disclosures show task records; they do not offer a selector for displaying an older run's full report.
-
-The generic `perform` helper coordinates persistence:
-
-1. Check cancellation and find the work item.
-2. If it is already completed, load and decode its compatible artifact.
-3. If terminal and unavailable, retain its reason and return no value.
-4. Begin pending work, charge any relevant category allowance, and save the running manifest.
-5. Execute and encode the typed result.
-6. Check cancellation before committing.
-7. Write the artifact, then save the completed manifest without an actor suspension between those writes.
-8. On ordinary failure, record failed/skipped state and reason, save, and allow supported degraded execution.
-
-Each file write is atomic; the artifact and manifest are separate files, not one filesystem transaction. Writing the artifact first avoids advertising completed evidence before its artifact exists. Restore checks both rather than trusting the status label alone.
-
-Qwen attempts are charged by category before inference. SAM allows up to four calls per image; CLIP allows the overview plus admitted crops. Failed inference consumes allowance too. Source preparation, planning, and numerical measurement are tasks but are not Qwen passes.
-
-## 12. Cancel, restore, resume, and rerun
-
-**Cancel** cancels the owned task and marks the manifest cancelled. Finished evidence and spent attempt counters survive. Unfinished output is discarded. The worker retains its lease and catalog session until termination, then clears them in its deferred cleanup.
-
-When `CombinedReviewView` appears, its `.task` calls `restoreStoredRun()`. With no active manifest, this loads saved history and the latest saved manifest. It does **not** immediately reconstruct the complete evidence display from all artifacts. After a fresh feature instance, **Resume saved run** executes the restore/reuse path that assembles the result again.
-
-Resume uses the **saved snapshot**, not the current text fields or current selected image. It:
-
-1. Acquires the lease and waits for sibling workflows.
-2. Retains access to the saved file URLs and revalidates file snapshots.
-3. Requires the current admitted model snapshots to equal the saved snapshots.
-4. Checks pipeline, render, and stage versions.
-5. Finds compatible surviving artifacts.
-6. Restores work with `retryFailed: false` and invalidates missing outputs and their dependents.
-7. Runs the pipeline, loading completed stage artifacts where valid.
-
-The source is decoded again and checked against saved source identity. Resume is therefore not an entirely file-free operation. Missing masks cannot justify new masked measurements.
-
-Interrupted or cancelled work can become pending, but another inference consumes another attempt. The saved allowance is not reset. Failed stages are not secretly retried by this resume path, so an interrupted mandatory pass may lack remaining budget.
-
-Use **Rerun with current settings** when the file, models, render compatibility, or goal has changed, or when a new attempt plan is needed. It creates a new UUID, snapshot, manifest, and budget. Previous runs remain in history. Changing controls alone does not mutate the saved snapshot.
-
-## 13. Know what is stored locally
-
-`ReviewArtifactStore` is an actor that serializes access to the default root under the user's application-support directory:
-
-```text
-RawCull/AnalysisArtifacts/CombinedReview/
-    runs/       run manifests
-    stages/     typed stage artifacts
-    inputs/     content-addressed retained PNG inputs and masks
-```
-
-On macOS the application-support location can vary with the application environment. The code asks `FileManager` for it rather than hard-coding a home-directory path.
-
-Manifests and artifacts use a V1 envelope with integer `schemaVersion`, kind, producer pipeline version, and compatibility data. Future versions are rejected and preserved; the current reader does not invent a migration or overwrite them as V1.
-
-Compatibility distinguishes file/source/render changes, criteria, depth/user-region settings, model/runtime identity, preprocessing, and consuming-stage versions. Missing or incompatible artifacts cannot remain completed after restore; dependency invalidation propagates.
-
-The input cache has a default **256,000,000-byte** limit. PNG content hashes form opaque names. Old inputs are evicted to enforce the bound; an oversized input cannot be retained. Exact retention is therefore best effort under the bounded cache, not permanent archiving.
-
-**Clear retained inputs** clears the input cache, including masks, across stored runs using that store. It does not delete manifests or typed evidence. Cleared or evicted images are reported unavailable rather than replaced with a fresh rendering presented as the original input.
-
-Already loaded preview/mask images can remain visible in the current view's state until it reloads; a visible image after clearing is not proof that its disk cache entry survives. Removing a mask can also prevent future measurement reuse or reconstruction that needs that mask.
-
-## 14. Work through one example
-
-Suppose one bird photograph is selected and the criteria are “Describe composition and visible feather detail.” Choose Standard, high-quality preview, and exact retention.
-
-The run freezes the file and models, decodes the declared preview source, and creates its overview. Qwen may propose “bird.” SAM attempts that concept; if a mask survives, the head query may find a contained candidate. Planning prioritizes a head crop, then a whole-bird crop, up to Standard's three-crop limit.
-
-A compatible technical source and surviving mask allow numerical subject-detail measurement. Qwen independently inspects each planned appearance crop. CLIP compares the overview and crops with the criteria. If at least one available crop observation and measurement exist, reconciliation runs. Report synthesis accepts only claims that survive schema and evidence validation.
-
-If SAM is unavailable, the run records missing subject/mask evidence. Without a manual region, planning uses a whole-frame fallback. Qwen can still inspect that crop, but the review has no verified subject measurement and ends with limitations. The fallback does not turn overview-scale evidence into a precise feather or eye examination.
-
-After completion, drag a wing area on the retained preview and press **Rerun with current settings**. The second run freezes that rectangle and gives it first crop priority. The first run remains in task history. Pressing Resume instead would continue the first run's frozen plan rather than use the new rectangle.
-
-## 15. Troubleshoot by locating the failed stage
-
-| Symptom | First explanation to check |
-| --- | --- |
-| Start is disabled | The selected/tagged collection must contain exactly one file, and no run can already be active. |
-| Criteria are rejected | Empty trimmed text or more than 512 UTF-8 bytes. |
-| Review stops during model checks | Required Qwen availability, pinned bundle identity, or capability mismatch. |
-| RAW detail uses a preview | The decoder could not supply an admitted RAW demosaic; inspect the recorded source fidelity and limitation. |
-| A large image is refused | Source pixel or estimated-memory admission limits. For a large RAW, choose High-quality preview and Rerun with current settings; Resume retains the old source preference. |
-| No subject detail measurement | SAM discovery, mask survival, dimensions, render alignment, or scorer evidence requirements failed. |
-| A crop task completes but provides no report evidence | The structured response can explicitly mark insufficient evidence. |
-| Generated wording is rejected | JSON/schema bounds, unknown IDs, conservative substring guards, or unsupported detail references. |
-| Report has no claims | Synthesis failed validation or lacked admissible evidence; inspect completed stages. |
-| Exact input is unavailable | Compact retention, cache eviction, failed retention, or explicit cleanup. |
-| Resume is unavailable | Saved file/model/version identity no longer matches, or source/artifact compatibility fails. |
-| Resume does not retry a failed request | This path explicitly restores with `retryFailed: false`; attempts also retain their spent budget. |
-
-## 16. Continue reading the code in this order
-
-Start with the view and trace the button into `analyze`. Then follow `execute` into its four methods. Read the response decoder before interpreting any generated text, and read the run/store contract before changing resume behavior.
-
-| Next source | Reason to read it |
-| --- | --- |
-| `ReviewImageSource.swift`, `ReviewEmbeddedPreviewLoader.swift`, `ReviewImageGeometry.swift` | Source fidelity, decoding, orientation, render alignment, crop and encoder geometry. |
-| `CombinedReviewResponse.swift` | Accepted schemas, context admission, and conservative text validation. |
-| `ReviewEvidence.swift` | IDs, claims, references, measurements, limitations, and provenance. |
-| `ReviewRunContract.swift`, `ReviewBudget.swift` | Frozen settings, compatibility, depth values, and attempt allowances. |
-| `ReviewRunManifest.swift`, `ReviewArtifactStore.swift` | Work transitions, invalidation, storage envelopes, and input eviction. |
-| `ReviewRunAdmission.swift`, `CombinedReviewLease.swift` | Catalog access and workflow reservation. |
-| `RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift` | The pixel-based detail metric reused by Combined. |
-
-The repository's `Docs/combined-review-input-contract.md`, `combined-review-source-contract.md`, `combined-review-storage-contract.md`, and `combined-review-single-image.md` explain the engineering contracts and phased delivery. They include implementation-time verification records; those records should not be interpreted as a newly run test result or a photographic quality guarantee.
-
-Relevant tests include `CombinedReviewFeatureTests`, `ReviewImageSourceTests`, and `ReviewRunContractTests`. They exercise fake-provider execution, provenance, degraded evidence, validation, cancellation, compatibility, budgets, and storage. `CombinedReviewRealModelTests` provides an opt-in installed-Qwen probe. Contract tests and a successful real-model workflow probe establish execution behavior; independent photographic evaluation remains a separate requirement.
+Verify the target and opt-in variables in the current Makefile/test source before
+using an older invocation. Supplying only Qwen tests a reduced backend; it does
+not establish a full-provider result. Inspect retained source dimensions,
+work failures, accepted observation/report references and limitations in the
+result bundle rather than reading a final completion line alone.
+
+The October 13 tab-negation update passed the focused Objects and Combined
+feature regression suites (52 tests reported), but that is distinct from a
+new Combined installed-model qualification. See [AI Diagnostics](/docs/ai/aidiagnostics/)
+for why schema acceptance, model confidence and visual accuracy must remain
+separate claims.
