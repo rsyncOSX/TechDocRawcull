@@ -898,5 +898,5 @@ The catalog session now delegates task/access lifetime to
 grants, while source decoders and admitted batches retain the covering grant
 until their operation exits. Model replacement, cancellation and publication
 identity checks remain necessary even when a retained source stays readable.
-See [Concurrency]({{< relref "concurrency.md" >}}) and
-[Security-Scoped URLs]({{< relref "security.md" >}}).
+See [Concurrency]({{< relref "/docs/concurrency.md" >}}) and
+[Security-Scoped URLs]({{< relref "/docs/security.md" >}}).

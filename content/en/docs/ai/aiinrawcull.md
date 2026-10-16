@@ -907,7 +907,7 @@ render before interpreting relative scores as a useful ranking.
 The application lockfile now resolves PhotoAIKit 1.0.0 and coreai-models 1.0.0.
 Provider resource ownership remains in [RawCullAIModelRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift); feature
 assembly remains in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). See the
-[package snapshot]({{< relref "packages/_index.md" >}}) for exact revisions.
+[package snapshot]({{< relref "/docs/packages/_index.md" >}}) for exact revisions.
 
 After the one automatic Objects board-response retry, the feature can call
 `ObjectAnalysisResponseDecoder.decodeAbstainingFromUnsupportedFocus`. Schema,
@@ -922,4 +922,4 @@ Combined Review now opens as its own main view, with Photo-first and Evidence
 workspace modes; it is not another AI Analysis tab. Its pipeline is
 `combined-v22`, with measurement v7. Camera AF overlap is recorded as positional
 evidence, not a generated focus verdict. Follow [Combined Review]({{< relref
-"ai/aicombined.md" >}}) for current stage compatibility and UI behavior.
+"/docs/ai/aicombined.md" >}}) for current stage compatibility and UI behavior.
