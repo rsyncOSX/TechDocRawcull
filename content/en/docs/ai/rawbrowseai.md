@@ -1,6 +1,6 @@
 +++
 author = "Thomas Evensen"
-title = "Build and publish RawBrowse AI models"
+title = "RawBrowse AI models"
 date = "2026-09-26"
 lastmod = "2026-10-08"
 weight = 25

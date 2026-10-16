@@ -1,6 +1,6 @@
 +++
 author = "Thomas Evensen"
-title = "Download AI models"
+title = "RawCull AI models"
 date = "2026-09-26"
 lastmod = "2026-10-13"
 weight = 25
