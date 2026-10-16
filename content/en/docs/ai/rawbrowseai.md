@@ -2,13 +2,21 @@
 author = "Thomas Evensen"
 title = "RawBrowse AI models"
 date = "2026-09-26"
-lastmod = "2026-10-08"
+lastmod = "2026-10-16"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "github", "release"]
 categories = ["technical details"]
 +++
 
 # Build CLIP and SAM 3 for RawBrowse
+
+> **Recipe scope (16 October 2026):** Preserve the dated source/exporter pins
+> below when reproducing the original packs. The current RawCull lockfile uses
+> PhotoAIKit 1.0.0 (`4b85056e6c2603b5e382987710ca2f16f4c5c155`) and coreai-models
+> 1.0.0 (`5de95c6cd29e5e390fb36d87e13b2396668f7974`). An older recipe pin is
+> not the current app dependency. Compare exporter options and model provenance
+> before building new candidates. This documentation review did not run model
+> conversion, download packs or qualify their output.
 
 This terminal workbook builds two complete PhotoAIKit-compatible Core AI
 bundles: **DataComp CLIP** for semantic search and image similarity, and **Meta
@@ -130,7 +138,7 @@ shasum -a 256 "$EXPORTER_REPO/Tools/export_clip.py" \
 ```
 
 **Runtime pin versus conversion tools:** the CoreAI revision above is the Swift
-runtime dependency. PhotoAIKit's `Tools/export_clip.py` and `Tools/export_sam3.py`
+runtime dependency. PhotoAIKit's [Tools/export_clip.py](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Tools/export_clip.py) and [Tools/export_sam3.py](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Tools/export_sam3.py)
 are separate Python exporters adapted from Apple's recipes. They currently
 specify `coreai-core==1.0.0b2` and `coreai-torch==0.4.1` in their script dependency
 blocks. Cloning a newer `coreai-models` checkout does not change those exporters
@@ -287,7 +295,7 @@ candidate's PhotoAIKit commit, CoreAI pin, source revisions, exporter hashes,
 and converted asset fingerprints before publication. Record hosting as GitHub
 and the app as RawBrowse; use model IDs `clip-datacomp` and `sam3`. Keep the
 licence inventory. SAM 3's verified licence acceptance remains required in the
-app. See [the current publishing instructions](../ModelAssets/README.md).
+app. See [the current publishing instructions](https://github.com/rsyncOSX/RawBrowse/blob/4177aebaf981275f2862b2f17c3f783927498e14/ModelAssets/README.md).
 
 ## 6. Generate GitHub release files and the download manifest
 
@@ -446,5 +454,5 @@ file size and SHA-256 and stages every file before installation.
 
 Reference implementations: [PhotoAIKit export tools](https://github.com/rsyncOSX/PhotoAIKit/tree/main/Tools),
 [the recorded CoreAI revision](https://github.com/apple/coreai-models/tree/1953c4f90ba0214c1abc7bebcb9be5107e329a46),
-and RawBrowse's [model publishing instructions](../ModelAssets/README.md) and
-[manifest template](../ModelAssets/manifest.template.json).
+and RawBrowse's [model publishing instructions](https://github.com/rsyncOSX/RawBrowse/blob/4177aebaf981275f2862b2f17c3f783927498e14/ModelAssets/README.md) and
+[manifest template](https://github.com/rsyncOSX/RawBrowse/blob/4177aebaf981275f2862b2f17c3f783927498e14/ModelAssets/manifest.template.json).

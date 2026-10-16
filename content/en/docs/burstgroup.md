@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-09-15"
+lastmod = "2026-10-16"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
@@ -28,20 +28,20 @@ typed `SimilarityArtifact` values rather than assuming one representation.
 
 | Area                                         | Main files                                                                                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Application commands and result publication  | `RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift`                                                                       |
-| Worker orchestration and cache compatibility | `RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift` and coordinator extensions                                        |
-| Similarity feature and shared state          | `RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`, `SimilarityScoringModel.swift`                                      |
-| Backend composition and adapters             | `RawCull/Intelligence/Composition/RawCullAIIntegration.swift`, `RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift` |
-| Per-file durable artifacts                   | `RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift`                                                                 |
-| Pure grouping and ranking                    | RawCullCore `Sources/RawCullCore/BurstGroupingEngine.swift`, `BurstRankingEngine.swift`                                               |
-| Shared models                                | RawCullCore `Sources/RawCullCore/BurstAnalysisModels.swift`; app `BurstAnalysisModels.swift`, `BurstReviewQueueModels.swift`          |
-| Cache and repository boundary                | `RawCull/Intelligence/Persistence/BurstAnalysisCache.swift`, `RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift`  |
-| Ratings and manual overrides                 | `CullingModel.swift`, `SavedFiles.swift`                                                                                              |
-| Burst home and review list                   | `BurstGroupsHomeView.swift`, `SimilarityGridSelectionView.swift`, `CullingGridView.swift`                                             |
-| Single-burst workspace and comparison        | `BurstCullingWorkspaceView.swift`, `ComparisonGridView.swift`                                                                         |
-| Batch badge selection and rating              | `CullingGridSelectionCoordinator.swift`, `CullingGridView.swift`                                                                      |
-| Deep Review subject outlines                  | `DeepAIReviewMaskOutlineRenderer.swift`, `MainThumbnailImageView.swift`, `ZoomOverlayView.swift`, `BurstCullingWorkspaceView.swift`   |
-| Tests                                        | `RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift`, `BurstRankingEngineTests.swift`, app burst/culling tests         |
+| Application commands and result publication  | [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift)                                                                       |
+| Worker orchestration and cache compatibility | [RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift) and coordinator extensions                                        |
+| Similarity feature and shared state          | [RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift)                                      |
+| Backend composition and adapters             | [RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift), [RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
+| Per-file durable artifacts                   | [RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)                                                                 |
+| Pure grouping and ranking                    | RawCullCore [Sources/RawCullCore/BurstGroupingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstGroupingEngine.swift), [BurstRankingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstRankingEngine.swift)                                               |
+| Shared models                                | RawCullCore [Sources/RawCullCore/BurstAnalysisModels.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstAnalysisModels.swift); app [BurstAnalysisModels.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/BurstAnalysis/BurstAnalysisModels.swift), [BurstReviewQueueModels.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/BurstAnalysis/BurstReviewQueueModels.swift)          |
+| Cache and repository boundary                | [RawCull/Intelligence/Persistence/BurstAnalysisCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Persistence/BurstAnalysisCache.swift), [RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift)  |
+| Ratings and manual overrides                 | [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/CullingModel.swift), [SavedFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/JSON/SavedFiles.swift)                                                                                              |
+| Burst home and review list                   | [BurstGroupsHomeView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/SimilarityGridView/BurstGroupsHomeView.swift), [SimilarityGridSelectionView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/SimilarityGridView/SimilarityGridSelectionView.swift), [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/CullingGrid/CullingGridView.swift)                                             |
+| Single-burst workspace and comparison        | [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift), [ComparisonGridView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ComparisonGridView/ComparisonGridView.swift)                                                                         |
+| Batch badge selection and rating              | [CullingGridSelectionCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/CullingGrid/CullingGridSelectionCoordinator.swift), [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/CullingGrid/CullingGridView.swift)                                                                      |
+| Deep Review subject outlines                  | [DeepAIReviewMaskOutlineRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift), [LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift), [ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ZoomViews/ZoomOverlayView.swift), [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)   |
+| Tests                                        | [RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift), [BurstRankingEngineTests.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Tests/RawCullCoreTests/BurstRankingEngineTests.swift), app burst/culling tests         |
 
 ## End-to-End Flow
 
@@ -88,15 +88,19 @@ produce, an indexing operation, and a distance operation. This keeps grouping
 independent of whether the payload is a Vision feature print or a CLIP image
 embedding.
 
-`RawCullAIIntegration` is the composition root:
+`RawCullAIModelRuntime` owns provider selection and model resources;
+`RawCullIntelligenceRuntime` owns stable feature surfaces:
 
 - `RawCullVisionSimilarityService` is always available and is the
   startup/default service.
 - `RawCullCLIPSimilarityService` is selected only when CLIP is enabled and the
   chosen model bundle has validated and produced a provider.
-- The CLIP service can recover through its configured Vision provider.
-  Diagnostics record partial CLIP generation and whole-batch Vision fallback
-  instead of silently changing artifact meaning.
+- A selected CLIP pass uses `fallbackPolicy: .none`. Failed files are retried
+  once with the loaded provider, then once with a newly constructed provider.
+  Successful CLIP artifacts survive; remaining failures are recorded and
+  excluded from grouping. Vision is the startup/service-selection fallback,
+  not an automatic whole-batch replacement for a partially failed CLIP pass.
+  The concrete CLIP service lives in [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift).
 
 | Setting                     |                                       Current value |
 | --------------------------- | --------------------------------------------------: |
@@ -135,7 +139,7 @@ group when any boundary rule fires.
 | Capture gap                 | Absolute capture-date gap exceeds `maxTimeGapSeconds`; modification-date fallback uses `maxFallbackTimeGapSeconds` |
 | Camera changed              | Normalized camera value changed and `requireSameCamera` is enabled                                                 |
 | Focal length changed        | Parsed focal-length delta exceeds `maxFocalLengthDeltaMM`                                                          |
-| Exposure changed            | Aperture changes by more than 0.2, ISO changes, or shutter-speed text changes                                      |
+| Exposure changed            | Shutter, aperture or ISO delta exceeds 0.5 EV, or exposure compensation exceeds 0.34 EV; unparseable values use conservative text fallback                                      |
 
 Lens changes are recorded as evidence but do not independently split a group.
 They do make group metadata unstable during ranking.
@@ -184,8 +188,11 @@ The other components are heuristic evidence:
 - Focus is 0.70 when camera AF data exists and 0.45 otherwise.
 - Saliency is 0.75 when the subject label matches the group's dominant label,
   0.25 on a mismatch, and 0.45–0.60 when evidence is incomplete.
-- Metadata starts from group stability, gains 0.15 for tight similarity, loses
-  0.10 at ISO 6400 or above, and gains 0.05 at f/5.6 or wider.
+- Metadata starts at 0.70 for stable groups or 0.40 otherwise and gains 0.15
+  for tight similarity. Above ISO 1600 it loses 0.05 per stop, capped at 0.15,
+  and gains 0.05 at f/5.6 or wider. Lower motion risk adds 0.05; elevated
+  motion risk subtracts a stop-based penalty capped at 0.15. The final
+  component is clamped to 0...1. High ISO (3200+) is also a candidate caution.
 
 Ties in overall score retain original shot order.
 
@@ -346,3 +353,22 @@ treated as a current cache hit.
   gate.
 - Keep the workspace's bounded image window and source-aware cache identity when
   changing image navigation.
+
+## Grid projection and keyboard ownership
+
+[CullingGridProjection.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/CullingGridProjection.swift) memoizes visible files, burst ordering, selection
+IDs and badge data. Its key combines content/similarity/saliency mutation
+revisions, source URL, rating and review filters, grouped mode and score
+availability. Cache hits avoid rebuilding membership sets during view updates.
+The cache itself is observation-ignored; mutation sites must advance the
+corresponding revision. [RawCullTests/CullingGridProjectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/CullingGridProjectionTests.swift) checks
+reuse and invalidation.
+
+`ReviewKeyboardScope` restricts local event monitors to the anchored key window,
+with no sheet/modal and no focused native text/control. Command, Control and
+Option combinations are left to their owners. In grouped grid mode,
+`ThumbnailKeyboardRouting` consumes Return, Escape, B, 2 and U as burst commands
+before ordinary rating dispatch, including reserved commands that cannot act.
+This prevents an unavailable burst command from becoming a rating edit. See
+[RawCullTests/ReviewKeyboardScopeTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/ReviewKeyboardScopeTests.swift) and
+[RawCullTests/ThumbnailKeyboardRoutingTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/ThumbnailKeyboardRoutingTests.swift).

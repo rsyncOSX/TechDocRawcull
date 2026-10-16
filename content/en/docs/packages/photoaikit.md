@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-13"
+lastmod = "2026-10-16"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -14,7 +14,7 @@ weight = 10
 # How PhotoAIKit Is Constructed
 
 > **Revision scope:** Updated against the RawCull dependency pin
-> `7f9adfcd69661c6bae4a640c16a4056dfc7393df` on 13 October 2026.
+> `4b85056e6c2603b5e382987710ca2f16f4c5c155` on 16 October 2026.
 > The original walkthrough used `20e57359603313af7c2d38cae3e8b6e37f8838ef`.
 > Current application policy is described in [AI Models in RawCull](/docs/ai/aiinrawcull/)
 > and [AI Runtime](/docs/ai/airuntime/).
@@ -54,13 +54,14 @@ This boundary makes PhotoAIKit reusable. A package that imports `FileItem` or
 searches `Bundle.main` for a RawCull resource might be convenient for one app,
 but it would silently encode application policy into the AI layer.
 
-## 2. Read `Package.swift` As An Architecture Diagram
+## 2. Read [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift) As An Architecture Diagram
 
-`PhotoAIKit/Package.swift` declares Swift tools 6.4, macOS 27, Swift 6 language
+[PhotoAIKit/Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift) declares Swift tools 6.4, macOS 27, Swift 6 language
 mode, **eight** library products and one test target. `CoreAIQwenBackend` is the
-eighth backend product. The inspected manifest pins `apple/coreai-models` to
-`1953c4f90ba0214c1abc7bebcb9be5107e329a46`; it declares
-`huggingface/swift-transformers` from 1.3.3 and RawCull resolves 1.3.4.
+eighth library product. The inspected manifest requires `apple/coreai-models`
+exactly at `1.0.0`; RawCull resolves it to
+`5de95c6cd29e5e390fb36d87e13b2396668f7974`; it declares
+`huggingface/swift-transformers` from 1.3.3 and RawCull resolves 1.3.5.
 
 ```mermaid
 flowchart TD
@@ -105,7 +106,7 @@ not application decisions.
 
 ### 3.1 Translate Host Photos Into `AIImageSource`
 
-`Sources/PhotoAIContracts/AIImageSource.swift` defines the package-owned source
+[Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/AIImageSource.swift) defines the package-owned source
 value:
 
 ```swift
@@ -151,7 +152,7 @@ flowchart LR
 
 ### 3.3 Separate Generation From Comparison
 
-`Sources/PhotoAIContracts/SimilarityArtifact.swift` defines two protocols:
+[Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SimilarityArtifact.swift) defines two protocols:
 
 - `ImageSimilarityArtifactProviding` creates an artifact from a `CGImage` and
   source.
@@ -168,7 +169,7 @@ unverified arbitrary data.
 
 ### 3.4 Keep Text Queries Query-Scoped
 
-`Sources/PhotoAIContracts/TextEmbedding.swift` defines a second, deliberately
+[Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/TextEmbedding.swift) defines a second, deliberately
 different similarity value. `TextEmbedding` contains a normalized text vector
 and a `TextEmbeddingDescriptor` with the complete backend identity, dimensions,
 tokenizer version, and schema version.
@@ -220,10 +221,10 @@ definition.
 
 The model types are spread across:
 
-- `ModelIdentity.swift`;
-- `ModelAssetFingerprint.swift`;
-- `ModelBundleResolver.swift`;
-- `ModelResource.swift`.
+- [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelIdentity.swift);
+- [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelAssetFingerprint.swift);
+- [ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelBundleResolver.swift);
+- [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelResource.swift).
 
 `ModelIdentity.cacheIdentifier` preserves compatibility with older cache naming.
 `artifactIdentifier` adds the selected asset fingerprint for new artifacts. This
@@ -523,7 +524,7 @@ The package includes tools under `Tools/` for exporting CLIP and SAM 3 assets,
 selecting a SAM 3 asset, generating fingerprints, and producing reference CLIP
 image/text similarities. Output paths are explicit.
 
-`export_clip.py` supports the existing OpenAI `clip-vit-base-patch32` model and
+[export_clip.py](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Tools/export_clip.py) supports the existing OpenAI `clip-vit-base-patch32` model and
 OpenCLIP `ViT-B-32-256` with `datacomp_s34b_b86k` weights. It writes the image
 and text encoders as named functions in one Core AI asset, verifies tokenizer
 parity for the OpenCLIP export, and records the runtime metadata consumed by
@@ -561,22 +562,22 @@ it probably belongs in RawCull's adapter layer instead.
 
 | Topic                                     | PhotoAIKit source                                                                                                                                                                                                  |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Products and dependency graph             | `Package.swift`                                                                                                                                                                                                    |
-| Host-neutral image and decoder boundary   | `Sources/PhotoAIContracts/AIImageSource.swift`, `ImageEmbedding.swift`                                                                                                                                             |
-| Model validation and identity             | `Sources/PhotoAIContracts/ModelBundleResolver.swift`, `ModelResource.swift`, `ModelIdentity.swift`, `ModelAssetFingerprint.swift`                                                                                  |
-| Similarity descriptors and protocols      | `Sources/PhotoAIContracts/SimilarityArtifact.swift`                                                                                                                                                                |
-| Text embeddings and image/text comparison | `Sources/PhotoAIContracts/TextEmbedding.swift`                                                                                                                                                                     |
-| Segmentation contracts                    | `Sources/PhotoAIContracts/SubjectSegmentation.swift`, `SubjectMaskStorage.swift`                                                                                                                                   |
-| CLIP runtime and backend                  | `Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift`, `CoreAICLIPProvider.swift`                                                                                                                             |
-| EfficientSAM backend                      | `Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift`                                                                                                                                               |
-| SAM 3 backend                             | `Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift`                                                                                                                                                               |
-| Vision backend                            | `Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift`                                                                                                                                                |
-| Similarity orchestration                  | `Sources/PhotoAIWorkflows/EmbeddingIndexer.swift`, `SimilarityArtifactIndexer.swift`                                                                                                                               |
-| Segmentation orchestration                | `Sources/PhotoAIWorkflows/SegmentationService.swift`, `SegmentationBatchPipeline.swift`, `SubjectMask*.swift`                                                                                                      |
+| Products and dependency graph             | [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift)                                                                                                                                                                                                    |
+| Host-neutral image and decoder boundary   | [Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/AIImageSource.swift), [ImageEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ImageEmbedding.swift)                                                                                                                                             |
+| Model validation and identity             | [Sources/PhotoAIContracts/ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelBundleResolver.swift), [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelResource.swift), [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelIdentity.swift), [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelAssetFingerprint.swift)                                                                                  |
+| Similarity descriptors and protocols      | [Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SimilarityArtifact.swift)                                                                                                                                                                |
+| Text embeddings and image/text comparison | [Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/TextEmbedding.swift)                                                                                                                                                                     |
+| Segmentation contracts                    | [Sources/PhotoAIContracts/SubjectSegmentation.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SubjectSegmentation.swift), [SubjectMaskStorage.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SubjectMaskStorage.swift)                                                                                                                                   |
+| CLIP runtime and backend                  | [Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift), [CoreAICLIPProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)                                                                                                                             |
+| EfficientSAM backend                      | [Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift)                                                                                                                                               |
+| SAM 3 backend                             | [Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)                                                                                                                                                               |
+| Vision backend                            | [Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift)                                                                                                                                                |
+| Similarity orchestration                  | [Sources/PhotoAIWorkflows/EmbeddingIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/EmbeddingIndexer.swift), [SimilarityArtifactIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SimilarityArtifactIndexer.swift)                                                                                                                               |
+| Segmentation orchestration                | [Sources/PhotoAIWorkflows/SegmentationService.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SegmentationService.swift), [SegmentationBatchPipeline.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SegmentationBatchPipeline.swift), `SubjectMask*.swift`                                                                                                      |
 | Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                                                                                                          |
 | Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                                                                                                   |
 | Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                                                                                                           |
-| RawCull semantic-search policy            | `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift`, `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift`, `RawCull/Intelligence/Similarity/SimilarityScoringModel.swift` |
+| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).

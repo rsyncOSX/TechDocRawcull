@@ -2,13 +2,21 @@
 author = "Thomas Evensen"
 title = "RawCull AI models"
 date = "2026-09-26"
-lastmod = "2026-10-13"
+lastmod = "2026-10-16"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
 +++
 
 # Download and prepare the three AI model packs
+
+> **Recipe scope (16 October 2026):** Preserve the dated source/exporter pins
+> below when reproducing the original packs. The current RawCull lockfile uses
+> PhotoAIKit 1.0.0 (`4b85056e6c2603b5e382987710ca2f16f4c5c155`) and coreai-models
+> 1.0.0 (`5de95c6cd29e5e390fb36d87e13b2396668f7974`). An older recipe pin is
+> not the current app dependency. Compare exporter options and model provenance
+> before building new candidates. This documentation review did not run model
+> conversion, download packs or qualify their output.
 
 This is a terminal workbook for rebuilding RawCull's **DataComp CLIP**, **Meta
 SAM 3**, and **Qwen3-VL-2B-Instruct** model packs from source and finishing with
@@ -25,7 +33,7 @@ weights, intermediate models, three converted bundles, and three archives.
 
 These commands produce **local release candidates**, not App Store approval.
 After packaging, compare the new hashes with the application catalog and follow
-the [publishing runbook](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md)
+the [publishing runbook](https://github.com/rsyncOSX/RawCull/blob/4a09c93d4ab9806c5a00d0b928c16158c82cb8d7/Docs/newmodels.md)
 to update RawCull, upload the packs, and test a signed TestFlight build. A fresh conversion may produce different archive
 bytes even when the same source model was used.
 
@@ -635,7 +643,7 @@ candidate. The files are at:
    leave the old archive SHA-256 in the app catalog for new `.aar` files.
 4. If uploading, use the existing `rawcull-clip-datacomp`, `rawcull-sam3`, and
    `rawcull-qwen3-vl-2b` App Store Connect records. Follow
-   [`RawCull/Docs/newmodels.md`](https://github.com/rsyncOSX/RawCull/blob/version-3.3.0/Docs/newmodels.md)
+   [`RawCull/Docs/newmodels.md`](https://github.com/rsyncOSX/RawCull/blob/4a09c93d4ab9806c5a00d0b928c16158c82cb8d7/Docs/newmodels.md)
    for `xcrun altool`, API-key handling, processing checks, and TestFlight
    verification. The `AppStore` build must use Apple hosting and the matching
    App Group. A successful local `.aar` build does not test runtime inference.
@@ -647,7 +655,7 @@ candidate. The files are at:
 | `401`/`403` downloading SAM 3 | Hugging Face approval and `hf auth whoami`; accept the gated model terms. |
 | Offline source missing | Check the isolated `HF_HUB_CACHE` and the model's `refs/main`; download the exact revision before re-exporting. |
 | CLIP tokenizer parity failure | Do not package; inspect the tokenizer source and OpenCLIP configuration. |
-| SAM export leaves source asset | Package only the optimized asset selected by `select_sam3_asset.py`. |
+| SAM export leaves source asset | Package only the optimized asset selected by [select_sam3_asset.py](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Tools/select_sam3_asset.py). |
 | Qwen bundle lacks `vision.aimodel` | Rebuild with a converter that supports Qwen VLM and without `--skip-vision`. |
 | `ba-package evaluate` lists extra files | Correct its `fileSelectors`; evaluate again before packaging. |
 | Archive hash differs from the old release | Expected for a new conversion; update catalog and provenance before upload. |

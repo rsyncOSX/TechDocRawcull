@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Synchronous Code"
 date = "2026-05-19"
-lastmod = "2026-09-15"
+lastmod = "2026-10-16"
 tags = ["concurrency", "imageio", "blocking"]
 categories = ["technical details"]
 mermaid = true
@@ -17,15 +17,15 @@ Most RawCull code uses async/await, actors, and task groups. Some framework and 
 
 | Area | Files |
 |---|---|
-| Cancellation-aware blocking bridge | `RawParserKit/Sources/RawParserKit/CancellableImageIOWork.swift` |
-| RAW thumbnail and embedded JPEG extraction | `SonyThumbnailExtractor.swift`, `NikonThumbnailExtractor.swift`, `DNGThumbnailExtractor.swift`, `JPGSonyARWExtractor.swift`, `JPGNikonNEFExtractor.swift`, `DNEmbeddedJPEGExtractor.swift` |
-| RAW development and orientation | `SonyRAWJPEGCreator.swift`, `ThumbnailSharpener.swift`, `OrientationNormalizedImageLoader.swift` |
+| Cancellation-aware blocking bridge | [RawParserKit/Sources/RawParserKit/CancellableImageIOWork.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/CancellableImageIOWork.swift) |
+| RAW thumbnail and embedded JPEG extraction | [SonyThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/SonyThumbnailExtractor.swift), [NikonThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/NikonThumbnailExtractor.swift), [DNGThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNGThumbnailExtractor.swift), [JPGSonyARWExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/JPGSonyARWExtractor.swift), [JPGNikonNEFExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/JPGNikonNEFExtractor.swift), [DNEmbeddedJPEGExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNEmbeddedJPEGExtractor.swift) |
+| RAW development and orientation | [SonyRAWJPEGCreator.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/SonyRAWJPEGCreator.swift), [ThumbnailSharpener.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/ThumbnailSharpener.swift), [OrientationNormalizedImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/OrientationNormalizedImageLoader.swift) |
 | Binary RAW parsing | Sony, Nikon, and DNG MakerNote/format files in `RawParserKit/Sources/RawParserKit/` |
-| Thumbnail and preview callers | `RequestThumbnail.swift`, `ScanAndCreateThumbnails.swift`, `ScanAndExtractJPGs.swift`, `FullSizePreviewLoader.swift`, `ZoomPreviewHandler.swift`, `ComparisonImageLoader.swift` |
-| Export and JPEG encoding | `ExtractAndSaveJPGs.swift`, `SaveJPGImage.swift`, `DiskCacheManager.swift`, `FullSizeJPGDiskCache.swift` |
-| Filesystem and persistence | `ScanFiles.swift`, `DiscoverFiles.swift`, `PerFileAnalysisArtifactStore.swift`, `SettingsViewModel.swift`, `ReadSavedFilesJSON.swift`, `WriteSavedFilesJSON.swift` |
-| Image analysis | `RawCullPhotoAnalysisAdapter.swift`, `DeepAIReviewFeature.swift`, `DeepAIReviewMaskOutlineRenderer.swift` |
-| External process | `ExecuteCopyFiles.swift`, `RsyncProcessStreaming.RsyncProcess` |
+| Thumbnail and preview callers | [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/RequestThumbnail.swift), [ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/ScanAndCreateThumbnails.swift), [ScanAndExtractJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/ScanAndExtractJPGs.swift), [FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/FullSizePreviewLoader.swift), [ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/Handlers/ZoomPreviewHandler.swift), [ComparisonImageLoader.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ComparisonGridView/ComparisonImageLoader.swift) |
+| Export and JPEG encoding | [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/SaveJPGImage.swift), [DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/DiskCacheManager.swift), [FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/FullSizeJPGDiskCache.swift) |
+| Filesystem and persistence | [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/ScanFiles.swift), [DiscoverFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/DiscoverFiles.swift), [PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift), [SettingsViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/SettingsViewModel.swift), [ReadSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/JSON/ReadSavedFilesJSON.swift), [WriteSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/JSON/WriteSavedFilesJSON.swift) |
+| Image analysis | [RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift), [DeepAIReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift), [DeepAIReviewMaskOutlineRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) |
+| External process | [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift), `RsyncProcessStreaming.RsyncProcess` |
 
 ## Why Blocking Work Matters
 
@@ -160,6 +160,22 @@ Examples include formatting values, cache-key construction, parsing a fixed-size
 - Search for `CGImageSource`, `CGImageDestination`, `CIRAWFilter`, `CIContext`, `Data(contentsOf:)`, `Data.write`, `FileHandle`, directory enumeration, and process launch when auditing a new release.
 - Verify package extractors still go through `CancellableImageIOWork` and catalog callers still apply decode limits.
 - Verify detached closures capture `Data`, `URL`, scalar configuration, or other Sendable values rather than actor-owned `CGImage`/`NSImage` state.
-- Verify cancellation and completion races resume continuations exactly once; `CancellableImageIOWorkTests.swift` covers this bridge.
+- Verify cancellation and completion races resume continuations exactly once; [CancellableImageIOWorkTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/CancellableImageIOWorkTests.swift) covers this bridge.
 - Verify export/security-scope owners await detached writes before stopping access.
 - Remove deprecated compatibility names from call sites and documentation as migrations complete.
+
+## Export and RAW 9 worker boundaries
+
+[EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/EmbeddedJPGExportLoader.swift) is an explicit concurrent app helper that reads
+embedded byte ranges and may normalize/encode orientation synchronously. It is
+bounded by `ExtractAndSaveJPGs` batch admission and retains source access through
+the operation. `@concurrent` moves it off inherited main-actor isolation; it does
+not turn those framework calls into suspension points. Profile this path before
+increasing batch extraction concurrency.
+
+RawParserKit 1.3.1 also adds [Internal/RAWDecoder.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/Internal/RAWDecoder.swift): optional RAW 9 rendering
+uses a detached utility task. Its post-render cancellation check discards a late
+image but cannot preempt an executing `CIRAWFilter`/`CIContext` call. The
+[package guide]({{< relref "packages/rawparserkit.md" >}}) explains the opt-in
+flag and fallback. These paths are distinct from the GCD continuation bridge
+used by the established embedded ImageIO extractors.

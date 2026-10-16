@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-10-10"
+lastmod = "2026-10-16"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
@@ -22,14 +22,14 @@ share keys merely because they originate from the same RAW file.
 
 | Cache                         | Main files                                                                                                              | Stores                                                                             |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Thumbnail identity            | `Model/Cache/ThumbnailCacheKey.swift`                                                                                   | Source fingerprint plus representation purpose, size, orientation, and schema      |
-| Preview memory cache          | `Actors/SharedMemoryCache.swift`, `Model/Cache/CachedThumbnail.swift`                                                   | Larger `NSImage` thumbnails admitted by UI demand                                  |
-| Grid memory cache             | `Actors/SharedMemoryCache.swift`                                                                                        | Small 200 px thumbnails populated by preload                                       |
-| Thumbnail disk cache          | `Actors/DiskCacheManager.swift`                                                                                         | Representation-aware JPEG thumbnail files under the app cache directory            |
-| Full-size JPEG disk cache     | `Actors/FullSizeJPGDiskCache.swift`, `Model/Handlers/ZoomPreviewHandler.swift`                                          | Larger embedded JPEG previews for zoom                                             |
-| Per-file similarity artifacts | `Intelligence/Persistence/PerFileAnalysisArtifactStore.swift`                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
-| Burst analysis cache          | `Intelligence/Persistence/BurstAnalysisCache.swift`                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
-| Cache accounting              | `Model/Cache/TrackedThumbnailCache.swift`, `Actors/SharedMemoryCache.swift`                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
+| Thumbnail identity            | [Model/Cache/ThumbnailCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/Cache/ThumbnailCacheKey.swift)                                                                                   | Source fingerprint plus representation purpose, size, orientation, and schema      |
+| Preview memory cache          | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/SharedMemoryCache.swift), [Model/Cache/CachedThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/Cache/CachedThumbnail.swift)                                                   | Larger `NSImage` thumbnails admitted by UI demand                                  |
+| Grid memory cache             | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/SharedMemoryCache.swift)                                                                                        | Small 200 px thumbnails populated by preload                                       |
+| Thumbnail disk cache          | [Actors/DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/DiskCacheManager.swift)                                                                                         | Representation-aware JPEG thumbnail files under the app cache directory            |
+| Full-size JPEG disk cache     | [Actors/FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/FullSizeJPGDiskCache.swift), [Model/Handlers/ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/Handlers/ZoomPreviewHandler.swift)                                          | Larger embedded JPEG previews for zoom                                             |
+| Per-file similarity artifacts | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
+| Burst analysis cache          | [Intelligence/Persistence/BurstAnalysisCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Persistence/BurstAnalysisCache.swift)                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
+| Cache accounting              | [Model/Cache/TrackedThumbnailCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/Cache/TrackedThumbnailCache.swift), [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/SharedMemoryCache.swift)                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
 
 ## Thumbnail Lookup
 

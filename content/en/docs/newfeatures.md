@@ -12,6 +12,15 @@ weight = 55
 
 # Future Features and Competitive Evaluation
 
+> **Historical roadmap, current implementation note (16 October 2026):** The
+> competitive review and version 3.2.2 recommendations below retain their original
+> planning context. The reviewed app is now 3.3.3 (build 422), with Qwen, SAM 3
+> Objects and Combined Review already implemented. Those are no longer merely
+> future candidates. Follow [AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}})
+> and [Combined Review]({{< relref "ai/aicombined.md" >}}) for current behavior.
+> Competitor offerings and model redistribution terms were not requalified by
+> this source-code review.
+
 This page evaluates possible RawCull features after version 3.2.2. It compares
 the current implementation with representative professional culling products,
 identifies the most important workflow gaps, and evaluates additional models
@@ -72,7 +81,7 @@ Future automation should preserve that contract. RawCull should not silently
 delete a file, conceal a low-confidence result, or present a generative
 explanation as measured fact.
 
-## Version 3.0.0 And Current 3.2.2 Baseline
+## Historical Version 3.0.0 And 3.2.2 Baseline
 
 Version 3.0.0 is sometimes described as the non-AI version. More precisely, it
 does not require separately downloaded AI models. It still uses Apple Vision
@@ -103,7 +112,7 @@ improved ingest, broader formats, better review queues, and keyboard workflow
 can therefore benefit both release lines. Model-dependent features should
 degrade cleanly when no model is present.
 
-## Current RawCull Capabilities
+## RawCull Capabilities At The Original Review
 
 Source inspection confirms the following current application behavior:
 
@@ -558,7 +567,7 @@ model. It supports a foreground click, box prompt, multiple point queries, and
 a segment-everything point grid. RawCull already has:
 
 - a `CoreAIEfficientSAMBackend` dependency;
-- an EfficientSAM provider path in `RawCullAIIntegration`;
+- an EfficientSAM provider path in `RawCullAIModelRuntime`;
 - an EfficientSAM model directory;
 - a `RawCullSegmentationModel.efficientSAM` identity; and
 - Deep Review code capable of consuming subject masks.

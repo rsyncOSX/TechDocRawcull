@@ -3,6 +3,7 @@ author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
 date = "2026-08-21"
+lastmod = "2026-10-16"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -61,7 +62,7 @@ none of the other packages.
 
 ## 2. The Manifest Optimizes For A Small Domain Library
 
-`Package.swift` declares Swift tools 6.2, Swift 6 language mode, macOS 26, one
+[Package.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Package.swift) declares Swift tools 6.2, Swift 6 language mode, macOS 26, one
 `RawCullCore` library target, and one test target. It has no external package
 dependencies and no bundled resources.
 
@@ -103,7 +104,7 @@ It contains both strings and numbers because they serve different purposes:
 RawCull or an adapter constructs this value from RawParserKit's
 `RawImageMetadata`. RawCullCore does not know where the values came from.
 
-At the app boundary, `RawCull/Main/RawCullFileItem.swift` deliberately preserves
+At the app boundary, [RawCull/Main/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Main/RawCullFileItem.swift) deliberately preserves
 familiar app names:
 
 ```swift
@@ -167,7 +168,7 @@ non-positive dimensions return `nil`.
 
 ## 5. Burst Models Preserve Evidence, Not Just A Winner
 
-`BurstAnalysisModels.swift` defines the values exchanged by the two engines.
+[BurstAnalysisModels.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstAnalysisModels.swift) defines the values exchanged by the two engines.
 
 ```text
 BurstGroupingOutput
@@ -454,17 +455,17 @@ Use these constraints when adding a rule:
 
 | Topic                                            | RawCullCore source                                                                                     |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Product and concurrency settings                 | `Package.swift`                                                                                        |
-| EXIF transport value                             | `Sources/RawCullCore/ExifMetadata.swift`                                                               |
-| File and source identity                         | `Sources/RawCullCore/RawCullFileItem.swift`, `RawCullSourceCatalog.swift`                              |
-| Saliency summary                                 | `Sources/RawCullCore/SaliencyInfo.swift`                                                               |
-| Focus normalization                              | `Sources/RawCullCore/FocusPointParser.swift`                                                           |
-| Burst contracts and migrations                   | `Sources/RawCullCore/BurstAnalysisModels.swift`                                                        |
-| Boundary decisions                               | `Sources/RawCullCore/BurstGroupingEngine.swift`                                                        |
-| Ranking and confidence                           | `Sources/RawCullCore/BurstRankingEngine.swift`                                                         |
-| Histogram                                        | `Sources/RawCullCore/HistogramCalculator.swift`                                                        |
+| Product and concurrency settings                 | [Package.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Package.swift)                                                                                        |
+| EXIF transport value                             | [Sources/RawCullCore/ExifMetadata.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/ExifMetadata.swift)                                                               |
+| File and source identity                         | [Sources/RawCullCore/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/RawCullFileItem.swift), [RawCullSourceCatalog.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/RawCullSourceCatalog.swift)                              |
+| Saliency summary                                 | [Sources/RawCullCore/SaliencyInfo.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/SaliencyInfo.swift)                                                               |
+| Focus normalization                              | [Sources/RawCullCore/FocusPointParser.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/FocusPointParser.swift)                                                           |
+| Burst contracts and migrations                   | [Sources/RawCullCore/BurstAnalysisModels.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstAnalysisModels.swift)                                                        |
+| Boundary decisions                               | [Sources/RawCullCore/BurstGroupingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstGroupingEngine.swift)                                                        |
+| Ranking and confidence                           | [Sources/RawCullCore/BurstRankingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstRankingEngine.swift)                                                         |
+| Histogram                                        | [Sources/RawCullCore/HistogramCalculator.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/HistogramCalculator.swift)                                                        |
 | Behavior tests                                   | `Tests/RawCullCoreTests/`                                                                              |
-| RawCull metadata adapter and burst orchestration | `RawCull/Model/RawImageLoading.swift`, `RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift` |
+| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift) |
 
 Return to the package overview in [RawCull Packages](/docs/packages/), or
 continue with the file-decoding layer in

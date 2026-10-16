@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-09-30"
+lastmod = "2026-10-16"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
@@ -25,31 +25,31 @@ lockfile table below records what the current app builds.
 ## Resolved Dependency Snapshot
 
 This table is derived from
-`RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
-This snapshot is from the current RawCull checkout on September 30, 2026.
+[RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
+This snapshot is from the current RawCull checkout on October 16, 2026.
 “App” means RawCull links a product directly; “transitive” means another package
 owns the dependency. A revision-only pin has no semantic-version label.
 
 | Identity              | Relationship               | Version/branch | Revision                                   |
 | --------------------- | -------------------------- | -------------- | ------------------------------------------ |
-| PhotoAIKit            | app                        | revision pin   | `77cc1d84a5d98a485caa15be102c8a55eb3d7698` |
-| PhotoAnalysisKit      | app                        | `1.3.1`        | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
-| RawCullCore           | app                        | `1.1.2`        | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
-| RawParserKit          | app                        | `1.3.1`        | `f0e5b02a10294798afd86781da5d6510e146a7ba` |
-| RsyncArguments        | app                        | `1.0.0`        | `0ff6518136c208dfbecc1a918f045048ca79853d` |
-| RsyncProcessStreaming | app                        | `1.0.0`        | `dd86f012b352888fd146e0b6e103740dc237f740` |
-| ParseRsyncOutput      | app                        | `1.0.0`        | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
-| DecodeEncodeGeneric   | app                        | `1.0.0`        | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
-| coreai-models         | transitive from PhotoAIKit | revision pin   | `475c585fdb0fe82a83c8f777f259e9414bd44c98` |
-| EventSource           | transitive                 | `1.5.1`        | `86b5096ac59ab46e66bd1f6377c604bc1dab0bc2` |
-| swift-asn1            | transitive                 | `1.7.3`        | `3b6410f7dee09eb33cdd26260c5fd47fda19b0e2` |
-| swift-collections     | transitive                 | `1.7.1`        | `98ef3c98609a1e31b7e157b5b619579001a789d6` |
-| swift-crypto          | transitive                 | `4.5.2`        | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
-| swift-huggingface     | transitive                 | `0.11.0`       | `f2f99991f2d7d8fdb3187e4fd539cd2facf5c13d` |
-| swift-jinja           | transitive                 | `2.5.1`        | `4588064a20f3fc093c95f2f7d3359999bf30cae5` |
-| swift-transformers    | transitive                 | `1.3.4`        | `c21fdcde390313a6d98d8e33a346f2c3486c3ab0` |
-| xgrammar              | transitive                 | `0.2.2`        | `4d145cc13d878c751ebeed36af1c013074be76bc` |
-| yyjson                | transitive                 | `0.12.0`       | `8b4a38dc994a110abaec8a400615567bd996105f` |
+| PhotoAIKit | app | `1.0.0` | `4b85056e6c2603b5e382987710ca2f16f4c5c155` |
+| PhotoAnalysisKit | app | `1.3.1` | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
+| RawCullCore | app | `1.1.2` | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
+| RawParserKit | app | `1.3.1` | `f0e5b02a10294798afd86781da5d6510e146a7ba` |
+| RsyncArguments | app | `1.0.0` | `0ff6518136c208dfbecc1a918f045048ca79853d` |
+| RsyncProcessStreaming | app | `1.0.0` | `dd86f012b352888fd146e0b6e103740dc237f740` |
+| ParseRsyncOutput | app | `1.0.0` | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
+| DecodeEncodeGeneric | app | `1.0.0` | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
+| coreai-models | transitive from PhotoAIKit | `1.0.0` | `5de95c6cd29e5e390fb36d87e13b2396668f7974` |
+| EventSource | transitive | `1.5.1` | `86b5096ac59ab46e66bd1f6377c604bc1dab0bc2` |
+| swift-asn1 | transitive | `1.7.3` | `3b6410f7dee09eb33cdd26260c5fd47fda19b0e2` |
+| swift-collections | transitive | `1.7.3` | `35a1edcb8ebd2bfe251d587f0b69e62af28f508c` |
+| swift-crypto | transitive | `4.5.2` | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
+| swift-huggingface | transitive | `1.0.0` | `c30143a4616f3fa994ee3ab3e3464f752845c07c` |
+| swift-jinja | transitive | `2.5.1` | `4588064a20f3fc093c95f2f7d3359999bf30cae5` |
+| swift-transformers | transitive | `1.3.5` | `48473106a93b2d8dfb114b82f0628ebbb71734e7` |
+| xgrammar | transitive | `0.2.2` | `4d145cc13d878c751ebeed36af1c013074be76bc` |
+| yyjson | transitive | `0.12.0` | `8b4a38dc994a110abaec8a400615567bd996105f` |
 
 Do not infer the app boundary from every transitive pin. Xcode product
 references and source imports define what RawCull actually consumes.
@@ -61,7 +61,7 @@ references and source imports define what RawCull actually consumes.
 | [RawParserKit](rawparserkit/)         | `RawParserKit`                                                                                                                                               | `RawImageLoader`, `RawImageMetadata`, `RawFocusPoint`, `RawFormatRegistry`, `CGImage` results; the app maps them through `RawParserKitImageLoader`                                         |
 | [PhotoAnalysisKit](photoanalysiskit/) | `PhotoAnalysisKit`                                                                                                                                           | `PhotoAnalyzer`, `PhotoAnalysisInput`, `PhotoAnalysisDescriptor`, `PhotoAnalysisResult`, focus evidence and mask values                                                                    |
 | [RawCullCore](rawcullcore/)           | `RawCullCore`                                                                                                                                                | `RawCullFileItem`, `RawCullSourceCatalog`, `ExifMetadata`, burst inputs/results/configurations, ranking evidence, histograms; the app exposes compatibility typealiases such as `FileItem` |
-| [PhotoAIKit](photoaikit/)             | `PhotoAIContracts`, `CoreAICLIPBackend`, `CoreAISAM3Backend`, `CoreAIEfficientSAMBackend`, `VisionFeaturePrintBackend`, `PhotoAIWorkflows`, `PhotoAIStorage` | `AIImageSource`, model identities/resources, similarity artifacts/descriptors, provider protocols, segmentation requests/results, mask stores and workflows                                |
+| [PhotoAIKit](photoaikit/)             | `PhotoAIContracts`, `CoreAICLIPBackend`, `CoreAIQwenBackend`, `CoreAISAM3Backend`, `CoreAIEfficientSAMBackend`, `VisionFeaturePrintBackend`, `PhotoAIWorkflows`, `PhotoAIStorage` | `AIImageSource`, model identities/resources, similarity artifacts/descriptors, provider protocols, segmentation requests/results, mask stores and workflows                                |
 | RsyncArguments                        | `RsyncArguments`                                                                                                                                             | rsync argument builders used by `Params` and `ArgumentsSynchronize`                                                                                                                        |
 | RsyncProcessStreaming                 | `RsyncProcessStreaming`                                                                                                                                      | `RsyncProcess` and `ProcessHandlers` used by the copy executor                                                                                                                             |
 | ParseRsyncOutput                      | `ParseRsyncOutput`                                                                                                                                           | parsed transfer progress and totals used by `RemoteDataNumbers`                                                                                                                            |

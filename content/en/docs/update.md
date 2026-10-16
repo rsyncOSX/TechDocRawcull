@@ -4,10 +4,27 @@ description:
   Prioritized backlog for keeping RawCull technical documentation aligned with
   the code
 weight: 95
-lastmod: 2026-10-10
+lastmod: 2026-10-16
 ---
 
 # Documentation Update Plan
+
+**Review checkpoint: 16 October 2026.** The plan below is retained as historical
+backlog. Current ownership is `RawCullAIModelRuntime` plus
+`RawCullIntelligenceRuntime`, with application assembly in
+`RawCullApplicationState`; references below to the former `RawCullAIIntegration`
+are historical. The runtime, package snapshot, catalog access, scan/preload,
+persistence, embedded export and Combined contract documentation have been
+updated against commit `23de7bec3063cab0f8466e8367921841c5ab5a1d`.
+
+This pass inspected all content pages for code references, scope and navigation.
+Source-focused pages now link implementations and regression tests. Landing,
+about, search and site-build pages do not describe implementation and are
+preserved. The Git workflow is repository guidance; it is not a statement that
+RawCull's existing history contains no merge commits. Roadmap comparisons and
+model-conversion recipes retain their historical qualification. No documents
+were removed; Hugo compilation and model execution are left to their respective
+build/qualification workflows.
 
 This page records completed documentation work and the review checklist for
 future TechDocRawCull updates. It is
@@ -163,7 +180,7 @@ Future review checklist:
 
 ### 6. CLIP Runtime Integration
 
-Page: [How RawCull Loads and Uses CLIP](../ai/clip-in-rawcull/)
+Page: [How RawCull Loads and Uses CLIP](../ai/aiinrawcull/)
 
 Future review checklist:
 
@@ -182,7 +199,7 @@ Page: [RawCull Packages](../packages/)
 
 Future review checklist:
 
-- Derive the package list and revisions from `Package.resolved`.
+- Derive the package list and revisions from [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
 - Show which products are imported by the app and which types form each
   boundary.
 - Add a dependency-direction diagram covering RawCullCore, RawParserKit,
@@ -314,7 +331,7 @@ the two evaluation pages below remain planned.**
 
 ### 16. AI Model Downloads
 
-Page: [AI Model Download Service](../ai/aimodeldownloads/)
+Page: [AI Model Download Service](../ai/rawcullai/)
 
 Future review checklist:
 
@@ -325,7 +342,7 @@ Future review checklist:
 
 ### 17. Publishing New AI Models
 
-Page: [Publishing New RawCull AI Models](../ai/newmodels/)
+Page: [Publishing New RawCull AI Models](../ai/rawcullai/)
 
 Future review checklist:
 
@@ -337,7 +354,7 @@ Future review checklist:
 
 ### 18. AI Licence And Provenance Procedure
 
-Page: [AI Model Licence and Provenance Clearance](../ai/licenceprocedure/)
+Page: [Model licence and provenance preparation](../ai/rawcullai/#8-stage-licences-notices-and-build-provenance)
 
 Future review checklist:
 

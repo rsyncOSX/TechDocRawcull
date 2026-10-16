@@ -3,7 +3,7 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-09-15
+lastmod: 2026-10-16
 ---
 
 # File Read and Write Reference
@@ -24,7 +24,7 @@ changing sandbox access, cache locations, persistence, or export behavior.
 | App Support AI models and licence acceptance       | Read/write                               | AI model download/resource and licence services                      |
 | Thumbnail cache directory                          | Read/write/delete                        | `DiskCacheManager`                                                   |
 | Full-size JPEG preview cache                       | Read/write/prune                         | `FullSizeJPGDiskCache`, `ZoomPreviewHandler`                         |
-| Subject-mask cache                                 | Read/write/delete                        | PhotoAIKit subject-mask stores configured by `RawCullAIIntegration`  |
+| Subject-mask cache                                 | Read/write/delete                        | PhotoAIKit subject-mask stores configured by `RawCullAIModelRuntime`  |
 | Exported `.jpg` files in a chosen destination      | Write                                    | `ExtractAndSaveJPGs`, `SaveJPGImage`                                 |
 | Temporary rsync include lists / process streams    | Write/delete/read                        | `ExecuteCopyFiles`, `ArgumentsSynchronize`, `PrepareOutputFromRsync` |
 | Destination security-scoped bookmark               | Read/write UserDefaults                  | `OpencatalogView`, copy workflow                                     |
@@ -98,7 +98,7 @@ destination catalog. It supports two modes:
 
 | Mode           | Input path                                  | Output name                            |
 | -------------- | ------------------------------------------- | -------------------------------------- |
-| Embedded JPG   | `FullSizePreviewLoader.loadEmbeddedPreview` | Original basename plus `.jpg`          |
+| Embedded JPG   | `EmbeddedJPGExportLoader.jpegData(for:)` | Original basename plus `.jpg`          |
 | Demosaiced RAW | `SonyRawFormat.createFullSizeJPEG`          | Original basename plus `_demosaic.jpg` |
 
 The actor bounds parallel extraction, tracks progress and per-file failures, and
@@ -119,12 +119,12 @@ Main files:
 
 | File                           | Role                                            |
 | ------------------------------ | ----------------------------------------------- |
-| `CopyFilesView.swift`          | UI and execution lifecycle                      |
-| `OpencatalogView.swift`        | Destination picker and bookmark creation        |
-| `ExecuteCopyFiles.swift`       | Process owner and progress/result state         |
-| `ArgumentsSynchronize.swift`   | Builds rsync arguments                          |
-| `PrepareOutputFromRsync.swift` | Parses process output                           |
-| `RemoteDataNumbers.swift`      | Summarizes copied file counts and sizes         |
+| [CopyFilesView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/CopyFiles/CopyFilesView.swift)          | UI and execution lifecycle                      |
+| [OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/CopyFiles/OpencatalogView.swift)        | Destination picker and bookmark creation        |
+| [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift)       | Process owner and progress/result state         |
+| [ArgumentsSynchronize.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ParametersRsync/ArgumentsSynchronize.swift)   | Builds rsync arguments                          |
+| [PrepareOutputFromRsync.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ParametersRsync/PrepareOutputFromRsync.swift) | Parses process output                           |
+| [RemoteDataNumbers.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ParametersRsync/RemoteDataNumbers.swift)      | Summarizes copied file counts and sizes         |
 
 `ExecuteCopyFiles.startcopyfiles` first derives the selected filenames from the
 current `RawCullViewModel`. It then creates an operation-unique file under
@@ -187,11 +187,15 @@ explicit migration.
 
 ## Diagnostics Reads
 
-RawCull currently has no separate RAW-diagnostics report file or persistent
-similarity-diagnostics log in the app target. Developer diagnostics use OSLog,
-package tests, and focused app integration tests. If a file-backed log is added
-later, keep it bounded, app-owned, and free of full user paths in ordinary
-presentation.
+Combined Review has durable diagnostic/evidence storage in
+`Application Support/RawCull/AnalysisArtifacts/CombinedReview/`, owned by
+`ReviewArtifactStore`. It stores run manifests, typed stage artifacts, optional
+exact PNG inputs and opt-in rejected responses. `maximumInputBytes` defaults to
+256,000,000 bytes for retained inputs; this is not a universal limit on every
+artifact category. Run inspection is backed by `ReviewDiagnostics` and the
+Combined diagnostic views. Retained inputs and rejected model text can contain
+photographic content: follow the selected retention policy when sharing bundles.
+OSLog and focused tests remain separate diagnostic channels.
 
 ## What To Check When Changing This Area
 
@@ -209,3 +213,41 @@ presentation.
   cancellation, and deinitialization.
 - Balance every successful security-scope start exactly once at the layer that
   owns its lifetime.
+
+## Persistence initialization and recovery
+
+The live `CullingModel` begins `.unloaded`. `ensureLoaded()` coalesces concurrent
+callers onto one load task; mutation is admitted only in `.ready` with no load
+failure. A missing store means a valid empty start, while a decoding/read failure
+preserves the original and enters `.failed`. `flushPersistence()` also ensures
+initialization, so switching catalog cannot overwrite an unread store with an
+empty snapshot.
+
+`retryCullingPersistence()` retries a failed load or pending save. After a load
+recovery, `restoreCullingPresentation()` rebuilds rating lookups, valid scores,
+filters and selection. Archive/reset also refreshes the UI when the subsequent
+write fails, because the in-memory store has already changed. Failed saves remain
+dirty. Rating edits refresh `dateTagged`, including edits of existing records.
+See [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/CullingModel.swift), [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift) and
+[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/ReviewPersistenceTests.swift).
+
+`loadPersistedScoringandSaliency()` builds a filename lookup once, validates
+signature/size/modification date, and publishes score dictionaries in a batch.
+It keeps the first legacy duplicate and accepts AF scores only with a valid AF
+point and a finite positive score. This avoids repeated normalization after each
+restored item. See [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift).
+
+Settings failures are represented separately by `SettingsPersistenceFailure`
+with `.load` or `.save`. `SettingsView` exposes the failure and retry/dismiss
+controls; a missing settings file uses defaults without reporting corruption.
+See [RawCullTests/SettingsPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SettingsPersistenceTests.swift).
+
+## Embedded export is independent of display preview
+
+`EmbeddedJPGExportLoader` reads camera JPEG ranges from ARW, NEF or DNG parser
+locations. It validates candidate data as JPEG and returns the original bytes
+when standalone orientation is present or the RAW orientation is upright.
+Otherwise it normalizes orientation and encodes a standalone JPEG. It does not
+export a same-basename sidecar or a lossy display-cache entry. No usable embedded
+JPEG is a per-file export failure. The Sony demosaic mode remains a separate
+path. [RawCullTests/RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/RawImageLoadingIntegrationTests.swift) protects this boundary.

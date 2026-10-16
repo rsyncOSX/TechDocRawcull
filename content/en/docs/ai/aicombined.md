@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Combined AI Review: A Step-by-Step Code Guide"
 linkTitle = "Combined AI Review"
 date = "2026-10-10"
-lastmod = "2026-10-13"
+lastmod = "2026-10-16"
 description = "Trace 1–8-image Combined Review through source admission, registered masks, criterion observations, evidence-row reports, comparison, and saved-run compatibility."
 weight = 60
 tags = ["ai", "combined-review", "architecture", "qwen", "sam", "clip", "swift"]
@@ -19,8 +19,8 @@ are different kinds of evidence. A mask identifies pixels, CLIP relates content
 to text, a deterministic scorer measures render-dependent detail, and Qwen
 produces observations subject to validation.
 
-This guide was updated against the local `version-3.3.0` working tree on
-13 October 2026. The current UI accepts **1–8 images**, with individual results
+This guide was reviewed against RawCull 3.3.3 (build 422) on
+16 October 2026. The current UI accepts **1–8 images**, with individual results
 and selection comparison for multiple images. It supersedes the October 10
 single-image description; that day's source-admission recovery is preserved
 below as a historical example. No Combined implementation was changed as part
@@ -41,13 +41,14 @@ of the October 13 standalone Qwen/Objects repairs or this documentation update.
 | Work item | Persisted task/state/dependency record in the run manifest |
 
 For provider composition and service replacement, read [AI Runtime](/docs/ai/airuntime/).
-For the Swift patterns, read [Swift Behind the AI Pipelines](/docs/ai/aiswift/).
+For the Swift patterns, read [Concurrency](/docs/concurrency-revised/).
 
 ## 2. Start with the visible controls
 
 1. Select or tag 1–8 photographs in the catalog.
-2. Open AI Analysis and choose Combined.
-3. Choose Selected or Tagged in the header to identify the file collection.
+2. Open Combined Review from its toolbar icon beside AI Analysis.
+3. Choose Selected or Tagged to identify the file collection. Expand Review
+   settings & retained data to change the run configuration.
 4. Enter criteria, choose depth and source preference, and choose input retention.
 5. Wait for parameter/source availability checking, then start the review.
 6. Inspect each result, its limitations and retained inputs. For multiple files,
@@ -94,18 +95,18 @@ against the model's available capabilities.
 
 | File under `RawCull/Intelligence` | Responsibility |
 | --- | --- |
-| `Composition/RawCullIntelligenceRuntime.swift` | Creates stable feature and live-backend factory |
-| `Composition/CombinedReviewLiveBackend.swift` | Admits and uses concrete Qwen/SAM/CLIP model services |
-| `CombinedReview/CombinedReviewFeature.swift` | Observable controls, admission, task lifecycle, restore/resume |
-| `CombinedReview/CombinedReviewExecution.swift` | Stage execution, repair, report selection, comparison |
-| `CombinedReview/ReviewRunContract.swift` | Typed IDs, frozen snapshot and compatibility versions |
-| `CombinedReview/ReviewRunManifest.swift` | Persisted work states and evidence history |
-| `CombinedReview/ReviewImageSource.swift` | Source availability, bounded loading and declared render |
-| `CombinedReview/ReviewMaskRegistration.swift` | Registers decoded mask foreground against source raster |
-| `CombinedReview/ReviewSynthesisGrounding.swift` | Accepted observation and claim ownership rules |
-| `CombinedReview/ReviewArtifactStore.swift` | Artifact persistence and retained inputs |
+| [Composition/RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Creates stable feature and live-backend factory |
+| [Composition/CombinedReviewLiveBackend.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift) | Admits and uses concrete Qwen/SAM/CLIP model services |
+| [CombinedReview/CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) | Observable controls, admission, task lifecycle, restore/resume |
+| [CombinedReview/CombinedReviewExecution.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/CombinedReviewExecution.swift) | Stage execution, repair, report selection, comparison |
+| [CombinedReview/ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift) | Typed IDs, frozen snapshot and compatibility versions |
+| [CombinedReview/ReviewRunManifest.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewRunManifest.swift) | Persisted work states and evidence history |
+| [CombinedReview/ReviewImageSource.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewImageSource.swift) | Source availability, bounded loading and declared render |
+| [CombinedReview/ReviewMaskRegistration.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewMaskRegistration.swift) | Registers decoded mask foreground against source raster |
+| [CombinedReview/ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewSynthesisGrounding.swift) | Accepted observation and claim ownership rules |
+| [CombinedReview/ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift) | Artifact persistence and retained inputs |
 
-Presentation lives in `RawCull/Views/AIAnalysis/CombinedReviewView.swift` and the
+Presentation lives in [RawCull/Views/AIAnalysis/CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/AIAnalysis/CombinedReviewView.swift) and the
 inspection/evidence views beside it. These are source paths for the inspected
 working tree; a published branch can lag local edits.
 
@@ -304,15 +305,16 @@ inspectable; Resume additionally requires compatible files, models, source,
 stage versions and contracts. Rerun creates a new run using current controls.
 Changing a picker does not mutate the frozen preference in an older run.
 
-Current compatibility values on October 13:
+Current compatibility values on October 16 (defined by [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift)):
 
 | Contract | Version |
 | --- | --- |
-| Overall pipeline | `combined-v21` |
+| Overall pipeline | `combined-v22` |
 | Overview stage | `combined-v10` |
 | Crop observation | `combined-v21` |
-| Reconciliation/report/comparison | `combined-v21` |
-| Segmentation/identity/measurement | `combined-v6` |
+| Reconciliation/report/comparison | `combined-v22` |
+| Segmentation/identity | `combined-v6` |
+| Measurement | `combined-v7` |
 | Other stage defaults | `combined-v1` |
 | Render | `review-srgb-v1` |
 
@@ -341,7 +343,7 @@ shown above, so those historical prompt versions must not be treated as current.
 
 ## 16. Select the appropriate verification
 
-`Scripts/RunAIAnalysis.py` exercises the existing SAM/Qwen/Objects tabs plus a
+[Scripts/RunAIAnalysis.py](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/Scripts/RunAIAnalysis.py) exercises the existing SAM/Qwen/Objects tabs plus a
 separate CLIP embedding probe. It does **not** test Combined. To inspect Combined,
 use its opt-in real-model suite and available Makefile target:
 
@@ -365,3 +367,36 @@ feature regression suites (52 tests reported), but that is distinct from a
 new Combined installed-model qualification. See [AI Diagnostics](/docs/ai/aidiagnostics/)
 for why schema acceptance, model confidence and visual accuracy must remain
 separate claims.
+
+## Current AF evidence and compatibility boundaries
+
+`ReviewFileSnapshot` freezes the normalized camera AF point with each file.
+`ReviewCompatibility.make` records it as `autofocusPoint` when present, alongside
+file/render/model identities and the stage contract. `SubjectMaskFocusScorer`
+records `autofocusInsideMask` by sampling foreground at the normalized point;
+this boolean records location overlap, not proof of focus or qualified anatomy.
+The current scorer semantics are `subject-detail-v2`.
+
+The pipeline and measurement version changes reject incompatible resume work.
+They do not require every unchanged stage to use `combined-v22`: crop observation
+remains v21, overview v10 and segmentation/identity v6. Read
+[ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), [ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewSynthesisGrounding.swift),
+[ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift) and [RawCullTests/ReviewRunContractTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/ReviewRunContractTests.swift)
+together when changing persisted evidence.
+
+## Photo-first and Evidence workspace presentation
+
+Combined Review is a separate main-view mode. AI Analysis retains its SAM 3 +
+CLIP, Qwen Vision and Objects tabs. [CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/AIAnalysis/CombinedReviewView.swift) defaults to
+Photo-first and uses [CombinedReviewPresentation.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Presentation/CombinedReviewPresentation.swift) to derive findings from
+stored evidence. Inspect evidence selects the finding and its supporting region,
+then opens the Evidence workspace. Findings, Coverage & limits, and Technical
+record are separate topics; the technical record preserves the structured JSON.
+
+The saved-result picker can show a reviewed image outside the current input
+selection. Rating controls appear only when that result belongs to a file in
+the current input list. Selecting an image with no result shows an empty state;
+it must not display another image's report. Missing retained PNGs leave the
+report and metrics available. [CombinedReviewLayouts.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/AIAnalysis/CombinedReviewLayouts.swift) handles responsive
+column layout, and [RawCullTests/CombinedReviewPresentationTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/CombinedReviewPresentationTests.swift) protects
+image ownership, supporting-region resolution and observation-only findings.

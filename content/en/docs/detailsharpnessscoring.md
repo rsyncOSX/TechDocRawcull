@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
-lastmod = "2026-09-28"
+lastmod = "2026-10-16"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -105,7 +105,7 @@ the scalar score. After a non-cancelled,
 nonempty result, RawCull merges scores and subject labels into `CullingModel`
 and reapplies catalog sorting.
 
-Protected by: `RawCullTests/CullingModelTests.swift` target-scope and
+Protected by: [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/CullingModelTests.swift) target-scope and
 `calibrateAndScoreCurrentCatalog` tests.
 
 ### Preset And Quality
@@ -134,9 +134,9 @@ The effective maximum pixel size is clamped between the quality minimum
 and 2048; a nonpositive setting resolves to 2048. RAW demosaic further caps
 concurrency at 2.
 
-Protected by: `RawCullTests/SharpnessScoringTests.swift` preset, quality, size,
+Protected by: [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SharpnessScoringTests.swift) preset, quality, size,
 and concurrency assertions; package policy also has
-`PhotoAnalysisKitTests/SharpnessMetricsTests.swift`.
+[PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift).
 
 ### Image Source
 
@@ -148,8 +148,8 @@ and concurrency assertions; package policy also has
 The adapter returns `PhotoAnalysisInput(image:iso:aperture:normalizedAFPoint:)`.
 PhotoAnalysisKit never opens RawCull files and does not choose a source.
 
-Protected by: `RawCullTests/PhotoAnalysisKitIntegrationTests.swift` and adapter
-overrides in `RawCullTests/SharpnessScoringTests.swift`.
+Protected by: [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/PhotoAnalysisKitIntegrationTests.swift) and adapter
+overrides in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SharpnessScoringTests.swift).
 
 ## 2. Package Defaults And Per-Image Resolution
 
@@ -183,8 +183,8 @@ The default `SharpnessConfiguration` values at the pinned revision are:
 
 An explicit preset override wins over the aperture fallback.
 
-Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and
-`RawCullTests/SharpnessScoringTests.swift`.
+Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) and
+[RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SharpnessScoringTests.swift).
 
 ## 3. Normalization And Vision
 
@@ -200,7 +200,7 @@ Vision confidence, detail, and area as tie-break evidence. Vision rectangles use
 a bottom-origin coordinate convention; the rendered bitmap is sampled with the Y
 coordinate inverted so the intended pixels are measured.
 
-Checked against `FocusMaskEngine+Scoring.swift`. The package facade and
+Checked against [FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift). The package facade and
 RawCull integration tests check that analysis is available; they do not directly
 test candidate filtering, selection tie-breaks, or asymmetric Y-coordinate fixtures.
 
@@ -239,8 +239,8 @@ combined      = primary * (1 - w) + fine * w
 w             = clamped to 0...0.65
 ```
 
-Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` ISO and
-numeric helper tests, and `PhotoAnalysisKitTests/PhotoAnalyzerTests.swift`
+Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) ISO and
+numeric helper tests, and [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)
 end-to-end tests.
 
 ## 5. Region Samples And Robust Tail Score
@@ -280,8 +280,8 @@ outliers can still score low because the top 3% is excluded and the band mean
 is small; dense residual noise is not ruled out by this factor. Micro-contrast
 is the standard deviation of finite Laplacian samples.
 
-Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` and the
-forwarding checks in `RawCullTests/SharpnessScoringTests.swift`.
+Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) and the
+forwarding checks in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SharpnessScoringTests.swift).
 
 ## 6. Subject Construction
 
@@ -305,7 +305,7 @@ This prevents one tiny high-energy patch from replacing the broad subject
 measurement while still rewarding localized detail.
 
 Checked against `conservativeSubjectScore` and `computeSharpnessAnalysis` in
-`FocusMaskEngine+Scoring.swift`. The pinned tests do not directly assert this
+[FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift). The pinned tests do not directly assert this
 blend or its missing-evidence branches.
 
 ### How A Local Patch Is Chosen
@@ -313,7 +313,7 @@ blend or its missing-evidence branches.
 "Best" means first selected by composite patch ranking, not necessarily the
 patch with the largest robust-tail score. The scoring path reuses
 `patchRankings` and `selectEvidencePatches` from
-`FocusMaskEngine+MaskGeneration.swift`, applied to the scoring energy image.
+[FocusMaskEngine+MaskGeneration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+MaskGeneration.swift), applied to the scoring energy image.
 
 Patch dimensions are 34% of the search region, bounded to 3.5%...14% of the
 full image dimension, with 50% overlap. Ranking combines robust-tail score,
@@ -400,7 +400,7 @@ of the physical cause of blur:
   0.55;
 - otherwise **none**.
 
-Protected by: `PhotoAnalysisKitTests/SharpnessMetricsTests.swift` focus-failure
+Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) focus-failure
 and aperture tests.
 
 ## 9. Score Range, UI Normalization, And Persistence
@@ -423,9 +423,9 @@ and modification date on reload. Legacy descriptors decode but are stale.
 
 Protected by:
 
-- `PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift`;
-- `RawCullTests/SharpnessScoringTests.swift`;
-- `RawCullTests/CullingModelTests.swift`.
+- [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift);
+- [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/SharpnessScoringTests.swift);
+- [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/CullingModelTests.swift).
 
 ## Assessment And Validation Priorities
 
