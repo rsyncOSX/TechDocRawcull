@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "API Documentation"
 date = "2026-10-15"
-lastmod = 2026-10-15"
+lastmod = "2026-10-15"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
