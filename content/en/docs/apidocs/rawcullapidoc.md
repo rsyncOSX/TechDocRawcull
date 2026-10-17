@@ -1,6 +1,6 @@
 +++
 author = "Thomas Evensen"
-title = "API Documentation"
+title = "API RawCull"
 date = "2026-10-15"
 lastmod = "2026-10-15"
 weight = 20
