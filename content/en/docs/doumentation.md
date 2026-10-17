@@ -67,7 +67,7 @@ Launch from Xcode, open a folder containing supported RAW photographs, inspect a
 | ParseRsyncOutput | Interpretation of rsync output |
 | DecodeEncodeGeneric | Codable persistence support |
 
-Read exact direct and transitive pins in [Package.resolved](../RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](../ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
+Read exact direct and transitive pins in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/main/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](https://github.com/rsyncOSX/RawCull/blob/main/ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
 
 ### Tests and release checks
 
@@ -79,9 +79,9 @@ make verify-ai-import-boundary
 make release-preflight
 ```
 
-Choose checks appropriate to the change. Smoke covers selected critical paths; full runs the suite with Thread Sanitizer; performance covers deliberately expensive cases. Selection manifests and enumeration verification are part of the test contract. See [test architecture](../RawCullTests/TEST_ARCHITECTURE.md).
+Choose checks appropriate to the change. Smoke covers selected critical paths; full runs the suite with Thread Sanitizer; performance covers deliberately expensive cases. Selection manifests and enumeration verification are part of the test contract. See [test architecture](https://github.com/rsyncOSX/RawCull/blob/main/RawCullTests/TEST_ARCHITECTURE.md).
 
-Installed-model probes are opt-in: `make releaseaiobjectstest`, `make releasesharpnesstest`, `make combinedinputstest`, and `make combinedselectiontest`. Read the current Makefile and [release-test guide](../RawCullReleaseTests/README.md) before running them: they can read local photographs and write reports. These checks are not substitutes for deterministic tests.
+Installed-model probes are opt-in: `make releaseaiobjectstest`, `make releasesharpnesstest`, `make combinedinputstest`, and `make combinedselectiontest`. Read the current Makefile and [release-test guide](https://github.com/rsyncOSX/RawCull/blob/main/RawCullReleaseTests/README.md) before running them: they can read local photographs and write reports. These checks are not substitutes for deterministic tests.
 
 Maintenance: update requirements and commands when project settings, package resolution, schemes, or Make targets change.
 
@@ -163,7 +163,7 @@ Examples below run inside the app module. Names such as `viewModel`, `runtime`, 
 
 ### 1. Catalog loading and sorting
 
-Source: [RawCullViewModel+Catalog.swift](../RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](../RawCull/Actors/ScanFiles.swift).
+Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Actors/ScanFiles.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -197,7 +197,7 @@ Helper functions: `beginCatalogLoad`, `isActiveCatalogLoad`, `resetCatalogWorkin
 
 ### 2. Culling decisions and persistence
 
-Source: [RawCullViewModel+Culling.swift](../RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), [CullingModel.swift](../RawCull/Model/ViewModels/CullingModel.swift).
+Source: [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/CullingModel.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -229,7 +229,7 @@ Helper functions: `rebuildRatingCache`, `refreshCullingDerivedState`, and `sched
 
 ### 3. Preview loading, zoom and JPEG export
 
-Source: [RequestThumbnail.swift](../RawCull/Actors/RequestThumbnail.swift), [RawCullViewModel+Thumbnails.swift](../RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](../RawCull/Actors/ExtractAndSaveJPGs.swift).
+Source: [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Actors/RequestThumbnail.swift), [RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Actors/ExtractAndSaveJPGs.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -262,7 +262,7 @@ Helper functions: `SaveJPGImage.outputURL`, JPEG encoding, timing estimates, pro
 
 ### 4. Sharpness and focus analysis
 
-Source: [RawCullViewModel+Sharpness.swift](../RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](../RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
+Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
 
 `calibrateAndScoreCurrentCatalog() async` calibrates and scores `sharpnessScoringTargetFiles`, re-sorts, and persists compatible scoring metadata after a non-cancelled run. Despite its name, the target may be a selection or filtered scope:
 
@@ -283,7 +283,7 @@ Helper functions: calibration adapters, persisted-score hydration, mask renderin
 
 ### 5. Similarity indexing and semantic search
 
-Source: [RawCullSimilarityFeature.swift](../RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [RawCullSemanticSearchFeature.swift](../RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift).
+Source: [RawCullSimilarityFeature.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -310,7 +310,7 @@ Helper functions: generation checks, application binding, identity probes, backe
 
 ### 6. Burst grouping and decisions
 
-Source: [RawCullViewModel+BurstGrouping.swift](../RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift), [BurstAnalysisCoordinator.swift](../RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
+Source: [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift), [BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -336,7 +336,7 @@ Helper functions: group signatures, cache snapshots, ranking assembly, undo capt
 
 ### 7. AI analysis input and feature actions
 
-Source: [RawCullViewModel+AIAnalysis.swift](../RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
+Source: [RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
 
 `aiAnalysisFiles(for:) -> [FileItem]` resolves `.gridSelection` or `.taggedImages`. Grid selection uses `selectedFileIDs`, falling back to the focused ID, and admits only visible filtered files. Tagged input uses persisted ratings of at least 2 within the active scope. `preserveAIAnalysisGridSelection()` freezes the fallback batch before browsing tagged images changes focus.
 
@@ -363,7 +363,7 @@ Helper functions: response decoders, validation feedback, mask outlines, object 
 
 ### 8. Combined Review
 
-Source: [CombinedReviewFeature.swift](../RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](../RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), and execution/backend files in the same directory.
+Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), and execution/backend files in the same directory.
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -397,7 +397,7 @@ Helper functions: manifest construction, work IDs, evidence grounding, geometry,
 
 ### 9. Model installation and settings
 
-Source: [RawCullAIModelDownloadsModel.swift](../RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift), [RawCullAIModelDownloadService.swift](../RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift), [SettingsViewModel.swift](../RawCull/Model/ViewModels/SettingsViewModel.swift).
+Source: [RawCullAIModelDownloadsModel.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift), [RawCullAIModelDownloadService.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift), [SettingsViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ViewModels/SettingsViewModel.swift).
 
 | Function | Input | Response and effects |
 |---|---|---|
@@ -423,7 +423,7 @@ Helper functions: catalogue descriptors, capability validation, licence provenan
 
 ### 10. RAW copy and process completion
 
-Source: [ExecuteCopyFiles.swift](../RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift).
+Source: [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/main/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift).
 
 `ExecuteCopyFiles.startCopyFiles() -> Result<Void, CopyStartupFailure>` resolves configuration and selected files, obtains source/destination access, writes an operation-specific include list and launches streaming rsync. Its instance carries `config`, `dryrun`, `rating`, `copyTaggedFiles` and the bound view model. A successful return means the process started; it does not mean copying completed.
 
