@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -314,16 +314,22 @@ records:
 
 The descriptor deliberately excludes per-image ISO and aperture, mask-only
 presentation settings, decoded dimensions, source choice, and source-file
-identity. A host must add those values to its cache identity.
+identity. A host must account for changes in those inputs and decode policy when
+deciding whether a persisted result is reusable.
 
 ```text
-Host sharpness cache identity
+RawCull persisted sharpness identity
 ├── PhotoAnalysisKit SharpnessAnalysisDescriptor
-├── per-image ISO and aperture
-├── source file identity
-├── selected preview/decode policy
-└── decoded pixel dimensions
+├── selected embedded-preview or RAW source
+├── effective maximum pixel size
+└── source file size and modification date
 ```
+
+RawCull's signature records requested effective size rather than every actual
+decoded dimension. Per-image metadata is supplied with each analysis input;
+source size/modification checks invalidate replaced input files. See
+[Focus Mask and Sharpness]({{< relref "../focusmask.md" >}}) for the exact
+host signature and restoration contract.
 
 ## 8. Bounded Batch Analysis
 
@@ -508,7 +514,7 @@ that concern belongs in RawCull's adapter or policy layer.
 | Metal source and compiled resource   | `Sources/PhotoAnalysisKit/Resources/`                                             |
 | Extraction decisions                 | `Documentation/ExtractionMap.md`                                                  |
 | Public behavior tests                | `Tests/PhotoAnalysisKitTests/`                                                    |
-| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
+| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
 
 Next, see how package-neutral measurements become culling-domain decisions in
 [How RawCullCore Is Constructed](../rawcullcore/).

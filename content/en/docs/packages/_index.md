@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
@@ -18,15 +18,17 @@ rsync/persistence support packages. The package repositories are separately
 versioned. They are **not** copied source snapshots inside TechDocRawCull; paths
 under `Sources/` and `Tests/` in these guides refer to the named package
 repository. The revision notes at the start of each guide say whether its detailed
-walkthrough was reviewed at the app's current pin. In particular, the PhotoAIKit
-and RawParserKit guides preserve their earlier architecture audits while the
-lockfile table below records what the current app builds.
+walkthrough was reviewed at the app's current pin. The PhotoAIKit guide preserves its earlier architecture audit plus later
+contract additions. The RawParserKit guide retains its earlier audit and records
+the 1.3.1 RAW 9 and 1.3.2 generic-format deltas explicitly. Unchanged package
+pins were checked against the preceding lockfile snapshot; sibling package HEADs
+do not redefine the application baseline.
 
 ## Resolved Dependency Snapshot
 
 This table is derived from
-[RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
-This snapshot is from the current RawCull checkout on October 16, 2026.
+[RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
+This snapshot is from the current RawCull checkout on October 22, 2026.
 “App” means RawCull links a product directly; “transitive” means another package
 owns the dependency. A revision-only pin has no semantic-version label.
 
@@ -35,7 +37,7 @@ owns the dependency. A revision-only pin has no semantic-version label.
 | PhotoAIKit | app | `1.0.0` | `4b85056e6c2603b5e382987710ca2f16f4c5c155` |
 | PhotoAnalysisKit | app | `1.3.1` | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
 | RawCullCore | app | `1.1.2` | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
-| RawParserKit | app | `1.3.1` | `f0e5b02a10294798afd86781da5d6510e146a7ba` |
+| RawParserKit | app | `1.3.2` | `07801a34a82d7720d301a80724c36a5b8c9f1d6c` |
 | RsyncArguments | app | `1.0.0` | `0ff6518136c208dfbecc1a918f045048ca79853d` |
 | RsyncProcessStreaming | app | `1.0.0` | `dd86f012b352888fd146e0b6e103740dc237f740` |
 | ParseRsyncOutput | app | `1.0.0` | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
@@ -86,12 +88,14 @@ flowchart TD
     Parser -. "app adapter" .-> Core
     Analysis -. "app adapter" .-> Core
     AI -. "app adapter" .-> Core
-    Args --> Process
-    Process --> Output
 ```
 
-Solid arrows are compile-time imports by the app or support flow. Dotted arrows
+Solid arrows are compile-time imports by the app. Dotted arrows
 are value translation performed by RawCull, not package dependencies.
+
+The three rsync support packages do not depend on one another. RawCull connects
+argument building, process execution and streamed-output parsing in its copy
+workflow. The runtime sequence is not a package import chain.
 
 ## Recommended Reading Order
 

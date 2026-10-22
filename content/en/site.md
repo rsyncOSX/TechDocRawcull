@@ -1,6 +1,6 @@
 ---
 title: Website information
-likeTitle: Site info
+linkTitle: Site info
 description: Information about the website.
 type: docs
 params:
@@ -14,6 +14,11 @@ v{{% param version %}} </span>][version]
 
 ## Build information
 
-{{% td/site-build-info/netlify team="docsy-example" %}}
+The site source is maintained in
+[TechDocRawcull](https://github.com/rsyncOSX/TechDocRawcull).
+The [documentation review record]({{< relref "docs/update.md" >}}) identifies
+the application commit and package revisions used by the technical guides.
+Deployment time and source-review time are separate: a site rebuild does not
+mean the application implementation has been reviewed again.
 
 [version]: <https://github.com/google/docsy/releases/v{{% param version %}}>

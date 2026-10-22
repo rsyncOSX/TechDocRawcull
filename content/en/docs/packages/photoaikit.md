@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -577,7 +577,7 @@ it probably belongs in RawCull's adapter layer instead.
 | Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                                                                                                          |
 | Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                                                                                                   |
 | Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                                                                                                           |
-| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).

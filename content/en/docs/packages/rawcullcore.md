@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -104,7 +104,7 @@ It contains both strings and numbers because they serve different purposes:
 RawCull or an adapter constructs this value from RawParserKit's
 `RawImageMetadata`. RawCullCore does not know where the values came from.
 
-At the app boundary, [RawCull/Main/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Main/RawCullFileItem.swift) deliberately preserves
+At the app boundary, [RawCull/Main/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Main/RawCullFileItem.swift) deliberately preserves
 familiar app names:
 
 ```swift
@@ -465,8 +465,16 @@ Use these constraints when adding a rule:
 | Ranking and confidence                           | [Sources/RawCullCore/BurstRankingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstRankingEngine.swift)                                                         |
 | Histogram                                        | [Sources/RawCullCore/HistogramCalculator.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/HistogramCalculator.swift)                                                        |
 | Behavior tests                                   | `Tests/RawCullCoreTests/`                                                                              |
-| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift) |
+| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift) |
 
 Return to the package overview in [RawCull Packages](/docs/packages/), or
 continue with the file-decoding layer in
 [How RawParserKit Is Constructed](../rawparserkit/).
+
+## The exposure histogram is an app-level display product
+
+RawCull's temporary exposure-inspection histogram uses three RGB channels and
+near-black/near-white fractions from the completed sRGB preview. It does not
+replace or call this package's single normalized luminance histogram. Keep the
+two algorithms and their interpretation separate when changing display code.
+See [RAW Formats and Exposure Inspection]({{< relref "../raw-inspection.md" >}}).

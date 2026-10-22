@@ -41,7 +41,7 @@ Most of my career was spent in IT management rather than hands-on development. W
 
 Build & distribution
 
-RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. It's digitally signed and notarized by Apple, so you can trust it hasn't been tampered with and meets Apple's security standards.
+RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. Release builds are digitally signed and notarized by Apple. The technical guides explain the application architecture, source boundaries and persistence behavior.
 
 {.text-center}
 
@@ -51,7 +51,7 @@ RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. It's d
 
 About this website
 
-This documentation runs on **Hugo**, a fast static site generator, with the **[Docsy](https://github.com/google/docsy)** theme. The source lives on GitHub; Netlify rebuilds the site automatically within seconds of any change to `main` — so what you're reading is always current.
+This documentation runs on **Hugo**, a fast static site generator, with the **[Docsy](https://github.com/google/docsy)** theme. The source lives on GitHub; Deployment follows the documentation repository. Implementation guides identify the app commits and package revisions they describe; a new source commit does not automatically update their content.
 
 {.text-center}
 

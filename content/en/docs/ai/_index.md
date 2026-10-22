@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
@@ -21,7 +21,7 @@ to a persisted similarity artifact.
 
 The source for this section comes from the pinned PhotoAIKit dependency and the
 RawCull repository. Paths beginning with `Sources/` refer to PhotoAIKit at the
-revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
+revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
 `RawCull/Intelligence`; app composition and presentation remain under
 `RawCull/Main`, `RawCull/Model`, and `RawCull/Views`.
 
@@ -37,7 +37,7 @@ revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec
 | [AI Diagnostics and Validation](/docs/ai/aidiagnostics/) | Why can inference finish but an analysis fail? | You are inspecting real responses or designing regression tests |
 | [Concurrency](/docs/concurrency-revised/) | How do actors, observation, cancellation, and typed evidence fit together? | You are learning the Swift implementation |
 | [Model licence and provenance preparation](/docs/ai/rawcullai/#8-stage-licences-notices-and-build-provenance) | What evidence is required before a model can ship? | You are reviewing licences, provenance, or release readiness |
-| [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/4a09c93d4ab9806c5a00d0b928c16158c82cb8d7/Docs/newmodels.md) | How are packs published and Objects tested? | You are preparing a model release or updating the download manifest |
+| [AI Diagnostics and Validation]({{< relref "aidiagnostics.md" >}}) | How are inference and response contracts checked? | You are preparing an installed-model evaluation |
 
 PhotoAIKit and RawCull use these AI backends:
 
@@ -47,7 +47,7 @@ PhotoAIKit and RawCull use these AI backends:
 - **Qwen3-VL** for local photo analysis and for concept discovery and assessment
   of numbered SAM 3 objects.
 
-The current catalog inspected in the 3.3.3 checkout exposes DataComp CLIP, Meta SAM 3,
+The catalog inspected in the 3.3.5 (build 425) checkout exposes DataComp CLIP, Meta SAM 3,
 and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
 a production download. SAM 3 requires acceptance of its verified bundled
 licence before download. The App Store build uses Apple-hosted Managed
@@ -66,17 +66,18 @@ The [PhotoAIKit architecture guide](/docs/packages/photoaikit/) covers SAM 3
 contracts, workflows, and storage so that the package design is understandable. Not every reusable package capability is necessarily
 exposed as a finished RawCull user workflow.
 
-## Objects test-release status
+## Objects evidence and historical evaluations
 
-The maintainer is preparing a user test of **AI Analysis → Objects**. The
-feature combines Qwen concept discovery, separate SAM 3 masks, and Qwen
-assessment of numbered crops. The structural decoder checks board IDs and
-response fields; it cannot verify that generated text matches the photograph.
-A recent two-puffin result had two retained objects but an invented third bird
-in its summary, and a separate two-puffin result has an unresolved
-crop/description mismatch. Treat Objects output as advisory and verify it
-against the source. See [Publishing and Testing RawCull AI Models](https://github.com/rsyncOSX/RawCull/blob/4a09c93d4ab9806c5a00d0b928c16158c82cb8d7/Docs/newmodels.md)
-for the known issues, tester checks, and release evidence still needed.
+Objects combines Qwen concepts, SAM 3 masks and numbered-crop assessment. The
+decoder validates response shape and ownership; it cannot establish visual truth.
+After bounded repair, selective focus abstention can preserve supported findings
+while removing unsupported focus claims. The current implementation and fixtures
+are described in [AI Models in RawCull]({{< relref "aiinrawcull.md" >}}).
+
+The older publishing/test reports are no longer in the current application tree.
+Dated photographic observations in these guides remain historical and do not
+establish current release readiness. This review did not rerun installed models.
+Use [AI Diagnostics]({{< relref "aidiagnostics.md" >}}) for present test entry points.
 
 ## The Central Design Idea
 
@@ -93,7 +94,7 @@ RawCull and PhotoAIKit answer different kinds of questions.
 **RawCull asks:**
 
 - Where are models installed for this application?
-- How is a Sony, Nikon, or DNG RAW file decoded for AI input?
+- How is a registered RAW file decoded for AI input, and what source fidelity is admitted?
 - Which backend did the user request?
 - When should a catalog be indexed or reindexed?
 - How do similarity distances affect burst grouping and culling?
@@ -229,7 +230,7 @@ selection, and storage lifecycle.
 The October 13 tab probes exercise SAM Deep Review, a separate CLIP embedding
 check, standalone Qwen, and Objects. They do not execute Combined Review.
 Passing a JSON contract establishes accepted structure and some consistency;
-it does not establish visual accuracy. The latest inspected run had 17/18
-successful analyses before a subsequent Objects negation fix. That fix passed
-focused unit tests; the next installed-model run was still pending at the time
-of this documentation update.
+it does not establish visual accuracy. The historical October 13 account reported 17/18 successful analyses before
+a later Objects negation fix. It is a dated result, not a fresh evaluation of
+3.3.5. Current source inspection and model-free fixtures do not replace a new
+installed-model run.

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawBrowse AI models"
 date = "2026-09-26"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "github", "release"]
 categories = ["technical details"]
@@ -456,3 +456,15 @@ Reference implementations: [PhotoAIKit export tools](https://github.com/rsyncOSX
 [the recorded CoreAI revision](https://github.com/apple/coreai-models/tree/1953c4f90ba0214c1abc7bebcb9be5107e329a46),
 and RawBrowse's [model publishing instructions](https://github.com/rsyncOSX/RawBrowse/blob/4177aebaf981275f2862b2f17c3f783927498e14/ModelAssets/README.md) and
 [manifest template](https://github.com/rsyncOSX/RawBrowse/blob/4177aebaf981275f2862b2f17c3f783927498e14/ModelAssets/manifest.template.json).
+
+## Relationship to the current application
+
+This is a pinned model-preparation recipe. Its exporter revisions, source-weight
+snapshots and historical tool versions are retained deliberately; the October 22
+application review did not rebuild or publish model packs. Do not substitute a
+new source revision into the commands merely because the app version changed.
+Current download/installation UI ownership is described in
+[AI Runtime]({{< relref "airuntime.md" >}}), and evaluation entry points in
+[AI Diagnostics]({{< relref "aidiagnostics.md" >}}). Earlier links to
+`RawCull/Docs/newmodels.md` open historical commits because that report has been
+removed from the current application tree.

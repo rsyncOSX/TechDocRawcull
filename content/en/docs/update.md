@@ -1,467 +1,133 @@
 ---
-title: Documentation Update Plan
-description:
-  Prioritized backlog for keeping RawCull technical documentation aligned with
-  the code
+title: Documentation Review Record
+description: Reviewed source baseline, page dispositions, verification limits and maintenance triggers.
 weight: 95
-lastmod: 2026-10-16
+lastmod: 2026-10-22
 ---
 
-# Documentation Update Plan
+# Documentation Review Record
 
-**Review checkpoint: 16 October 2026.** The plan below is retained as historical
-backlog. Current ownership is `RawCullAIModelRuntime` plus
-`RawCullIntelligenceRuntime`, with application assembly in
-`RawCullApplicationState`; references below to the former `RawCullAIIntegration`
-are historical. The runtime, package snapshot, catalog access, scan/preload,
-persistence, embedded export and Combined contract documentation have been
-updated against commit `23de7bec3063cab0f8466e8367921841c5ab5a1d`.
+## Source baseline — 22 October 2026
 
-This pass inspected all content pages for code references, scope and navigation.
-Source-focused pages now link implementations and regression tests. Landing,
-about, search and site-build pages do not describe implementation and are
-preserved. The Git workflow is repository guidance; it is not a statement that
-RawCull's existing history contains no merge commits. Roadmap comparisons and
-model-conversion recipes retain their historical qualification. No documents
-were removed; Hugo compilation and model execution are left to their respective
-build/qualification workflows.
+This review covers all **36 existing Markdown pages** under `content/en`, plus
+three new pages. It reconciles implementation changes since the preceding
+RawCull baseline `23de7bec3063cab0f8466e8367921841c5ab5a1d` with the latest
+checked-in source available in the local repositories:
 
-This page records completed documentation work and the review checklist for
-future TechDocRawCull updates. It is
-ordered by the risk that stale documentation will teach the wrong architecture,
-not simply by the age or length of an article.
+| Repository | Reviewed commit / version | Scope |
+| --- | --- | --- |
+| [RawCull](https://github.com/rsyncOSX/RawCull/tree/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91) | `b46501739f6a09c0e2df352fc3ed2bf8e10a0e91`; 3.3.5, build 425; `version-3.3.5` | Application, focused tests, project metadata, dependency lockfile and recent commit diff |
+| [RawParserKit](https://github.com/rsyncOSX/RawParserKit/tree/07801a34a82d7720d301a80724c36a5b8c9f1d6c) | 1.3.2; `07801a34a82d7720d301a80724c36a5b8c9f1d6c` | Actual RawCull dependency pin, including generic-format additions |
+| [RawBrowse](https://github.com/rsyncOSX/RawBrowse/tree/5815fd64ca02185c1ca6300311794a3ecacf6ec8) | `5815fd64ca02185c1ca6300311794a3ecacf6ec8` | Companion API guide, source-link repair and changes since October 17 |
 
-The intended reader understands Swift and SwiftUI at an intermediate level. Each
-article should therefore explain ownership, data flow, cancellation,
-persistence, and extension points before presenting low-level formulas or
-implementation details.
+The [package overview]({{< relref "packages/_index.md" >}}) records every RawCull
+resolved dependency. PhotoAnalysisKit 1.3.1, RawCullCore 1.1.2 and PhotoAIKit 1.0.0
+remain at their preceding pins. Their package algorithms are not rewritten as
+if a UI refactor changed them. Package walkthroughs explicitly retain earlier
+audit scopes where applicable and add current integration/delta sections.
 
-## Recently Completed Baseline
+Current implementation links use immutable commits. Model-preparation recipes,
+dated cache archaeology and historical evaluation references retain their
+original pins. A repository branch or a separately newer sibling checkout is
+not a substitute for the application's resolved dependency. No remote fetch,
+release publication or installed-model qualification is implied by this review.
 
-The following pages were reconciled with the RawCull source on 15 September 2026
-and established the architecture learning path:
+## Structural decisions
 
-| Page                                          | Current baseline                                                                                         |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [RawCull Tech Documentation](../)             | Repository map, composition root, architecture, and reading order                                        |
-| [Burst Groups](../burstgroup/)                | Backend-selectable similarity artifacts, per-file persistence, cache schema 9, and the current workspace |
-| [Thumbnails and Scan Pipeline](../thumbnail/) | Preload gating, request coalescing, replacement-safe identity, and current cache admission rules         |
-| [Cache System](../cache/)                     | Representation-aware thumbnail caches and two-level similarity persistence                               |
-| [File Read and Write](../filereadandwrite/)   | Settings JSON, saved-data recovery, exports, security scopes, diagnostics, and rsync cleanup             |
+The new [Viewer Architecture]({{< relref "viewer-architecture.md" >}}) guide
+explains session state, task identity, shared geometry and keyboard ownership
+across screens. The new [RAW Formats and Exposure Inspection]({{< relref
+"raw-inspection.md" >}}) guide separates registry admission, actual OS decoding,
+export, development and display-referred inspection evidence.
 
-These pages still need review whenever their source areas change, but they are
-not part of the immediate stale-document backlog below.
+The large RawCull API article is split into an
+[application walkthrough]({{< relref "apidocs/rawcullapidoc.md" >}}) and an
+[internal Swift method reference]({{< relref "apidocs/rawcull-internal-api.md" >}}).
+The old main-reference section remains as a forwarding section. Existing page
+names, the concurrency slug and the RawBrowse filename are retained to preserve
+published entry points.
 
-## Cache Documentation Follow-up — 10 October 2026
+Important corrections include the synthetic Single Images ID −1 versus real
+persisted group states, deletion of Combined evidence under Delete Cache,
+complete preference clearing after Objects focus abstention, and the histogram's
+any-channel versus clipping overlay's all-channel predicates. Historical model
+results and roadmap research are identified as dated rather than presented as
+qualification of this build.
 
-The cache synchronization follow-up is complete:
+The former accumulated update plan is available in
+[the preceding documentation revision](https://github.com/rsyncOSX/TechDocRawcull/blob/b7ed15c667fc13a6db8bbf7b438a505f4810e776/content/en/docs/update.md).
+It is historical context, not the current outstanding-work list.
 
-| Page | Reconciled behavior |
+## Page-by-page disposition
+
+| Page | Review result |
 | --- | --- |
-| [Synchronizing Cache Storage and Accounting]({{< relref "cache-accounting.md" >}}) | New walkthrough of the owned delegate, recursive lock, replacement IDs, clearing, teardown, and regression tests |
-| [Memory Cache]({{< relref "cache.md" >}}) | Wrapper ownership, synchronized accounting, and current persistence source paths |
-| [Thumbnails]({{< relref "thumbnail.md" >}}) | Preview/grid wrapper integration and admission policy without an explicit LRU guarantee |
-| [Memory Pressure]({{< relref "memorypressure.md" >}}) | Current pressure responses, synchronized cache clearing, accounting observations, and removed diagnostics claims |
-| [Concurrency]({{< relref "concurrency.md" >}}) | Synchronous locking boundary and cache accounting source-to-test mapping |
-
-This follow-up checked the cache-related descriptions against the current source;
-it does not constitute a fresh audit of every package, algorithm, or release
-procedure. The sections below preserve review criteria from the earlier plan.
-Completed criteria are maintenance checks, not outstanding implementation work.
-Planned pages remain proposals until they are added.
-
-## Priority Definitions
-
-| Priority | Meaning                                                                                                                | Target                                            |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| P0       | The article may currently teach an incorrect runtime model or important invariant                                      | Update before using it as an implementation guide |
-| P1       | The article is broadly useful but lacks current ownership, UI flow, testing, or failure behavior                       | Update after P0                                   |
-| P2       | The article is specialized or operational and should be checked against current packages, release tooling, or evidence | Update after core architecture pages              |
-| P3       | The content is stable process guidance with low architectural risk                                                     | Review when the workflow changes                  |
-
-## P0 — Correct The Core Runtime Model
-
-Status: **Earlier baseline marked complete; retain these criteria for future review.**
-
-### 1. Concurrency
-
-Page: [Concurrency](../concurrency-revised/)
-
-Status: **Current architecture coverage present; cache boundary refreshed on
-10 October 2026.**
-
-Completed coverage:
-
-- Current composition and presentation boundaries at `RawCullApp`,
-  `RawCullMainView`, `RawCullViewModel`, and the intelligence runtime.
-- Catalog, thumbnail, burst, and termination flow diagrams; preload gating,
-  exact-key coalescing, waiter cancellation, generation guards, and scope owners.
-- Actor serialization, bounded task groups, detached work, continuation cleanup,
-  and a source-to-test table.
-- Synchronous `TrackedThumbnailCache` locking and
-  `CacheAccountingConcurrencyTests` for replacements, clearing, and eviction.
-
-Review these contracts when ownership, cancellation, executor boundaries, or
-cache mutation paths change. The presence of a test reference records coverage;
-it does not claim that the tests were rerun during a documentation update.
-
-### 2. Focus Mask And Sharpness Overview
-
-Page: [Focus Mask and Sharpness](../focusmask/)
-
-Why now:
-
-- It is the bridge between the UI, `SharpnessScoringModel`, `FocusMaskModel`,
-  PhotoAnalysisKit, saved culling data, and burst ranking.
-- Recent scoring settings, source selection, calibration, and cache-signature
-  changes should be reflected before readers use the detailed algorithm pages.
-
-Future review checklist:
-
-- Add an ownership diagram from `SharpnessControlsView` and scoring sheets
-  through the main-actor models into PhotoAnalysisKit.
-- Explain `SharpnessAnalysisDescriptor`, effective thumbnail size, source
-  choice, calibration lifetime, and persistence validation.
-- Separate scalar sharpness, saliency evidence, focus-point evidence, and the
-  rendered focus mask.
-- Document cancellation, bounded scoring, progress publication, and stale-result
-  prevention.
-- Replace broad file lists with a guided “read these files in order” section.
-
-### 3. Detailed Sharpness Scoring
-
-Page: [Detailed Sharpness Scoring](../detailsharpnessscoring/)
-
-Future review checklist:
-
-- Revalidate every constant, default, formula, quality preset, source choice,
-  and score range against the pinned PhotoAnalysisKit revision.
-- Label package-owned behavior separately from RawCull-owned orchestration and
-  UI normalization.
-- Add one compact worked example for a medium-level reader before the
-  formula-by-formula reference.
-- Link each major step to the test that protects it.
-- Remove duplicated explanation already covered by the overview and retain this
-  page as the algorithm-level reference.
-
-### 4. Detailed Focus Mask Computation
-
-Page: [Detailed Focus Mask Computation](../detailsfocusmask/)
-
-Future review checklist:
-
-- Revalidate mask stages, region-selection rules, AF weighting, patch ranking,
-  thresholds, and debug modes against PhotoAnalysisKit.
-- Explain which values change the scalar score, which change only mask
-  presentation, and which are calibration output.
-- Add a data-shape diagram showing `CGImage`/`CIImage`, analysis values, mask
-  output, and the SwiftUI overlay boundary.
-- Reduce repetition with the overview while preserving the step-by-step source
-  walkthrough.
-
-## P1 — Complete The Architecture Learning Path
-
-Status: **Earlier baseline marked complete; retain these criteria for future review.**
-
-### 5. AI Section Overview
-
-Page: [Artificial Intelligence in RawCull](../ai/)
-
-Future review checklist:
-
-- Present `RawCullAIIntegration` as the composition root and list the narrow
-  services passed into feature models.
-- Separate burst similarity, semantic search, and Deep Review; they use related
-  packages but have different capability and persistence rules.
-- Explain Vision availability, optional CLIP selection, CLIP-to-Vision recovery,
-  segmentation model selection, and capability refresh.
-- Align its learning order with the main documentation index and remove
-  duplicated model-download instructions.
-
-### 6. CLIP Runtime Integration
-
-Page: [How RawCull Loads and Uses CLIP](../ai/aiinrawcull/)
-
-Future review checklist:
-
-- Verify startup behavior, managed model locations, bundle validation, provider
-  reuse, model fingerprints, and settings callbacks.
-- Add the current boundary between burst similarity artifacts and
-  semantic-search artifacts.
-- Document partial CLIP generation, whole-batch Vision fallback, diagnostic
-  logging, and descriptor validation.
-- Explain per-file artifact hydration and why changing backend descriptors
-  invalidates reuse.
-
-### 7. Package Overview And Reading Order
-
-Page: [RawCull Packages](../packages/)
-
-Future review checklist:
-
-- Derive the package list and revisions from [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
-- Show which products are imported by the app and which types form each
-  boundary.
-- Add a dependency-direction diagram covering RawCullCore, RawParserKit,
-  PhotoAnalysisKit, PhotoAIKit, and the rsync support packages.
-- State that package repositories are separately versioned and are not source
-  snapshots inside TechDocRawCull.
-
-### 8. PhotoAIKit
-
-Page: [How PhotoAIKit Is Constructed](../packages/photoaikit/)
-
-Future review checklist:
-
-- Compare the article with the exact pinned package revision.
-- Recheck product names, contract types, backend actors, artifact descriptors,
-  storage APIs, fallback behavior, and segmentation workflows.
-- Add a RawCull integration section mapping package protocols to
-  `RawCullAIIntegration`, `SimilarityScoringModel`, semantic search, and Deep
-  Review.
-- Identify which behavior belongs to the package and which policy remains in
-  RawCull.
-
-### 9. PhotoAnalysisKit
-
-Page: [How PhotoAnalysisKit Is Constructed](../packages/photoanalysiskit/)
-
-Future review checklist:
-
-- Reconcile the package facade, analysis descriptors, presets, batch limits,
-  calibration, focus evidence, and mask APIs with the pinned revision.
-- Add call maps from RawCull's sharpness and focus models into the package.
-- Link package tests for scalar scoring, cancellation, configuration identity,
-  and mask rendering.
-
-### 10. RawCullCore
-
-Page: [How RawCullCore Is Constructed](../packages/rawcullcore/)
-
-Future review checklist:
-
-- Verify domain models, `FileItem` typealias boundaries, burst grouping/ranking
-  defaults, review states, and histogram behavior.
-- Explain why pure `nonisolated` value logic belongs here while orchestration
-  and persistence remain in the app.
-- Add extension guidance for new grouping evidence and cache-version
-  consequences.
-
-### 11. RawParserKit
-
-Page: [How RawParserKit Is Constructed](../packages/rawparserkit/)
-
-Future review checklist:
-
-- Verify format registration, metadata normalization, thumbnail/preview
-  strategies, coalescing, decode limits, and cancellation bridges.
-- Map `RawParserKitImageLoader` to the package facade and show where
-  non-Sendable images are consumed or converted.
-- Include the current Sony and Nikon behavior without implying that app code
-  should call vendor conformers directly.
-
-### 12. Sony/Nikon MakerNote Parser
-
-Page: [Sony/Nikon MakerNote Parser](../sonymakernoteparser/)
-
-Future review checklist:
-
-- Reconcile parser type names and file locations with RawParserKit.
-- Walk one Sony and one Nikon focus-location result through normalization into
-  `FileItem` and focus UI.
-- Document fallback to EXIF subject area and catalog-wide `focuspoints.json`
-  behavior.
-- Add a checklist and tests required when introducing another RAW format.
-
-## P1 — Operational Correctness References
-
-Status: **Earlier baseline marked complete; retain these criteria for future review.**
-
-### 13. Security-Scoped URLs
-
-Page: [Security-Scoped URLs](../security/)
-
-Future review checklist:
-
-- Keep the already-current AI indexing and semantic-search scope explanation.
-- Add the selected JPG export destination lifetime and app-termination
-  persistence flush.
-- Cross-check rsync bookmark fallback, idempotent cleanup, and exact ownership
-  of every successful scope start.
-- Add a table for catalog, scan, export, copy, diagnostics, and AI operations
-  showing owner, start, stop, and failure cleanup.
-
-### 14. Memory Pressure
-
-Page: [Memory Pressure](../memorypressure/)
-
-Status: **Cache and pressure descriptions refreshed on 10 October 2026.**
-
-Completed coverage:
-
-- Adaptive recommendations, user maxima, warning/critical responses, and recovery.
-- Kernel pressure state behind `OSAllocatedUnfairLock`; synchronous cache
-  operations and accounting behind each wrapper's `NSRecursiveLock`.
-- Owned eviction callbacks, replacement IDs, synchronized clearing, estimated
-  cost versus process footprint, and separate-read observation limits.
-- Cache-policy and concurrency test references plus operational measurements.
-- Removal of obsolete pressure-event counters and eviction-history ring claims.
-
-Review policy constants and settings defaults when limits change, and keep the
-cache walkthrough, thumbnail article, and concurrency test map aligned.
-
-### 15. Synchronous Code
-
-Page: [Synchronous Code](../heavy/)
-
-Future review checklist:
-
-- Audit all current blocking ImageIO, filesystem, RAW parsing, JPEG encoding,
-  and process operations.
-- Distinguish short `@concurrent` work from operations intentionally moved to a
-  detached task or dedicated GCD continuation bridge.
-- Add decision rules for when a synchronous call is safe inside an actor and
-  when it would occupy Swift's cooperative executor too long.
-- Remove types or paths that no longer exist.
-
-## P2 — AI Distribution, Evidence, And Release Procedures
-
-Status: **Existing procedure pages were marked complete in the earlier baseline;
-the two evaluation pages below remain planned.**
-
-### 16. AI Model Downloads
-
-Page: [AI Model Download Service](../ai/rawcullai/)
-
-Future review checklist:
-
-- Reconcile the procedure with the current download catalog, downloader target,
-  managed locations, activation callbacks, and release metadata tests.
-- Separate runtime architecture from release-operator commands.
-- Add failure/retry behavior and the user-visible capability states.
-
-### 17. Publishing New AI Models
-
-Page: [Publishing New RawCull AI Models](../ai/rawcullai/)
-
-Future review checklist:
-
-- Verify archive names, manifest schema, checksums, release tags, model
-  identities, and staging paths against `ModelAssets` and current release tests.
-- Replace any historical one-off commands with parameterized examples or clearly
-  label them as records.
-- Add a final reproducibility and licence gate before publishing.
-
-### 18. AI Licence And Provenance Procedure
-
-Page: [Model licence and provenance preparation](../ai/rawcullai/#8-stage-licences-notices-and-build-provenance)
-
-Future review checklist:
-
-- Separate current legal/provenance status from the reusable clearance
-  procedure.
-- Verify notices, provenance JSON, upstream licences, acceptance requirements,
-  and distribution restrictions for every shipped model.
-- Add an evidence date and owner to decisions that can expire or change.
-- Keep legal conclusions explicitly evidence-based and avoid inferring
-  permission from model availability.
-
-### 19. Evaluating CLIP Models
-
-Planned page: **Evaluating CLIP Models** (not yet present)
-
-Future review checklist:
-
-- Verify package revisions, fixture identities, scripts, commands, thresholds,
-  and report paths.
-- Separate parity testing, semantic retrieval evaluation, performance
-  measurement, and RawCull integration testing.
-- Add a reproducibility checklist including hardware, OS, toolchain, model
-  fingerprint, and immutable fixture digest.
-
-### 20. CLIP Evaluation Results
-
-Planned page: **CLIP Model Evaluation Results** (not yet present)
-
-Future review checklist:
-
-- Treat this as a dated evidence report rather than timeless architecture.
-- Record exact inputs, model fingerprints, query set, metrics, hardware, and
-  report generation date.
-- Link conclusions to generated artifacts and clearly distinguish measured
-  results from recommendations.
-- Add a superseded-results policy so later evaluations do not silently overwrite
-  historical evidence.
-
-## P3 — Stable Workflow Guidance
-
-### 21. Repository Git Workflow
-
-Page: [Repository Git Workflow](../pushpull/)
-
-Future review checklist:
-
-- Confirm that the documented rebase and fast-forward policy still matches
-  repository practice.
-- Add the documentation validation commands: Prettier, Hugo build, and
-  internal-link check.
-- Remove duplicated Git basics if the page is intended only for this
-  repository's policy.
-- Review when branch protection, deployment, or contribution rules change.
-
-## Proposed New Pages
-
-These pages should be added only after the existing P0 and P1 articles are
-accurate.
-
-| Priority | Proposed page            | Purpose                                                                                                                                |
-| -------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| P1       | `swiftuiarchitecture.md` | Main window modes, `NavigationSplitView` composition, environment injection, sheets, overlays, commands, and reusable inspection views |
-| P1       | `persistence.md`         | `CullingModel`, saved-file schema, backup/corruption recovery, debounced writes, flush-on-termination, and migration rules             |
-| P2       | `testing.md`             | Test plans, smoke/performance manifests, package tests, isolation helpers, fixtures, and how tests encode architecture invariants      |
-| P2       | `diagnostics.md`         | Memory, similarity, contention, and RAW diagnostics; log locations, privacy boundaries, and troubleshooting workflow                   |
-
-## Standard Required For Every Update
-
-Every revised architecture article should contain:
-
-1. **Purpose and boundary** — what the subsystem owns and deliberately does not
-   own.
-2. **Source map** — exact repository-relative files and package revision where
-   relevant.
-3. **Read order** — the shortest path through the code for a new contributor.
-4. **End-to-end flow** — trigger, main-actor orchestration, background owner,
-   persistence, and UI publication.
-5. **State and lifetime** — actor ownership, cancellation, generation guards,
-   security scopes, and cleanup.
-6. **Failure behavior** — what the user sees and what remains recoverable.
-7. **Cache or persistence identity** — descriptors, fingerprints, versions, and
-   invalidation rules.
-8. **Tests** — executable evidence for important invariants.
-9. **Change checklist** — related files, versions, docs, and tests to update
-   together.
-10. **Last reviewed date** — the date the article was checked against source,
-    not merely reformatted.
-
-Avoid absolute developer-machine paths, undocumented source snapshots,
-unverified constants, and claims that `await` automatically moves work to a
-background thread.
-
-## Review Triggers
-
-Update the relevant article in the same change whenever any of these occur:
-
-- a source file is renamed or ownership moves between view, model, actor, and
-  package;
-- a package revision changes a public contract or default;
-- a cache key, schema, descriptor, algorithm version, or persistence format
-  changes;
-- a new task, actor, continuation, security scope, or cancellation path is
-  introduced;
-- a new model backend, RAW format, view mode, export mode, or diagnostics store
-  is added;
-- tests establish a new invariant that the current article does not explain.
-
-After each documentation batch, run the configured formatter, render the
-complete Hugo site, validate internal links, and check the diff for stale
-filenames and obsolete constants.
+| [_index.md]({{< relref "/_index.md" >}}) | Clarified that this site teaches how RawCull is built; retained the landing layout. |
+| [about/index.md]({{< relref "/about/index.md" >}}) | Preserved personal/project background; corrected notarization and automatic-document-freshness wording. |
+| [search.md]({{< relref "/search.md" >}}) | Retained search layout; no application behavior is described. |
+| [site.md]({{< relref "/site.md" >}}) | Removed the Docsy example-team build placeholder; linked source and review provenance. |
+| [docs/_index.md]({{< relref "/docs/_index.md" >}}) | Updated baseline, source map and reading order; linked the new architecture guides. |
+| [docs/thumbnail.md]({{< relref "/docs/thumbnail.md" >}}) | Added generic registry admission and current viewer ownership; distinguished normal development from inspection. |
+| [docs/viewer-architecture.md]({{< relref "/docs/viewer-architecture.md" >}}) | New end-to-end guide to sessions, async publication, rendering, geometry and keyboard ownership. |
+| [docs/raw-inspection.md]({{< relref "/docs/raw-inspection.md" >}}) | New guide to format admission, generic extractors, development/export boundaries and temporary EV inspection. |
+| [docs/cache.md]({{< relref "/docs/cache.md" >}}) | Documented combined cleanup and the deletion of stored review evidence; separated the burst session cache. |
+| [docs/cache-accounting.md]({{< relref "/docs/cache-accounting.md" >}}) | Retained the dated commit walkthrough; wrapper implementation and package boundary are unchanged. |
+| [docs/memorypressure.md]({{< relref "/docs/memorypressure.md" >}}) | Refreshed source references; removed the contradictory pressure-event-counter assertion. |
+| [docs/concurrency.md]({{< relref "/docs/concurrency.md" >}}) | Added viewer task/controller owners and explicit inspection-render placement; retained actor/continuation invariants. |
+| [docs/focusmask.md]({{< relref "/docs/focusmask.md" >}}) | Updated app presentation ownership; retained the unchanged PhotoAnalysisKit measurement boundary. |
+| [docs/detailsfocusmask.md]({{< relref "/docs/detailsfocusmask.md" >}}) | Retained package stages at the unchanged pin; added the new publication/geometry boundary. |
+| [docs/detailsharpnessscoring.md]({{< relref "/docs/detailsharpnessscoring.md" >}}) | Retained formulas at the unchanged PhotoAnalysisKit pin; refreshed app implementation links. |
+| [docs/burstgroup.md]({{< relref "/docs/burstgroup.md" >}}) | Documented synthetic Single Images workspace, actual persisted states and extracted dashboard/workspace components. |
+| [docs/filereadandwrite.md]({{< relref "/docs/filereadandwrite.md" >}}) | Added Saved Files size/reset path, review/cache deletion order and inspection/export distinctions. |
+| [docs/security.md]({{< relref "/docs/security.md" >}}) | Added inspection grant retention and links to current privacy-manifest metadata/tests. |
+| [docs/heavy.md]({{< relref "/docs/heavy.md" >}}) | Added generic extractor bridges and the separate serialized native exposure renderer. |
+| [docs/sonymakernoteparser.md]({{< relref "/docs/sonymakernoteparser.md" >}}) | Updated parser pin; explained generic EXIF fallback without claiming new vendor MakerNote support. |
+| [docs/newfeatures.md]({{< relref "/docs/newfeatures.md" >}}) | Preserved dated research; marked broader-format and exposure-inspection implementation deltas. |
+| [docs/pushpull.md]({{< relref "/docs/pushpull.md" >}}) | Retained documentation-repository workflow guidance; it does not describe the app repository history. |
+| [docs/update.md]({{< relref "/docs/update.md" >}}) | Replaced the accumulated historical backlog with this baseline, disposition and maintenance record. |
+| [docs/ai/_index.md]({{< relref "/docs/ai/_index.md" >}}) | Updated baseline/navigation and replaced stale test-release claims with dated evidence guidance. |
+| [docs/ai/airuntime.md]({{< relref "/docs/ai/airuntime.md" >}}) | Added extracted model/download presentation boundaries while retaining stable feature/provider ownership. |
+| [docs/ai/aiinrawcull.md]({{< relref "/docs/ai/aiinrawcull.md" >}}) | Explained typed Objects sanitation, complete preference clearing and current preview ownership. |
+| [docs/ai/aicombined.md]({{< relref "/docs/ai/aicombined.md" >}}) | Reconfirmed v22/per-stage compatibility; added shared input policy and saved-review deletion behavior. |
+| [docs/ai/aidiagnostics.md]({{< relref "/docs/ai/aidiagnostics.md" >}}) | Replaced the removed-report dependency and added presentation regression entry points. |
+| [docs/ai/rawcullai.md]({{< relref "/docs/ai/rawcullai.md" >}}) | Retained reproducible weight/exporter pins; distinguished historical preparation from current installation and qualification. |
+| [docs/ai/rawbrowseai.md]({{< relref "/docs/ai/rawbrowseai.md" >}}) | Retained the pinned companion-app preparation recipe and clarified review/qualification limits. |
+| [docs/packages/_index.md]({{< relref "/docs/packages/_index.md" >}}) | Reconciled all resolved pins with the current app lockfile; RawParserKit advances to 1.3.2. |
+| [docs/packages/rawparserkit.md]({{< relref "/docs/packages/rawparserkit.md" >}}) | Preserved the scoped original audit and added a linked 1.3.2 generic-format delta. |
+| [docs/packages/photoanalysiskit.md]({{< relref "/docs/packages/photoanalysiskit.md" >}}) | Retained package architecture at the unchanged 1.3.1 pin; refreshed host links. |
+| [docs/packages/rawcullcore.md]({{< relref "/docs/packages/rawcullcore.md" >}}) | Retained pure models/grouping/ranking/histogram architecture at the unchanged 1.1.2 pin; refreshed host links. |
+| [docs/packages/photoaikit.md]({{< relref "/docs/packages/photoaikit.md" >}}) | Retained explicitly scoped package architecture at the unchanged app pin; refreshed host links. |
+| [docs/apidocs/_index.md]({{< relref "/docs/apidocs/_index.md" >}}) | Added the split internal API guide and links to the viewer/RAW guides. |
+| [docs/apidocs/rawcullapidoc.md]({{< relref "/docs/apidocs/rawcullapidoc.md" >}}) | Kept the application journey, setup and recovery; moved method tables into a focused reference. |
+| [docs/apidocs/rawcull-internal-api.md]({{< relref "/docs/apidocs/rawcull-internal-api.md" >}}) | New split-out internal method reference plus current viewer/inspection/persistence entry points. |
+| [docs/apidocs/rabrowsweapidoc.md]({{< relref "/docs/apidocs/rabrowsweapidoc.md" >}}) | Fixed site-relative code links; documented deferred per-folder RAW 9 probing and its separate dependency baseline. |
+
+## Verification and limits
+
+Static checks cover TOML/YAML front-matter syntax, unique page routes,
+balanced fenced blocks, internal page links and `relref` targets. GitHub source
+paths are checked with local Git objects at their stated commits, including
+historical revisions. This confirms repository path identity; it does not test
+remote HTTP availability or external vendor/Hugging Face services.
+
+Source diffs and relevant test fixtures were inspected to explain the changed
+behavior. **Hugo was not compiled**, as requested. Application/package tests,
+model conversion, installed-model inference and photographic/performance
+qualification were not run by this documentation pass. Referenced tests are
+executable contracts to consult, not newly reported passing runs.
+
+## Maintain the learning path
+
+When app code changes, start with its commit diff and the resolved lockfile.
+Update the owning page and its overview together. Explain the trigger, owner,
+input, result, cancellation/publication guard, persistence identity and failure
+path before listing low-level APIs. Link the implementation and the test that
+protects the contract. Preserve the distinction between supported structure and
+photographic correctness.
+
+Revisit the viewer guide when screen/task/controller ownership changes; the RAW
+guide when formats, decoding, histogram/clipping or inspection policy changes;
+the persistence/cache pages when cleanup semantics change; and the AI pages when
+providers, contracts, response schemas or stored-run compatibility change.
+Advance package pins only from the app lockfile, and qualify model-release
+recipes independently from normal application documentation updates.

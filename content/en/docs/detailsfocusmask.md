@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -61,10 +61,10 @@ view, app model, URL, or persistence object.
 
 The RawCull entry files are:
 
-- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
-- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
-- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
-- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
+- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
+- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
+- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
+- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
 
 Views snapshot the effective config, inject ISO, aperture, and normalized AF
 point, cancel a previous mask task when image or config identity changes, and
@@ -412,7 +412,7 @@ the owning SwiftUI task is the final stale-result boundary.
 
 | Stage                                                                                   | Tests                                                          |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
 | Public analyze/mask/calibration behavior and cancellation                               | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
 | Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | [PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift)           |
 | Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
@@ -432,3 +432,14 @@ When changing the mask:
 6. inspect raw Laplacian, patch diagnostics, threshold coverage, and final
    overlay as separate stages;
 7. update this page and the overview together.
+
+## Presentation after the October viewer refactor
+
+The package computation above is unchanged at the current pin. The app's
+publication boundary now includes `LoupeFocusPresentationModel` and
+`ZoomOverlayAnalysisCoordinator`, with focused raster/canvas views for rendering.
+The zoom coordinator snapshots selected file, image identity and source and
+rechecks them after analysis. `AnalysisImageCanvas` shares one aspect-fit
+rectangle for photograph, mask and AF overlay without changing their coordinate
+conventions. Follow [Viewer Architecture]({{< relref "viewer-architecture.md" >}})
+for the current task owners; the small raster view is not an analysis engine.

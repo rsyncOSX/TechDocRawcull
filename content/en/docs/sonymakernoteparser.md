@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Sony, Nikon, and DNG Metadata Parsers"
 date = "2026-08-21"
-lastmod = "2026-10-16"
+lastmod = "2026-10-22"
 tags = ["focus points", "sony", "nikon", "dng", "arw", "nef", "parser"]
 categories = ["technical details"]
 mermaid = true
@@ -10,8 +10,8 @@ mermaid = true
 
 # Sony, Nikon, and DNG Metadata Parsers
 
-RawParserKit `1.3.1`, revision
-`f0e5b02a10294798afd86781da5d6510e146a7ba`, provides one neutral result
+RawParserKit `1.3.2`, revision
+`07801a34a82d7720d301a80724c36a5b8c9f1d6c`, provides one neutral result
 shape for Sony ARW, Nikon NEF, and Adobe DNG autofocus metadata. RawCull enters
 through `RawImageLoader.metadata(for:)` or `RawFormatRegistry`; diagnostics and
 package tests may call a format parser directly.
@@ -20,13 +20,13 @@ package tests may call a format parser directly.
 
 | Area | RawParserKit file |
 |---|---|
-| Neutral format contract and registration | [Sources/RawParserKit/RawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/RawFormat.swift), [RawFormatRegistry.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/RawFormatRegistry.swift) |
-| Normalized focus value and metadata snapshot | [Sources/RawParserKit/BrowserFocusPoint.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/BrowserFocusPoint.swift), [BrowserExifInfo.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/BrowserExifInfo.swift) |
-| Facade and EXIF fallback | [Sources/RawParserKit/RawImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/RawImageLoader.swift) |
-| Sony | [SonyMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/SonyMakerNoteParser.swift), [SonyRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/SonyRawFormat.swift), [SonyThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/SonyThumbnailExtractor.swift), `SonyEmbeddedJPEGExtractor` |
-| Nikon | [NikonMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/NikonMakerNoteParser.swift), [NikonRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/NikonRawFormat.swift), [NikonThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/NikonThumbnailExtractor.swift), `NikonEmbeddedJPEGExtractor` |
-| DNG | [DNGMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNGMakerNoteParser.swift), [DNGRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNGRawFormat.swift), [DNGThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNGThumbnailExtractor.swift), [DNEmbeddedJPEGExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DNEmbeddedJPEGExtractor.swift) |
-| RawCull consumer | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/23de7bec3063cab0f8466e8367921841c5ab5a1d/RawCull/Actors/ScanFiles.swift) |
+| Neutral format contract and registration | [Sources/RawParserKit/RawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawFormat.swift), [RawFormatRegistry.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawFormatRegistry.swift) |
+| Normalized focus value and metadata snapshot | [Sources/RawParserKit/BrowserFocusPoint.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/BrowserFocusPoint.swift), [BrowserExifInfo.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/BrowserExifInfo.swift) |
+| Facade and EXIF fallback | [Sources/RawParserKit/RawImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawImageLoader.swift) |
+| Sony | [SonyMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/SonyMakerNoteParser.swift), [SonyRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/SonyRawFormat.swift), [SonyThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/SonyThumbnailExtractor.swift), `SonyEmbeddedJPEGExtractor` |
+| Nikon | [NikonMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/NikonMakerNoteParser.swift), [NikonRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/NikonRawFormat.swift), [NikonThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/NikonThumbnailExtractor.swift), `NikonEmbeddedJPEGExtractor` |
+| DNG | [DNGMakerNoteParser.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/DNGMakerNoteParser.swift), [DNGRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/DNGRawFormat.swift), [DNGThumbnailExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/DNGThumbnailExtractor.swift), [DNEmbeddedJPEGExtractor.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/DNEmbeddedJPEGExtractor.swift) |
+| RawCull consumer | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/ScanFiles.swift) |
 
 `RawFormatRegistry.all` registers `SonyRawFormat` for `.arw`, `NikonRawFormat`
 for `.nef`, and `DNGRawFormat` for `.dng`. Each conformer supplies focus-point
@@ -94,11 +94,11 @@ sensor camera families.
 
 | Test | Contract |
 |---|---|
-| [SonyMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/SonyMakerNoteParserTests.swift) | Sony focus tags, offsets, malformed input, and embedded JPEG discovery |
-| [NikonMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/NikonMakerNoteParserTests.swift) | Nikon Type-3/AFInfo2 layouts, byte order, and embedded JPEG discovery |
-| [DNGMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/DNGMakerNoteParserTests.swift) | DNG TIFF/SubIFD focus and preview discovery, including malformed data |
-| [DNGRawFormatTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/DNGRawFormatTests.swift) | DNG compression labels, size classes, and format behavior |
-| [RawFormatRegistryTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/RawFormatRegistryTests.swift) | Case-insensitive ARW/NEF/DNG dispatch and unregistered formats |
+| [SonyMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/SonyMakerNoteParserTests.swift) | Sony focus tags, offsets, malformed input, and embedded JPEG discovery |
+| [NikonMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/NikonMakerNoteParserTests.swift) | Nikon Type-3/AFInfo2 layouts, byte order, and embedded JPEG discovery |
+| [DNGMakerNoteParserTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/DNGMakerNoteParserTests.swift) | DNG TIFF/SubIFD focus and preview discovery, including malformed data |
+| [DNGRawFormatTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/DNGRawFormatTests.swift) | DNG compression labels, size classes, and format behavior |
+| [RawFormatRegistryTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/RawFormatRegistryTests.swift) | Case-insensitive ARW/NEF/DNG dispatch and unregistered formats |
 
 ## Checklist For Another RAW Format
 
@@ -112,3 +112,14 @@ sensor camera families.
    cancellation, and diagnostics tests.
 5. Verify the RawCull adapter maps the result into the same visual coordinate
    system and preserves the catalog-wide JSON fallback rule.
+
+## Generic RAW metadata does not add a vendor parser
+
+The 1.3.2 registry also includes
+[GenericRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/GenericRawFormat.swift).
+Its `focusLocation` returns nil; standard EXIF SubjectArea may still supply a
+normalized point through the facade. The three dedicated binary parser paths
+above remain separate. Before writing another vendor parser, decide whether
+ImageIO-only support is enough or whether AF locations, container offsets and
+body-specific metadata require a dedicated conformer. See
+[RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}).

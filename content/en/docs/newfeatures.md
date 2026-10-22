@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Future Features and Competitive Evaluation"
 linkTitle = "Future Features"
 date = "2026-09-01"
-lastmod = "2026-09-15"
+lastmod = "2026-10-22"
 description = "Competitive feature review and a prioritized roadmap for RawCull after version 3.2.2, including an evaluation of additional Core AI models."
 tags = ["roadmap", "features", "culling", "ai", "core-ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
@@ -12,17 +12,17 @@ weight = 55
 
 # Future Features and Competitive Evaluation
 
-> **Historical roadmap, current implementation note (16 October 2026):** The
+> **Historical roadmap, implementation note (22 October 2026):** The
 > competitive review and version 3.2.2 recommendations below retain their original
-> planning context. The reviewed app is now 3.3.3 (build 422), with Qwen, SAM 3
+> planning context. The reviewed app is now 3.3.5 (build 425), with Qwen, SAM 3
 > Objects and Combined Review already implemented. Those are no longer merely
 > future candidates. Follow [AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}})
 > and [Combined Review]({{< relref "ai/aicombined.md" >}}) for current behavior.
 > Competitor offerings and model redistribution terms were not requalified by
 > this source-code review.
 
-This page evaluates possible RawCull features after version 3.2.2. It compares
-the current implementation with representative professional culling products,
+This historical page evaluates possible RawCull features after version 3.2.2. It compares
+the implementation at that review date with representative professional culling products,
 identifies the most important workflow gaps, and evaluates additional models
 from Apple's Core AI model catalog.
 
@@ -844,3 +844,14 @@ Before implementation, prepare three focused specifications:
 EfficientSAM can be evaluated in parallel because its backend boundary already
 exists. It should not delay XMP or the deterministic First Pass, and a new model
 should never be required merely to display existing RawCull evidence clearly.
+
+## October 22 implementation delta
+
+The reviewed app now consumes RawParserKit 1.3.2 generic RAW support, so the
+broader-format proposal below is partly implemented at extension/OS-decoder
+level. It still does not establish a camera-qualified support matrix, vendor
+AF coverage or generic embedded-byte export. See
+[RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}).
+Temporary exposure inspection is also implemented, without persistent editing
+sidecars. This update does not re-rank competitors, requalify model terms or
+claim that the earlier proposed XMP/face/first-pass roadmap is a release plan.

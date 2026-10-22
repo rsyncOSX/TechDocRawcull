@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "API RawBrowse"
 date = "2026-10-15"
-lastmod = "2026-10-15"
+lastmod = "2026-10-22"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
@@ -12,9 +12,9 @@ mermaid = true
 
 # RawBrowse developer and API documentation
 
-Last reviewed: 2026-10-17. Scope: the checked-in macOS application and its internal Swift interfaces.
+Last reviewed: 2026-10-22. Baseline: RawBrowse commit `5815fd64ca02185c1ca6300311794a3ecacf6ec8` and its internal Swift interfaces.
 
-Read this guide in order to follow a photograph from application launch through folder browsing, preview, optional AI review, RAW 9 editing and export. The operation reference describes inputs, results, ownership and failure behavior. Links are relative to this document and point to the implementation in this checkout.
+Read this guide in order to follow a photograph from application launch through folder browsing, preview, optional AI review, RAW 9 editing and export. The operation reference describes inputs, results, ownership and failure behavior. Source links point to the separate RawBrowse repository at the reviewed immutable commit.
 
 “API” here means the application’s internal Swift interfaces. These workflows do not expose an HTTP server or REST endpoints, and the app types are not a versioned public SDK. A synchronous action often launches owned asynchronous work: returning from that action is not proof that scanning, inference, persistence or export has finished. Inspect the documented observable state or await the relevant completion operation.
 
@@ -33,9 +33,9 @@ Read this guide in order to follow a photograph from application launch through 
 
 ### 1. Launch assembles a shared workspace
 
-[RawBrowseApp.swift](../RawBrowse/Main/RawBrowseApp.swift) retains one `FileBrowserViewModel` in application state. The Image Browser, AI Workspace and Settings scenes receive this same workspace through [BrowserWorkspaceEnvironment.swift](../RawBrowse/Main/BrowserWorkspaceEnvironment.swift). Opening another scene therefore uses the existing settings, selection, catalog and model runtimes.
+[RawBrowseApp.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Main/RawBrowseApp.swift) retains one `FileBrowserViewModel` in application state. The Image Browser, AI Workspace and Settings scenes receive this same workspace through [BrowserWorkspaceEnvironment.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Main/BrowserWorkspaceEnvironment.swift). Opening another scene therefore uses the existing settings, selection, catalog and model runtimes.
 
-[FileBrowserViewModel.swift](../RawBrowse/Main/FileBrowserViewModel.swift) is the composition root. It creates or accepts feature owners, wires callbacks and coordinates operations that cross feature boundaries. It does not implement decoding or inference itself.
+[FileBrowserViewModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Main/FileBrowserViewModel.swift) is the composition root. It creates or accepts feature owners, wires callbacks and coordinates operations that cross feature boundaries. It does not implement decoding or inference itself.
 
 The main window task installs the termination callback and calls `loadIfNeeded()`. Initialization proceeds in this order:
 
@@ -49,9 +49,9 @@ The main window task installs the termination callback and calls `loadIfNeeded()
 
 ### 2. Adding a folder establishes access and a remembered root
 
-The folder-picker action calls `FileBrowserViewModel.addRootFolder(_:)`. [CatalogStore.swift](../RawBrowse/Features/Browser/CatalogStore.swift) standardizes the URL, opens security-scoped access, adds the root if needed and schedules folder discovery. It also creates a bookmark and queues persistence of the remembered roots.
+The folder-picker action calls `FileBrowserViewModel.addRootFolder(_:)`. [CatalogStore.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/CatalogStore.swift) standardizes the URL, opens security-scoped access, adds the root if needed and schedules folder discovery. It also creates a bookmark and queues persistence of the remembered roots.
 
-[CatalogAccess.swift](../RawBrowse/Infrastructure/CatalogAccess/CatalogAccess.swift) separates a catalog session from the work using it. A `CatalogAccessLease` balances one successful security-scope start with a stop at deinitialization. Workers retain the same lease. Removing the session’s reference does not revoke access still retained by an image load or save.
+[CatalogAccess.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Infrastructure/CatalogAccess/CatalogAccess.swift) separates a catalog session from the work using it. A `CatalogAccessLease` balances one successful security-scope start with a stop at deinitialization. Workers retain the same lease. Removing the session’s reference does not revoke access still retained by an image load or save.
 
 For a nested folder, access resolves to the deepest matching remembered root. A plain URL describes a location; retaining the matching lease preserves the grant while asynchronous work uses that location.
 
@@ -63,15 +63,15 @@ Use `selectFolder(_:)`, rather than assigning folder or file state directly. The
 
 An admitted transition cancels refresh and Deep Review work, closes zoom, resets the zoom interface, clears selection and semantic results, and starts a new contents scan with a retained access lease. It then selects the CLIP catalog using the root access URL. Thus a nested folder’s grid can use its enclosing catalog’s recursive search index.
 
-[BrowserContentsModel.swift](../RawBrowse/Features/Browser/BrowserContentsModel.swift) clears old files, sets `isScanning`, and runs folder and file discovery concurrently. A `LatestTaskRunner` token prevents obsolete scans from publishing results after a newer scan starts. On success it publishes children and files; on failure it publishes `scanError`.
+[BrowserContentsModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/BrowserContentsModel.swift) clears old files, sets `isScanning`, and runs folder and file discovery concurrently. A `LatestTaskRunner` token prevents obsolete scans from publishing results after a newer scan starts. On success it publishes children and files; on failure it publishes `scanError`.
 
-[BrowserImageLoader.swift](../RawBrowse/Infrastructure/ImageLoading/BrowserImageLoader.swift) discovers immediate, visible regular files whose extensions belong to `RawFormatRegistry.allExtensions` or the app’s rendered-image extensions. Results use localized filename order. Normal grid discovery is not recursive. Sidebar expansion discovers children separately.
+[BrowserImageLoader.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Infrastructure/ImageLoading/BrowserImageLoader.swift) discovers immediate, visible regular files whose extensions belong to `RawFormatRegistry.allExtensions` or the app’s rendered-image extensions. Results use localized filename order. Normal grid discovery is not recursive. Sidebar expansion discovers children separately.
 
 `BrowserFileItem` contains a URL, display name and newly generated UUID. It does not eagerly contain EXIF, decoded pixels or saved editing state. A rescan creates new UUIDs, so refresh preserves surviving selections by standardized URL rather than old item IDs.
 
 ### 4. The grid displays the active projection
 
-The composition root chooses `contents.files` for ordinary browsing and `clip.semanticFiles` while semantic or similarity search is active. [SelectionModel.swift](../RawBrowse/Features/Browser/SelectionModel.swift) owns the resulting `displayedFiles`, the primary selected ID and the multiple-selection set.
+The composition root chooses `contents.files` for ordinary browsing and `clip.semanticFiles` while semantic or similarity search is active. [SelectionModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/SelectionModel.swift) owns the resulting `displayedFiles`, the primary selected ID and the multiple-selection set.
 
 | State | Meaning |
 |---|---|
@@ -84,7 +84,7 @@ The composition root chooses `contents.files` for ordinary browsing and `clip.se
 
 Replacing displayed files prunes IDs no longer present. Scan completion and completed search publication can select the first item. Range selection uses an anchor; keyboard navigation moves within displayed order without wrapping.
 
-Grid cells request imagery separately. [ThumbnailPresentationModel.swift](../RawBrowse/Features/Browser/Grid/ThumbnailPresentationModel.swift) checks request generation and the source fingerprint before assigning an image. An old result must not populate a cell now representing another source.
+Grid cells request imagery separately. [ThumbnailPresentationModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/Grid/ThumbnailPresentationModel.swift) checks request generation and the source fingerprint before assigning an image. An old result must not populate a cell now representing another source.
 
 ### 5. Thumbnail loading follows caches before decoding
 
@@ -109,7 +109,7 @@ A nil result means the caller has no image, including decode failure or a cache-
 
 ### 6. Zoom loads preview pixels and metadata
 
-`FileBrowserViewModel.openZoom(...)` resolves the focused file and delegates to [ZoomModel.swift](../RawBrowse/Features/Zoom/ZoomModel.swift). Zoom prepares that file’s editing session, cancels its previous presentation task, starts metadata loading and checks RAW 9 support.
+`FileBrowserViewModel.openZoom(...)` resolves the focused file and delegates to [ZoomModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Zoom/ZoomModel.swift). Zoom prepares that file’s editing session, cancels its previous presentation task, starts metadata loading and checks RAW 9 support.
 
 There are three image paths:
 
@@ -127,13 +127,13 @@ Zoom publishes `zoomImage`, `zoomImageError`, `zoomExifInfo` and `isZoomExifInfo
 
 ### 7. Optional CLIP indexing prepares search
 
-AI model management is implemented in [ModelDownloadsModel.swift](../RawBrowse/Features/ModelDownloads/ModelDownloadsModel.swift) and the model-download catalog. Browsing does not require a model. CLIP search requires a validated CLIP runtime and a compatible index; SAM 3 review requires its own available runtime.
+AI model management is implemented in [ModelDownloadsModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/ModelDownloads/ModelDownloadsModel.swift) and the model-download catalog. Browsing does not require a model. CLIP search requires a validated CLIP runtime and a compatible index; SAM 3 review requires its own available runtime.
 
 Managed downloads come from the configured GitHub AI-model manifest, validate file sizes and SHA-256 values, and install under application support. SAM 3 requires recorded licence acceptance. Download completion refreshes model locations and triggers feature activation. Model removal first drains dependent runtime work before deleting the managed bundle.
 
-`clip.startIndexingSelectedFolder()` indexes the active catalog recursively. [CLIPImageDiscovery.swift](../RawBrowse/Features/CLIP/CLIPImageDiscovery.swift) currently admits `jpg`, `jpeg`, `png`, `heic`, `heif`, `tif`, `tiff` and `arw`. This list is narrower than ordinary browsing support; a browsable DNG or NEF is not automatically CLIP-indexable.
+`clip.startIndexingSelectedFolder()` indexes the active catalog recursively. [CLIPImageDiscovery.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/CLIP/CLIPImageDiscovery.swift) currently admits `jpg`, `jpeg`, `png`, `heic`, `heif`, `tif`, `tiff` and `arw`. This list is narrower than ordinary browsing support; a browsable DNG or NEF is not automatically CLIP-indexable.
 
-[CLIPSearchEngine.swift](../RawBrowse/Features/CLIP/CLIPSearchEngine.swift) compares source fingerprints and artifact descriptors with the existing index. It reuses unchanged compatible embeddings, indexes pending sources, drops removed sources from the new snapshot and atomically saves the binary property list. The app configures indexing concurrency to one.
+[CLIPSearchEngine.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/CLIP/CLIPSearchEngine.swift) compares source fingerprints and artifact descriptors with the existing index. It reuses unchanged compatible embeddings, indexes pending sources, drops removed sources from the new snapshot and atomically saves the binary property list. The app configures indexing concurrency to one.
 
 The index lives in the catalog’s `.clipbench` directory. Compatibility includes the backend descriptor and artifact model, preprocessing, normalization, configuration and schema identities. A `.clipindex` file merely existing does not prove compatibility.
 
@@ -143,11 +143,11 @@ Index validation distinguishes `valid`, `needsUpdate`, `notFound` and `invalid` 
 
 Text search embeds the query, scores indexed image artifacts and orders results by descending score, with path as the tie-breaker. Find Similar uses the selected indexed image as its anchor. Results carry rank, score, filename and path; they are not quality ratings. The result limit defaults to 50 and is bounded to 10–500 in settings.
 
-[CLIPFeatureModel.swift](../RawBrowse/Features/CLIP/CLIPFeatureModel.swift) owns search tasks and publication. It filters out paths that no longer exist and rejects obsolete results using latest-task tokens. Clearing search restores the ordinary folder projection. A root index can return photographs from nested folders outside the currently selected grid folder.
+[CLIPFeatureModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/CLIP/CLIPFeatureModel.swift) owns search tasks and publication. It filters out paths that no longer exist and rejects obsolete results using latest-task tokens. Clearing search restores the ordinary folder projection. A root index can return photographs from nested folders outside the currently selected grid folder.
 
-For subject review, `FileBrowserViewModel.startDeepReview(groupID:groupSignature:files:)` retains access and delegates to [DeepReviewModel.swift](../RawBrowse/Features/DeepReview/DeepReviewModel.swift). Preparation gathers optional CLIP subject labels, EXIF autofocus points and whole-image sharpness from thumbnails. CLIP classification failure degrades to missing labels rather than blocking SAM 3 review.
+For subject review, `FileBrowserViewModel.startDeepReview(groupID:groupSignature:files:)` retains access and delegates to [DeepReviewModel.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/DeepReview/DeepReviewModel.swift). Preparation gathers optional CLIP subject labels, EXIF autofocus points and whole-image sharpness from thumbnails. CLIP classification failure degrades to missing labels rather than blocking SAM 3 review.
 
-[DeepAIReviewFeature.swift](../RawBrowse/Features/DeepReview/DeepAIReviewFeature.swift) selects candidates according to scope:
+[DeepAIReviewFeature.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/DeepReview/DeepAIReviewFeature.swift) selects candidates according to scope:
 
 | Scope | Preparation and SAM 3 selection |
 |---|---|
@@ -167,7 +167,7 @@ For developed output, the zoom export action snapshots the source URL, current a
 
 ### 10. Quit drains work and checks unsaved state
 
-[AppDelegate.swift](../RawBrowse/Main/AppDelegate.swift) returns `.terminateLater` while handling asynchronous shutdown. With pending exports, it offers Wait and Quit, Cancel Exports and Quit, or Keep RawBrowse Open.
+[AppDelegate.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Main/AppDelegate.swift) returns `.terminateLater` while handling asynchronous shutdown. With pending exports, it offers Wait and Quit, Cancel Exports and Quit, or Keep RawBrowse Open.
 
 `prepareForTermination(exports:)` marks the workspace as shutting down, waits for startup, pending RAW 9 saves, exports and settings saves, and checks unsaved flags. Save failures keep the application open. It then cancels and drains downloads, review and CLIP runtimes. Settings are checked again because an index finishing during shutdown can persist its final summary.
 
@@ -204,18 +204,18 @@ if let file = workspace.selection.selectedFile {
 
 | Owner | Responsibilities | Source |
 |---|---|---|
-| `FileBrowserViewModel` | Assembly, feature callbacks, folder transitions and shutdown. | [Composition root](../RawBrowse/Main/FileBrowserViewModel.swift) |
-| `CatalogStore` | Roots, child hierarchy, bookmarks, access sessions and catalog saves. | [Catalog store](../RawBrowse/Features/Browser/CatalogStore.swift) |
-| `BrowserContentsModel` | Current folder’s scan and files. | [Contents](../RawBrowse/Features/Browser/BrowserContentsModel.swift) |
-| `SelectionModel` | Displayed projection and primary/multiple selection. | [Selection](../RawBrowse/Features/Browser/SelectionModel.swift) |
-| `ZoomModel` | Preview task, EXIF, launch mode and render publication. | [Zoom](../RawBrowse/Features/Zoom/ZoomModel.swift) |
-| `RAW9EditingSession` | Adjustments, sidecar restoration and durable save tracking. | [Editing session](../RawBrowse/Features/RAW9/RAW9EditingSession.swift) |
-| `RAW9ExportQueue` | FIFO snapshots, access retention, cancellation and failures. | [Export queue](../RawBrowse/Features/RAW9/RAW9ExportQueue.swift) |
-| `CLIPFeatureModel` | Model/index availability, indexing and search task ownership. | [CLIP feature](../RawBrowse/Features/CLIP/CLIPFeatureModel.swift) |
-| `DeepReviewModel` / controller / feature | SAM runtime activation, preparation, review and presentation. | [Review model](../RawBrowse/Features/DeepReview/DeepReviewModel.swift) |
-| `SettingsModel` / `ModelDownloadsModel` | Persisted configuration and managed model lifecycle. | [Settings](../RawBrowse/Features/Settings/SettingsModel.swift), [downloads](../RawBrowse/Features/ModelDownloads/ModelDownloadsModel.swift) |
+| `FileBrowserViewModel` | Assembly, feature callbacks, folder transitions and shutdown. | [Composition root](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Main/FileBrowserViewModel.swift) |
+| `CatalogStore` | Roots, child hierarchy, bookmarks, access sessions and catalog saves. | [Catalog store](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/CatalogStore.swift) |
+| `BrowserContentsModel` | Current folder’s scan and files. | [Contents](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/BrowserContentsModel.swift) |
+| `SelectionModel` | Displayed projection and primary/multiple selection. | [Selection](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/SelectionModel.swift) |
+| `ZoomModel` | Preview task, EXIF, launch mode and render publication. | [Zoom](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Zoom/ZoomModel.swift) |
+| `RAW9EditingSession` | Adjustments, sidecar restoration and durable save tracking. | [Editing session](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9EditingSession.swift) |
+| `RAW9ExportQueue` | FIFO snapshots, access retention, cancellation and failures. | [Export queue](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9ExportQueue.swift) |
+| `CLIPFeatureModel` | Model/index availability, indexing and search task ownership. | [CLIP feature](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/CLIP/CLIPFeatureModel.swift) |
+| `DeepReviewModel` / controller / feature | SAM runtime activation, preparation, review and presentation. | [Review model](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/DeepReview/DeepReviewModel.swift) |
+| `SettingsModel` / `ModelDownloadsModel` | Persisted configuration and managed model lifecycle. | [Settings](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Settings/SettingsModel.swift), [downloads](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/ModelDownloads/ModelDownloadsModel.swift) |
 
-Observable feature owners run on the main actor. Image loading, disk caches, sidecars and RAW rendering use actors; explicit concurrent or detached operations move filesystem work and other expensive work off the UI actor. [LatestTaskRunner.swift](../RawBrowse/Infrastructure/Concurrency/LatestTaskRunner.swift) provides cancellation and generation checks for replaceable tasks.
+Observable feature owners run on the main actor. Image loading, disk caches, sidecars and RAW rendering use actors; explicit concurrent or detached operations move filesystem work and other expensive work off the UI actor. [LatestTaskRunner.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Infrastructure/Concurrency/LatestTaskRunner.swift) provides cancellation and generation checks for replaceable tasks.
 
 Keep UI publication separate from worker lifetime. A latest-task token protects current state, while a retained task/lease keeps old work safe until it exits. Replacing a reference or cancelling a SwiftUI task alone does not establish either guarantee.
 
@@ -282,7 +282,7 @@ Call `startDeepReview(groupID:groupSignature:files:)` with the intended displaye
 
 ## RAW 9 operations
 
-RAW 9 is the adjustable Core Image development workflow. Its implementation spans [RAW9Support.swift](../RawBrowse/Features/RAW9/RAW9Support.swift), [RAW9EditingSession.swift](../RawBrowse/Features/RAW9/RAW9EditingSession.swift), [RAW9CropEditor.swift](../RawBrowse/Features/RAW9/Views/RAW9CropEditor.swift), [RAW9ExportQueue.swift](../RawBrowse/Features/RAW9/RAW9ExportQueue.swift) and the [zoom view](../RawBrowse/Features/Zoom/Views/BrowserZoomOverlayView.swift).
+RAW 9 is the adjustable Core Image development workflow. Its implementation spans [RAW9Support.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9Support.swift), [RAW9EditingSession.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9EditingSession.swift), [RAW9CropEditor.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/Views/RAW9CropEditor.swift), [RAW9ExportQueue.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9ExportQueue.swift) and the [zoom view](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Zoom/Views/BrowserZoomOverlayView.swift).
 
 ### Capability detection and entering the editor
 
@@ -456,7 +456,7 @@ Paths below are relative to the effective user-domain application support or cac
 | Adjustable RAW previews | Renderer actor memory | Uncompressed completed pixels, byte-bounded LRU. |
 | Deep Review results | Feature memory | Results keyed by group signature. |
 
-[DiskCachePolicy.swift](../RawBrowse/Infrastructure/ImageLoading/DiskCachePolicy.swift) supplies source identity used by image caches. Cache keys account for source revisions; they are not a promise of content hashing every source byte. The RAW preview key explicitly uses size and modification date. Avoid conflating a cache fingerprint with proof that the source file is unchanged under arbitrary external edits.
+[DiskCachePolicy.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Infrastructure/ImageLoading/DiskCachePolicy.swift) supplies source identity used by image caches. Cache keys account for source revisions; they are not a promise of content hashing every source byte. The RAW preview key explicitly uses size and modification date. Avoid conflating a cache fingerprint with proof that the source file is unchanged under arbitrary external edits.
 
 `SettingsModel` admits mutations only when its load state is ready. Missing settings initialize defaults; unreadable settings set failed state. Saves capture revisions and serialize behind earlier saves. A successful old save cannot clear the dirty flag for a newer mutation. `retryPersistence()` reloads failed initialization or retries ready-state persistence.
 
@@ -496,3 +496,36 @@ For changes to operation flow, verify the relevant transition and failure contra
 Keep this guide aligned with changes to composition, supported extension lists, decoder selection, sidecar schema, backend compatibility, save ordering and export encoding. Update the review date when rechecking the source. Document asynchronous completion and durability separately from action admission.
 
 A useful change record states the triggering action, resulting behavior, state or storage affected, compatibility implications and the checks performed. Comments on APIs should explain ownership, coordinate systems, cancellation or persistence assumptions that are not obvious from their names.
+
+## Deferred folder RAW 9 compatibility discovery
+
+The October 18–20 changes separate folder presentation from decoder probing.
+`BrowserFolderItem` now includes `hasRAW9Files`.
+[BrowserImageLoader.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Infrastructure/ImageLoading/BrowserImageLoader.swift)
+counts supported files directly inside a folder and discovers child folders
+without waiting for RAW 9 decoder checks. `hasRAW9Files(at:)` performs the
+capability pass in a detached background worker, retains catalog access and
+forwards cancellation to that worker.
+
+[CatalogStore.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/Browser/CatalogStore.swift)
+schedules one scan task after an initial 300 ms delay, waits while hierarchy
+loads are active, then probes pending folders sequentially. A result publishes
+only if the folder still exists, persistence generation still matches and its
+per-folder revision is current. Reloading children invalidates revisions;
+removing a root invalidates descendants. Folder rows display the result and
+the browser shows a compatibility-scan status while probing.
+
+The probe stops decoder checks after finding one supported RAW in that folder;
+the file count still covers all supported immediate regular files. It does not
+recursively qualify every file or promise that all RAWs in the folder support
+RAW 9. Rendered images are excluded from the capability test. Read
+[RAW9Support.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse/Features/RAW9/RAW9Support.swift)
+and [BrowserFileDiscoveryTests.swift](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowseTests/BrowserFileDiscoveryTests.swift).
+This companion guide has its own app/package baseline; RawCull's lockfile is
+not RawBrowse's dependency contract.
+
+The reviewed RawBrowse lockfile now resolves RawParserKit 1.3.2 and also updates
+swift-collections, swift-huggingface and swift-transformers. Consult its
+[Package.resolved](https://github.com/rsyncOSX/RawBrowse/blob/5815fd64ca02185c1ca6300311794a3ecacf6ec8/RawBrowse.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved)
+before reproducing a build. Generic RAW registry admission remains dependent
+on actual macOS decoding capability.
