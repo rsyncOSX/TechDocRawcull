@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "How RawCull owns and refreshes local CLIP, SAM 3, Qwen, Vision, Deep Review, and Objects runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "objects"]
@@ -27,9 +27,9 @@ The current implementation has two runtime layers:
 
 That distinction replaces the older, broader `RawCullAIIntegration` shape. The
 authoritative sources are
-[`RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift)
+[`RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift)
 and
-[`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
+[`RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift).
 For model algorithms and data products, see
 [AI Models in RawCull](/docs/ai/aiinrawcull/).
 
@@ -62,6 +62,7 @@ flowchart TD
 
     Similarity --> SharedModel["SimilarityScoringModel"]
     Semantic --> SharedModel
+    SharedModel --> SemanticModel["RawCullSemanticSearchModel: semantic state and queries"]
     Review --> DeepFeature["DeepAIReviewFeature"]
     Qwen --> QwenActor
     Objects --> QwenActor
@@ -130,7 +131,7 @@ the AI features need.
 
 ## Construction: From App Launch to a Live Graph
 
-[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Main/RawCullApp.swift)
+[`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Main/RawCullApp.swift)
 calls `RawCullApplicationState.live()`. SwiftUI retains the returned view model
 and intelligence runtime in separate `@State` properties:
 
@@ -227,7 +228,7 @@ selected services to the stable feature objects.
 
 ### Declare and construct the package boundary
 
-[RawCullAIModelRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) imports `CoreAICLIPBackend`,
+[RawCullAIModelRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) imports `CoreAICLIPBackend`,
 `CoreAISAM3Backend`, `PhotoAIContracts`, `PhotoAIStorage`,
 `PhotoAIWorkflows`, and `VisionFeaturePrintBackend`. At construction it passes
 `CoreAICLIPProvider.factory` and `CoreAISAM3Provider.factory` to separate
@@ -812,20 +813,20 @@ while application feature identities remain stable for the session.
 
 | Concern | Source |
 | --- | --- |
-| App retention and startup refresh | [`RawCull/Main/RawCullApp.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Main/RawCullApp.swift) |
-| Model/provider runtime | [`RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) |
-| Assembly and stable runtime | [`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) |
-| Runtime paths/capabilities | [`RawCull/Intelligence/Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Contracts/RawCullAIModels.swift) |
-| Resource-manager actor/cache | [`RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) |
-| Settings refresh/config publication | [`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) |
-| Downloads and location snapshot | [`RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) |
-| Stable similarity operations | [`RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) |
-| Shared similarity/search state | [`RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
-| Deep Review service installation/state | [`RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) |
-| Qwen provider/model actor | [`RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) |
-| Objects feature, cache reuse, and diagnostics | [`RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) |
-| Objects contracts, validation, and board | [`RawCull/Intelligence/ObjectAnalysis`](https://github.com/rsyncOSX/RawCull/tree/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/ObjectAnalysis) |
-| Objects view and status | [`RawCull/Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) |
+| App retention and startup refresh | [`RawCull/Main/RawCullApp.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Main/RawCullApp.swift) |
+| Model/provider runtime | [`RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) |
+| Assembly and stable runtime | [`RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) |
+| Runtime paths/capabilities | [`RawCull/Intelligence/Contracts/RawCullAIModels.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Contracts/RawCullAIModels.swift) |
+| Resource-manager actor/cache | [`RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/ModelManagement/RawCullAIModelResourceManager.swift) |
+| Settings refresh/config publication | [`RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/ModelManagement/RawCullAISettingsModel.swift) |
+| Downloads and location snapshot | [`RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift) |
+| Stable similarity operations | [`RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift) |
+| Image similarity and semantic facade | [`RawCull/Intelligence/Similarity/SimilarityScoringModel.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| Deep Review service installation/state | [`RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) |
+| Qwen provider/model actor | [`RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) |
+| Objects feature, cache reuse, and diagnostics | [`RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift) |
+| Objects contracts, validation, and board | [`RawCull/Intelligence/ObjectAnalysis`](https://github.com/rsyncOSX/RawCull/tree/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/ObjectAnalysis) |
+| Objects view and status | [`RawCull/Views/AIAnalysis/ObjectAnalysisView.swift`](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/AIAnalysis/ObjectAnalysisView.swift) |
 | PhotoAIKit object workflow | [`PhotoAIWorkflows/ObjectSegmentationService.swift`](https://github.com/rsyncOSX/PhotoAIKit/blob/7f9adfcd69661c6bae4a640c16a4056dfc7393df/Sources/PhotoAIWorkflows/ObjectSegmentationService.swift) |
 
 The runtime's central rule is simple: validate and replace model-dependent
@@ -888,13 +889,13 @@ checks after suspension, see [Concurrency](/docs/concurrency-revised/).
 ## October 16: catalog lifetime and the separate Combined screen
 
 The model/feature graph remains stable when switching between AI Analysis and
-Combined Review. [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Main/RawCullMainView.swift) routes the separate main-view modes;
-[CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/AIAnalysis/CombinedReviewView.swift) derives Photo-first/Evidence workspace presentation
+Combined Review. [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Main/RawCullMainView.swift) routes the separate main-view modes;
+[CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/AIAnalysis/CombinedReviewView.swift) derives Photo-first/Evidence workspace presentation
 from the existing feature results instead of rebuilding providers. Sibling work
 still observes `CombinedReviewLease` and Qwen's generation gate.
 
 The catalog session now delegates task/access lifetime to
-[CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift). `RawCullCatalogAccess` weakly registers
+[CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift). `RawCullCatalogAccess` weakly registers
 grants, while source decoders and admitted batches retain the covering grant
 until their operation exits. Model replacement, cancellation and publication
 identity checks remain necessary even when a retained source stays readable.
@@ -909,7 +910,7 @@ Selected/Tagged control; they do not construct new analysis features. Deep
 Review, Objects and Combined retain their existing runtime instances.
 
 Model-download presentation is now composed from
-[AIModelDownloadRow.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/Settings/AIModelDownloadRow.swift), identity/progress/state
+[AIModelDownloadRow.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/Settings/AIModelDownloadRow.swift), identity/progress/state
 sections and licence-review views. `RawCullAIModelDownloadsModel` still owns
 download tasks, validation, removal and managed-location refresh. The row
 invokes these actions; it does not own provider installation. Removal remains
@@ -919,3 +920,22 @@ Settings receives the existing `RawCullViewModel` for Saved Files cleanup.
 That presentation change does not move culling persistence into the AI runtime.
 See [Viewer Architecture]({{< relref "../viewer-architecture.md" >}}) and
 [File Read and Write]({{< relref "../filereadandwrite.md" >}}) for those owners.
+
+## Dedicated semantic state within the stable graph
+
+The shared `SimilarityScoringModel` retains one
+[RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift).
+It owns semantic capability/service configuration, cached evidence, hydration,
+query tasks/generations, progress, matches and selection. Similarity forwards
+its existing semantic API. Feature wrappers and runtime identities remain stable;
+this is not another inference provider or application graph.
+
+Indexing replaces compatible semantic entries; legacy import preserves existing
+ones. Provider replacement cancels search, advances hydration generation and
+clears evidence, rejecting older completion. Grid revisions combine image and
+semantic changes. Classification leaves visible query results alone.
+
+The main view model separately retains
+[BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/BurstReviewSessionModel.swift) for decisions
+and explicit mutation commands; the coordinator retains worker/cache orchestration.
+Neither extraction changes the pinned AI model or photographic-quality contract.

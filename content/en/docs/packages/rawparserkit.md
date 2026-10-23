@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
 tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -547,7 +547,7 @@ Use the existing extension points:
 | Decode admission control                  | [Sources/RawParserKit/DecodeConcurrencyLimiter.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DecodeConcurrencyLimiter.swift)                                |
 | Parser diagnostics                        | [Sources/RawParserKit/RawParserDiagnostics.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/RawParserDiagnostics.swift)                                    |
 | Behavior and binary-fixture tests         | `Tests/RawParserKitTests/`                                                           |
-| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/ScanFiles.swift)              |
+| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/ScanFiles.swift)              |
 
 Continue from decoded images into
 [How PhotoAnalysisKit Is Constructed](../photoanalysiskit/), or return to the
@@ -566,8 +566,8 @@ The renderer caps scale to the requested longest edge without upscaling and
 renders RGBA8 sRGB. `CIRAWFilter` applies source orientation. Its detached render
 checks cancellation before and after work; cancellation does not interrupt a
 framework call already executing. See [Tests/RawParserKitTests/RAWDecoderTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/RAWDecoderTests.swift).
-In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
-access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
+In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
+access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
 than this display-oriented facade.
 
 ## Version 1.3.2: generic macOS-backed RAW formats
@@ -593,3 +593,11 @@ distinction. Current tests are
 and [GenericEmbeddedPreviewExtractorTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Tests/RawParserKitTests/GenericEmbeddedPreviewExtractorTests.swift).
 Adding an extension is not sufficient evidence for a camera-support promise;
 qualify a real file on the intended macOS decoder.
+
+## Current preload-save boundary is app-owned
+
+RawCull preload returns encoded JPEG data to its bounded worker, which releases
+the file's grid gate, awaits saving, then returns its slot. Each preload group
+bounds pending saves and retains its catalog grant through completion.
+Interactive saving is unchanged. RawParserKit's decode limiter, coalescing and
+resolved 1.3.2 APIs are unchanged by this host-side change.

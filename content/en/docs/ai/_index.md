@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
@@ -21,7 +21,7 @@ to a persisted similarity artifact.
 
 The source for this section comes from the pinned PhotoAIKit dependency and the
 RawCull repository. Paths beginning with `Sources/` refer to PhotoAIKit at the
-revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
+revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
 `RawCull/Intelligence`; app composition and presentation remain under
 `RawCull/Main`, `RawCull/Model`, and `RawCull/Views`.
 
@@ -47,7 +47,7 @@ PhotoAIKit and RawCull use these AI backends:
 - **Qwen3-VL** for local photo analysis and for concept discovery and assessment
   of numbered SAM 3 objects.
 
-The catalog inspected in the 3.3.5 (build 425) checkout exposes DataComp CLIP, Meta SAM 3,
+The catalog inspected in the 3.3.5 (build 426) checkout exposes DataComp CLIP, Meta SAM 3,
 and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
 a production download. SAM 3 requires acceptance of its verified bundled
 licence before download. The App Store build uses Apple-hosted Managed
@@ -234,3 +234,13 @@ it does not establish visual accuracy. The historical October 13 account reporte
 a later Objects negation fix. It is a dated result, not a fresh evaluation of
 3.3.5. Current source inspection and model-free fixtures do not replace a new
 installed-model run.
+
+## Current state owners
+
+`SimilarityScoringModel` retains `RawCullSemanticSearchModel` for semantic
+evidence, configuration, hydration and query execution. Its existing semantic
+API forwards to that owner. `RawCullViewModel` retains `BurstReviewSessionModel`
+for review decisions, independently of viewport sessions. Combined Review's
+three execution extensions still share one mutable feature/run owner. Read
+[AI Runtime]({{< relref "airuntime.md" >}}) and
+[Combined Review]({{< relref "aicombined.md" >}}) for the boundaries.

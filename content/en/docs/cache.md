@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
@@ -22,14 +22,14 @@ share keys merely because they originate from the same RAW file.
 
 | Cache                         | Main files                                                                                                              | Stores                                                                             |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Thumbnail identity            | [Model/Cache/ThumbnailCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Cache/ThumbnailCacheKey.swift)                                                                                   | Source fingerprint plus representation purpose, size, orientation, and schema      |
-| Preview memory cache          | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/SharedMemoryCache.swift), [Model/Cache/CachedThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Cache/CachedThumbnail.swift)                                                   | Larger `NSImage` thumbnails admitted by UI demand                                  |
-| Grid memory cache             | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/SharedMemoryCache.swift)                                                                                        | Small 200 px thumbnails populated by preload                                       |
-| Thumbnail disk cache          | [Actors/DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/DiskCacheManager.swift)                                                                                         | Representation-aware JPEG thumbnail files under the app cache directory            |
-| Full-size JPEG disk cache     | [Actors/FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/FullSizeJPGDiskCache.swift), [Model/Handlers/ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Handlers/ZoomPreviewHandler.swift)                                          | Larger embedded JPEG previews for zoom                                             |
-| Per-file similarity artifacts | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
-| Burst analysis cache          | [Intelligence/Persistence/BurstAnalysisCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Intelligence/Persistence/BurstAnalysisCache.swift)                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
-| Cache accounting              | [Model/Cache/TrackedThumbnailCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Cache/TrackedThumbnailCache.swift), [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Actors/SharedMemoryCache.swift)                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
+| Thumbnail identity            | [Model/Cache/ThumbnailCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Cache/ThumbnailCacheKey.swift)                                                                                   | Source fingerprint plus representation purpose, size, orientation, and schema      |
+| Preview memory cache          | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/SharedMemoryCache.swift), [Model/Cache/CachedThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Cache/CachedThumbnail.swift)                                                   | Larger `NSImage` thumbnails admitted by UI demand                                  |
+| Grid memory cache             | [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/SharedMemoryCache.swift)                                                                                        | Small 200 px thumbnails populated by preload                                       |
+| Thumbnail disk cache          | [Actors/DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/DiskCacheManager.swift)                                                                                         | Representation-aware JPEG thumbnail files under the app cache directory            |
+| Full-size JPEG disk cache     | [Actors/FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/FullSizeJPGDiskCache.swift), [Model/Handlers/ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Handlers/ZoomPreviewHandler.swift)                                          | Larger embedded JPEG previews for zoom                                             |
+| Per-file similarity artifacts | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)                                                                             | Individually validated Vision/CLIP `SimilarityArtifact` records                    |
+| Burst analysis cache          | [Intelligence/Persistence/BurstAnalysisCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/Persistence/BurstAnalysisCache.swift)                                                                                       | Derived catalog snapshots of artifacts, scores, groups, rankings, and review state |
+| Cache accounting              | [Model/Cache/TrackedThumbnailCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Cache/TrackedThumbnailCache.swift), [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/SharedMemoryCache.swift)                                                  | Lock-backed preview/grid item counts and byte costs kept correct across eviction   |
 
 ## Thumbnail Lookup
 
@@ -243,7 +243,7 @@ supply migration candidates, but it is not accepted as a current snapshot.
 
 ## Settings deletion includes durable review evidence
 
-[CacheSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/Settings/CacheSettingsTab.swift) now presents a combined
+[CacheSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/Settings/CacheSettingsTab.swift) now presents a combined
 cache total: preview/grid RAM, thumbnail/full-size disk data, similarity artifacts,
 burst snapshots and saved Combined Reviews. Its Delete Cache action first calls
 `CombinedReviewFeature.clearAllReviews()`, then clears shared caches, per-file
@@ -260,3 +260,16 @@ Saved Files has its own confirmed deletion action and size accounting. Read
 [File Read and Write]({{< relref "filereadandwrite.md" >}}) before changing
 either path. The burst workspace's three-frame session cache is a separate
 working set described in [Viewer Architecture]({{< relref "viewer-architecture.md" >}}).
+
+## Preload write lifetime and whole-process memory
+
+Preload releases a file's grid gate before awaiting its disk save, and retains
+the worker slot until saving returns. The per-group concurrency limit covers
+pending saves and encoded JPEGs. The background atomic writer and interactive
+thumbnail-save behavior are unchanged. A started write may finish during cancellation.
+
+Thumbnail-cache limits are not a whole-process memory cap. Loupe, zoom,
+comparison, full-size sources and framework scratch allocations have separate
+lifetimes. See [Performance Measurement]({{< relref "performance.md" >}})
+for the October 23 workload and the limits of comparing its transient peak with
+an earlier, different action sequence.

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "API RawBrowse"
 date = "2026-10-15"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
@@ -12,7 +12,7 @@ mermaid = true
 
 # RawBrowse developer and API documentation
 
-Last reviewed: 2026-10-22. Baseline: RawBrowse commit `5815fd64ca02185c1ca6300311794a3ecacf6ec8` and its internal Swift interfaces.
+Last reviewed: 2026-10-23. Baseline: RawBrowse commit `5815fd64ca02185c1ca6300311794a3ecacf6ec8` and its internal Swift interfaces.
 
 Read this guide in order to follow a photograph from application launch through folder browsing, preview, optional AI review, RAW 9 editing and export. The operation reference describes inputs, results, ownership and failure behavior. Source links point to the separate RawBrowse repository at the reviewed immutable commit.
 

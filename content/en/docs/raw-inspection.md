@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RAW Formats and Exposure Inspection"
 date = "2026-10-22"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "Distinguish extension admission, macOS decoding, embedded export, RAW development and display-referred exposure inspection."
 weight = 16
 mermaid = true
@@ -79,18 +79,18 @@ The helper name is a concrete call boundary, not a guarantee that every
 registry extension supports full development. The system filter determines
 whether an attempted input can be developed. In particular, generic browsing
 support does not extend the export loader's explicit three-format switch.
-See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/EmbeddedJPGExportLoader.swift) and
-[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
+See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/EmbeddedJPGExportLoader.swift) and
+[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
 
 ## Enter and leave exposure inspection
 
-[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
+[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
 selection, current/committed EV and clipping visibility before selecting
 `.developedRAW` and enabling inspection. Ending inspection restores that
 snapshot. A selected-file reset ends inspection and resets EV to zero.
 No editing sidecar is written by this mode.
 
-[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
+[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
 local slider draft from −5 to +5 EV in 0.1 steps. Dragging updates the small
 control view; release updates committed EV and triggers rendering. Reset
 commits zero. Closing inspection or pressing Escape restores the earlier
@@ -127,8 +127,8 @@ adjustments. They cannot establish sensor saturation or recoverable RAW detail.
 
 | Product | Sample cap | Near-white rule | Near-black rule |
 | --- | --- | --- | --- |
-| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
-| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
+| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
+| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
 
 The overlay draws near-white pixels red and near-black pixels blue with alpha
 180. The histogram has 256 bins per channel, normalized against the largest
@@ -144,9 +144,9 @@ task also includes whether the warning is enabled for a developed source.
 ## Read and verify the boundaries
 
 Start with registry tests, then generic preview tests in RawParserKit. In
-RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCullTests/RawImageLoadingIntegrationTests.swift) for
-display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCullTests/ZoomSessionModelTests.swift)
-for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCullTests/ZoomKeyboardControllerTests.swift)
+RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/RawImageLoadingIntegrationTests.swift) for
+display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ZoomSessionModelTests.swift)
+for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ZoomKeyboardControllerTests.swift)
 for suppressed inspection actions. Those tests do not qualify camera coverage,
 exposure recovery accuracy or the current histogram predicates on real files.
 Record OS/decoder, camera, render source and actual pixels when validating

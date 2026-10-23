@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Developer and API Documentation"
 linkTitle = "API Documentation"
 date = "2026-10-17"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "Developer guides and internal Swift API references for RawCull and RawBrowse."
 tags = ["API"]
 categories = ["technical details"]
@@ -29,3 +29,8 @@ The RawCull guide is split into a narrative application tour and
 For current presentation and image-source policy, use
 [Viewer Architecture]({{< relref "../viewer-architecture.md" >}}) and
 [RAW Formats and Exposure Inspection]({{< relref "../raw-inspection.md" >}}).
+
+The build-426 references include explicit burst-review commands, dedicated
+semantic-state ownership, AF evidence backfill and bounded preload saves. For
+measured behavior and its limits, read
+[Performance Measurement]({{< relref "../performance.md" >}}).

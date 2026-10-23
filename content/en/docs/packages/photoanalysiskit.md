@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -514,7 +514,15 @@ that concern belongs in RawCull's adapter or policy layer.
 | Metal source and compiled resource   | `Sources/PhotoAnalysisKit/Resources/`                                             |
 | Extraction decisions                 | `Documentation/ExtractionMap.md`                                                  |
 | Public behavior tests                | `Tests/PhotoAnalysisKitTests/`                                                    |
-| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
+| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
 
 Next, see how package-neutral measurements become culling-domain decisions in
 [How RawCullCore Is Constructed](../rawcullcore/).
+
+## Current host AF evidence hydration
+
+RawCull's workspace fills missing AF-center evidence from older cached analysis
+without replacing blended scores or recommended winners. Cancellation and
+scoring identity guard publication. The resolved PhotoAnalysisKit 1.3.1 formula
+is unchanged. The host's optional `releaseafcomparison` workflow exports crops
+for a separately labeled comparison; it is not photographic qualification.

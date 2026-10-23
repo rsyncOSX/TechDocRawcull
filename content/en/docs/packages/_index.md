@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-10-22"
+lastmod = "2026-10-23"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
@@ -27,8 +27,8 @@ do not redefine the application baseline.
 ## Resolved Dependency Snapshot
 
 This table is derived from
-[RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved](https://github.com/rsyncOSX/RawCull/blob/b46501739f6a09c0e2df352fc3ed2bf8e10a0e91/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
-This snapshot is from the current RawCull checkout on October 22, 2026.
+[RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved).
+This snapshot is from the current RawCull checkout on October 23, 2026.
 “App” means RawCull links a product directly; “transitive” means another package
 owns the dependency. A revision-only pin has no semantic-version label.
 
