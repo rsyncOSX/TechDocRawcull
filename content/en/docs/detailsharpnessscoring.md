@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -495,3 +495,13 @@ Follow the optional NumPy/OpenCV setup and labeling protocol in
 [Release test guide](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullReleaseTests/README.md). The report does not
 claim statistical significance or change app scoring. This documentation pass
 did not run this opt-in comparison or qualify photographic accuracy.
+
+## Target count and execution order
+
+Control labels now read `sharpnessScoringTargetCount`, which computes membership
+without sorting `sharpnessScoringTargetFiles`. Execution still uses the ordered
+array: visible selections first, hidden selected files in filename order; a star
+filter uses visible matching files when available, otherwise matching active files
+in filename order; the unfiltered active scope is filename-sorted. This avoids
+presentation-only sorting without changing scoring options or package throughput.
+See [Viewer Architecture]({{< relref "viewer-architecture.md" >}}).

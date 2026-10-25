@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
@@ -373,7 +373,7 @@ rendering preemptible. See
 
 ## Bounded preload saves and separate observable owners
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/ScanAndCreateThumbnails.swift) keeps saving inside each
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanAndCreateThumbnails.swift) keeps saving inside each
 bounded worker: process and encode, release the file's grid gate, await
 `DiskCacheManager.save`, then release the slot. A cancellation check after
 `group.next()` prevents new admission when a cancelled producer gets a slot.
@@ -389,3 +389,21 @@ remain observable main-actor models, not new background actors.
 Read [ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift),
 [CullingGridCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/CullingGridCoordinatorTests.swift) and
 [RawCullSemanticSearchTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/RawCullSemanticSearchTests.swift) for the contracts.
+
+## Catalog progress lifetime — October 2026
+
+[CatalogProgressCoalescer](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/Handlers/CatalogProgressCoalescer.swift)
+is main-actor presentation state. Each catalog load creates independent metadata
+and thumbnail instances. A cancellable 100 ms scheduling task weakly references
+the coalescer; scheduled identifiers and an accepting flag reject obsolete ticks.
+Initial and terminal publication bypass the cadence. Catalog cancellation cancels
+both coalescers, and callbacks check current catalog or instance identity.
+Internal accounting and thumbnail availability do not wait for a UI tick.
+
+Catalog instrumentation pairs `CatalogOpen`, `CatalogMetadataScan` and
+`CatalogThumbnailPreload` intervals. Optional source-load stage diagnostics are
+opt-in measurement support; ordinary loading continues through the production
+adapter. No parser concurrency or save-lifetime rewrite was retained in Phases
+3–6. The [current findings]({{< relref "performance.md" >}}) establish reduced
+sampled main-thread progress work, not that every expensive path avoids the main
+thread or that interaction is hitch-free.

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Viewer Architecture and Keyboard Ownership"
 date = "2026-10-22"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 description = "Trace loupe, zoom, burst, comparison and AI presentation through sessions, task owners, shared geometry and keyboard routing."
 weight = 15
 mermaid = true
@@ -176,3 +176,19 @@ works, but result/state writes use session commands.
 changed results invalidate cached group presentation. The workspace also
 requests missing AF-center evidence without replacing blended scores or
 reranking the winner as a side effect.
+
+## Reused navigation and progress presentation
+
+Zoom navigation now reuses a projection containing ordered files, an ID-to-index
+map and catalog membership. Its key includes catalog, grid and navigation-context
+revisions, source URL, rating filter and analysis-order mode. Selection changes
+reuse the projection; relevant content/context changes invalidate it. Cache reads
+still read observable inputs, while memoization storage does not publish changes.
+Sharpness control labels use `sharpnessScoringTargetCount` to count membership
+without constructing and sorting the execution array; execution preserves target
+ordering.
+
+Catalog progress is published at a coalesced 100 ms cadence with immediate
+initial/terminal states. Only the progress ring animates, respecting Reduce Motion.
+These changes do not establish first-painted-frame smoothness; see
+[the October 25 findings]({{< relref "performance.md" >}}).

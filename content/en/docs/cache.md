@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
@@ -271,5 +271,5 @@ thumbnail-save behavior are unchanged. A started write may finish during cancell
 Thumbnail-cache limits are not a whole-process memory cap. Loupe, zoom,
 comparison, full-size sources and framework scratch allocations have separate
 lifetimes. See [Performance Measurement]({{< relref "performance.md" >}})
-for the October 23 workload and the limits of comparing its transient peak with
-an earlier, different action sequence.
+for the October 25 reference, unresolved resource signals and the historical
+October 23 workload. These workloads are not interchangeable memory comparisons.

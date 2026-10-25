@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawCull Developer Guide"
 date = "2026-10-15"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
@@ -61,7 +61,7 @@ The main window then passes feature instances to `RawCullMainView` and supplies 
 
 ### 2. Opening a folder is a guarded transition
 
-In [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
+In [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
 
 The coordinator flushes pending decisions before allowing the replacement. After that suspension, it checks cancellation, transition generation and whether the requested source is still selected. A successful flush for folder B must not open B if the user has already selected folder C. A failed flush restores the previous source selection.
 
@@ -83,7 +83,7 @@ This explains why UI code should call the view-model entry point instead of mere
 
 ### 3. Scanning builds file descriptions before loading every preview
 
-Open [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/ScanFiles.swift). `scanFiles(url:onProgress:)` lists the immediate folder, skips hidden entries and admits formats recognized by `RawFormatRegistry`. It uses a task group with a bounded number of pending metadata reads. Before scheduling beyond that bound, it waits for a result. This limits simultaneous file access rather than starting a decode task for every photograph at once.
+Open [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanFiles.swift). `scanFiles(url:onProgress:)` lists the immediate folder, skips hidden entries and admits formats recognized by `RawFormatRegistry`. It uses a task group with a bounded number of pending metadata reads. Before scheduling beyond that bound, it waits for a result. This limits simultaneous file access rather than starting a decode task for every photograph at once.
 
 Each admitted file becomes a `FileItem` containing its URL, name, size, modification date, optional capture time, EXIF metadata and normalized autofocus point. [RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Main/RawCullFileItem.swift) aliases `FileItem` and `ARWSourceCatalog` to RawCullCore domain types: the application uses package models through familiar local names.
 
@@ -611,3 +611,20 @@ cache-preserved recordings and the unproven backlog-performance benefit.
 The smoke manifest expects 401 unique identifiers; parameterized invocations
 are separate from identifier counts. `make releaseafcomparison` is an additional
 opt-in real-photo export/comparison workflow, not a production scoring change.
+
+## Catalog progress and navigation updates — October 25
+
+`handleSourceChange(url:)` owns separate metadata and thumbnail progress coalescers.
+They publish intermediate observable values at a 100 ms cadence and initial/terminal
+values immediately. Cancelling or replacing a catalog cancels pending ticks and
+rejects obsolete callbacks. The pipeline still accounts for every file; thumbnail
+readiness and awaited disk saves do not wait for presentation ticks. `ProgressCount`
+animates only the ring for 100 ms and respects Reduce Motion.
+
+Zoom navigation reuses a revision-keyed projection rather than rebuilding ordered
+files and lookup maps on every selection. Sharpness control descriptions use a
+membership count without sorting the target execution list. See
+[Viewer Architecture]({{< relref "/docs/viewer-architecture.md" >}}) and
+[Performance Measurement]({{< relref "/docs/performance.md" >}}) for the cache inputs
+and evidence limits. The October 24–25 investigation retained no further encoder,
+grid, parser or picker optimizations in Phases 3–6.

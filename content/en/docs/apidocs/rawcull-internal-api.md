@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawCull Internal Swift API"
 date = "2026-10-22"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 description = "Application-internal catalog, culling, preview, scoring, similarity, AI, persistence and copy method contracts."
 weight = 25
 mermaid = true
@@ -25,7 +25,7 @@ Examples below run inside the app module. Names such as `viewModel`, `runtime`, 
 
 ### 1. Catalog loading and sorting
 
-Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/ScanFiles.swift).
+Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanFiles.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -124,7 +124,7 @@ Helper functions: `SaveJPGImage.outputURL`, JPEG encoding, timing estimates, pro
 
 ### 4. Sharpness and focus analysis
 
-Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
+Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
 
 `calibrateAndScoreCurrentCatalog() async` calibrates and scores `sharpnessScoringTargetFiles`, re-sorts, and persists compatible scoring metadata after a non-cancelled run. Despite its name, the target may be a selection or filtered scope:
 
@@ -309,7 +309,7 @@ When following an async function, track three things: the state captured before 
 
 `handleSortOrderChange()` is a compact example. It captures the sort generation, catalog identity, selected source, sort order and text. After sorting, it verifies that those inputs still describe the current request.
 
-**Source excerpt — publication guard in [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift):**
+**Source excerpt — publication guard in [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift):**
 
 ```swift
 let sorted = await sortFiles(files, order, text)
@@ -395,3 +395,21 @@ is retained by `SimilarityScoringModel`, whose forwarding API remains available.
 App admission and selection remain in the semantic feature. Combined Review's
 orchestration/work/comparison extensions still share one feature/run owner;
 `ReviewRunError` now has its own file.
+
+## Catalog performance contracts — October 25
+
+`CatalogProgressCoalescer<Value>` is a main-actor helper with `update`, `finish`
+and `cancel` operations. Each load owns independent metadata and thumbnail
+instances. Intermediate publication waits for a 100 ms tick; initial/terminal
+values publish immediately. Cancellation rejects pending callbacks. This is a
+presentation contract, independent of completed file accounting and image readiness.
+`ScanAndCreateThumbnails.progressCounts()` supplies final completed/total counts.
+
+`zoomNavigationProjection()` memoizes ordered files, indices and membership against
+catalog/grid/context revisions, source, rating filter and analysis-order mode.
+`sharpnessScoringTargetCount` supplies control labels without sorting the execution
+array; `sharpnessScoringTargetFiles` retains execution order. These are internal
+app helpers, not package API additions.
+
+See [Performance Measurement]({{< relref "/docs/performance.md" >}}) for benchmark
+and signpost semantics, historical comparison restrictions and incomplete UI validation.

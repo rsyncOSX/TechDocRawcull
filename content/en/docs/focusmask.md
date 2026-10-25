@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-25"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
@@ -252,7 +252,7 @@ for overlay rendering.
 
 ## Restoring scores without repeated normalization
 
-[RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift) restores persisted scores by building one
+[RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift) restores persisted scores by building one
 filename index and validating the scoring signature, source byte size and
 modification date (within 0.001 seconds). It collects the valid values before
 publishing dictionaries, so normalization runs once per restoration. AF-center

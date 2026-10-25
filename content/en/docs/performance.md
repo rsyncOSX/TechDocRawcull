@@ -1,9 +1,9 @@
 ---
 title: Performance Measurement
 linkTitle: Performance
-description: What the October 23 real-catalog measurements establish, how preload saves are bounded, and how to design a comparable follow-up.
+description: October 25 performance findings, progress coalescing, catalog benchmark semantics, and remaining validation limits.
 weight: 85
-lastmod: 2026-10-23
+lastmod: 2026-10-25
 ---
 
 # Performance Measurement
@@ -11,6 +11,103 @@ lastmod: 2026-10-23
 Treat performance claims as workload-specific evidence. A bounded task group
 establishes an ownership/admission invariant; it does not by itself establish
 faster browsing, lower total CPU work or a leak-free application.
+
+## Current findings — 25 October 2026
+
+RawCull **3.3.5, build 426** closed the October 24–25 investigation with
+qualified acceptance. The retained Phase 2 changes coalesce metadata and
+thumbnail progress independently at a 100 ms cadence, publish initial and terminal
+states immediately, and cancel pending publication when a catalog is replaced.
+The progress ring uses a 100 ms linear transition and respects Reduce Motion;
+numeric progress changes immediately. Accounting, image readiness, bounded
+workers and awaited saves retain their contracts.
+
+The current reference passed three benchmark repetitions on **809 ARWs**
+(50,126,917,632 bytes), **1616 px** previews and **100 browsing steps**, optimized
+Release with testability. This workload differs from the historical 1,198-file
+session below. The benchmark source was `53c80dbb`; the final documentation
+revision is linked in the reports below. The CPU recording's app UUID was verified,
+but its source hash was not independently established.
+
+| Pooled median | Historical 809-file baseline | Current reference |
+| --- | ---: | ---: |
+| Empty-thumbnail-cache preload | 8.206 s | 8.415 s |
+| Warm-thumbnail-cache preload | 3.553 s | 3.647 s |
+| JPEG encoding | 5.005 ms | 4.989 ms |
+| Grid preload resize | 4.308 ms | 4.335 ms |
+| Prepared disk image readiness | 0.330 ms | 0.314 ms |
+| Zoom preview readiness | 3.316 ms | 3.376 ms |
+
+These numbers are **historical context, not an accepted automated before/after
+comparison**: harness fingerprints differ and the runner rejects comparison.
+Three repetitions and unmatched cache/power/background conditions do not establish
+significance or a general loading speedup. Source-load wrapper medians rose
+13.563 → 23.296 ms and the worst rose 2.781 → 6.187 s; metadata and resource
+changes also remain unresolved regression signals, without established causality.
+
+A separate phase-aligned app capture observed preload main-thread sampled weight
+falling **4.575 → 1.325 s (71%)**, while elapsed preload was **20.577 → 20.254 s**.
+This supports less sampled main-thread progress work, with differing capture
+configuration/provenance and no matched repetition. It does not establish a 71%
+loading speedup, exact CPU savings, or smoother painted frames. Component benchmark
+and app preload times measure different workloads.
+
+Phases 3–6 deferred further encoder, grid, parser, picker and view optimizations.
+They retained diagnostics and findings. A reduced warm-cache recording contained
+74 hitches, worst 416.694 ms; actions and capture settings differ from earlier
+recordings, so counts must not be compared as a regression rate. Full SwiftUI
+acceptance, first-painted-frame smoothness, matched cancellation/catalog-switch
+coverage and long-duration stability remain incomplete. Phase 7 did not rerun
+Swift report tests; its Python runner/exporter suite passed 18 tests. Performance
+close-out permits the normal release process, not complete release certification.
+
+See [the final findings](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/PerformancePhase7.md),
+[Phase 2 measurements](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/PerformancePhase2.md), and
+[the phase plan and outcomes](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/performancefixes.md) for provenance, validation and deferred work.
+The durable final trace/app/dSYM/export archive is
+`/Volumes/MacMini4/TestRunPerformance/phase7-evidence-2026-10-25`;
+the benchmark reference is stored separately under
+`/Volumes/MacMini4/TestRunPerformance/phase7-reference-20261025-062837`.
+
+## Run the catalog benchmark
+
+Run from the RawCull app repository with Xcode and pinned dependencies available:
+
+```sh
+python3 -B Scripts/RunCatalogPerformance.py "/Volumes/Photos/My ARW Catalog" \
+  --output /tmp/rawcull-reference --runs 3 --steps 100 --pixels 1616
+```
+
+Use a new output directory outside the repository and catalog. The source folder
+is read only and nonrecursive; the benchmark requires valid ARWs. The CLI defaults
+to 1600 pixels while the app source default is 1616, so pass the actual app setting.
+Every repetition starts with a separate empty thumbnail disk cache, then measures
+warm preload and prepared browsing with documented RAM resets. OS/parser caches
+are not flushed. Results measure image readiness, not first painted pixels or AI
+throughput. The benchmark build disables App Sandbox only for its command-line
+catalog access; normal application settings are unchanged.
+
+Retain `run-configuration.json`, `results.json`, `report.md`, per-run events/results,
+`xcodebuild.log` and `tests.xcresult`. Add `--baseline /path/to/previous-output` only
+for compatible catalog, machine/OS, Xcode, settings, version and harness identities.
+Do not bypass fingerprint checks. An optional `--max-regression-percent 20` gate
+requires both a median increase over 20% and over 5 ms; tails still need review.
+
+[Benchmark semantics](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/CatalogPerformance.md) and
+[the Instruments workflow](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/MeasurePerformance.md) explain the complete procedure.
+App phase instrumentation uses subsystem `no.blogspot.RawCull`, category
+`CatalogPerformance`, intervals `CatalogOpen`, `CatalogMetadataScan`,
+`CatalogThumbnailPreload` and event `CatalogThumbnailPreloadComplete`.
+`Scripts/ExportCatalogTrace.py` exports available tables and records missing/empty
+data; `Scripts/ValidateCatalogSignposts.py` validates pairing and completion.
+A successful export alone does not establish usable phase or UI evidence.
+Preserve complete traces and matching binaries/dSYMs before cleaning temporary data.
+
+## Historical October 23 evidence
+
+The remaining sections preserve the earlier 1,198-file workload. They describe
+that session and its limitations; use the October 25 findings above for current
+performance status.
 
 ## Recorded implementation and catalog
 
@@ -29,7 +126,7 @@ Raw Instruments traces were temporary files; do not assume they still exist.
 
 ## Preload owns its pending saves
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Actors/ScanAndCreateThumbnails.swift)
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanAndCreateThumbnails.swift)
 returns encoded JPEG data and its cache key from processing. Each worker:
 
 1. Processes the image and prepares any cache-save payload.
@@ -122,7 +219,7 @@ The same-process fallback also recorded no hangs, but did not sample preload.
 that app session. Repeated folder selection therefore does not reproduce a
 fresh-process preload workload.
 
-## Design the next comparable measurement
+## Comparable-measurement requirements
 
 Use the same implementation fingerprints, source mode, preview size, catalog,
 action sequence and cache preparation for both sides. Separate a cached load
@@ -130,8 +227,8 @@ from a controlled cache-miss/write workload. Record phase boundaries so source
 switches and full-size development do not become catalog-load peaks. Observe
 cancellation while the intended phase is active and verify recovery afterward.
 
-Grid downscaling is a candidate for further cached-preload investigation; the
-current trace does not establish that it causes foreground latency. Reproduce
+The October 24 grid investigation deferred optimization; the historical
+October 23 trace does not establish that downscaling causes foreground latency. Reproduce
 the intermittent reopening issue independently before assigning its cause.
 Keep photographic quality, task ownership and runtime performance as separate
 validation questions.
