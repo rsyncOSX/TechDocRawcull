@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
@@ -21,7 +21,7 @@ to a persisted similarity artifact.
 
 The source for this section comes from the pinned PhotoAIKit dependency and the
 RawCull repository. Paths beginning with `Sources/` refer to PhotoAIKit at the
-revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
+revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
 `RawCull/Intelligence`; app composition and presentation remain under
 `RawCull/Main`, `RawCull/Model`, and `RawCull/Views`.
 
@@ -47,7 +47,7 @@ PhotoAIKit and RawCull use these AI backends:
 - **Qwen3-VL** for local photo analysis and for concept discovery and assessment
   of numbered SAM 3 objects.
 
-The catalog inspected in the 3.3.5 (build 426) checkout exposes DataComp CLIP, Meta SAM 3,
+The catalog inspected in the 3.3.6 (build 428) checkout exposes DataComp CLIP, Meta SAM 3,
 and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
 a production download. SAM 3 requires acceptance of its verified bundled
 licence before download. The App Store build uses Apple-hosted Managed
@@ -232,7 +232,7 @@ check, standalone Qwen, and Objects. They do not execute Combined Review.
 Passing a JSON contract establishes accepted structure and some consistency;
 it does not establish visual accuracy. The historical October 13 account reported 17/18 successful analyses before
 a later Objects negation fix. It is a dated result, not a fresh evaluation of
-3.3.5. Current source inspection and model-free fixtures do not replace a new
+3.3.6. Current source inspection and model-free fixtures do not replace a new
 installed-model run.
 
 ## Current state owners

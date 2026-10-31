@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "Future Features and Competitive Evaluation"
 linkTitle = "Future Features"
 date = "2026-09-01"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 description = "Competitive feature review and a prioritized roadmap for RawCull after version 3.2.2, including an evaluation of additional Core AI models."
 tags = ["roadmap", "features", "culling", "ai", "core-ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
@@ -12,9 +12,9 @@ weight = 55
 
 # Future Features and Competitive Evaluation
 
-> **Historical roadmap, implementation note (23 October 2026):** The
+> **Historical roadmap, implementation note (31 October 2026):** The
 > competitive review and version 3.2.2 recommendations below retain their original
-> planning context. The reviewed app is now 3.3.5 (build 426), with Qwen, SAM 3
+> planning context. The reviewed app is now 3.3.6 (build 428), with Qwen, SAM 3
 > Objects and Combined Review already implemented. Those are no longer merely
 > future candidates. Follow [AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}})
 > and [Combined Review]({{< relref "ai/aicombined.md" >}}) for current behavior.

@@ -3,7 +3,7 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-10-25
+lastmod: 2026-10-31
 ---
 
 # File Read and Write Reference
@@ -119,12 +119,12 @@ Main files:
 
 | File                           | Role                                            |
 | ------------------------------ | ----------------------------------------------- |
-| [CopyFilesView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/CopyFiles/CopyFilesView.swift)          | UI and execution lifecycle                      |
-| [OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/CopyFiles/OpencatalogView.swift)        | Destination picker and bookmark creation        |
-| [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift)       | Process owner and progress/result state         |
-| [ArgumentsSynchronize.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ParametersRsync/ArgumentsSynchronize.swift)   | Builds rsync arguments                          |
-| [PrepareOutputFromRsync.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ParametersRsync/PrepareOutputFromRsync.swift) | Parses process output                           |
-| [RemoteDataNumbers.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ParametersRsync/RemoteDataNumbers.swift)      | Summarizes copied file counts and sizes         |
+| [CopyFilesView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CopyFiles/CopyFilesView.swift)          | UI and execution lifecycle                      |
+| [OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CopyFiles/OpencatalogView.swift)        | Destination picker and bookmark creation        |
+| [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift)       | Process owner and progress/result state         |
+| [ArgumentsSynchronize.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/ArgumentsSynchronize.swift)   | Builds rsync arguments                          |
+| [PrepareOutputFromRsync.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/PrepareOutputFromRsync.swift) | Parses process output                           |
+| [RemoteDataNumbers.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/RemoteDataNumbers.swift)      | Summarizes copied file counts and sizes         |
 
 `ExecuteCopyFiles.startcopyfiles` first derives the selected filenames from the
 current `RawCullViewModel`. It then creates an operation-unique file under
@@ -228,19 +228,19 @@ recovery, `restoreCullingPresentation()` rebuilds rating lookups, valid scores,
 filters and selection. Archive/reset also refreshes the UI when the subsequent
 write fails, because the in-memory store has already changed. Failed saves remain
 dirty. Rating edits refresh `dateTagged`, including edits of existing records.
-See [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/CullingModel.swift), [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift) and
-[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ReviewPersistenceTests.swift).
+See [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/CullingModel.swift), [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift) and
+[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewPersistenceTests.swift).
 
 `loadPersistedScoringandSaliency()` builds a filename lookup once, validates
 signature/size/modification date, and publishes score dictionaries in a batch.
 It keeps the first legacy duplicate and accepts AF scores only with a valid AF
 point and a finite positive score. This avoids repeated normalization after each
-restored item. See [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift).
+restored item. See [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift).
 
 Settings failures are represented separately by `SettingsPersistenceFailure`
 with `.load` or `.save`. `SettingsView` exposes the failure and retry/dismiss
 controls; a missing settings file uses defaults without reporting corruption.
-See [RawCullTests/SettingsPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/SettingsPersistenceTests.swift).
+See [RawCullTests/SettingsPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SettingsPersistenceTests.swift).
 
 ## Embedded export is independent of display preview
 
@@ -250,13 +250,13 @@ when standalone orientation is present or the RAW orientation is upright.
 Otherwise it normalizes orientation and encodes a standalone JPEG. It does not
 export a same-basename sidecar or a lossy display-cache entry. No usable embedded
 JPEG is a per-file export failure. The Sony demosaic mode remains a separate
-path. [RawCullTests/RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/RawImageLoadingIntegrationTests.swift) protects this boundary.
+path. [RawCullTests/RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/RawImageLoadingIntegrationTests.swift) protects this boundary.
 
 ## Saved Files and cache deletion in Settings
 
 The old Saved Files menu/sheet presentation has been removed from
-`RawCullMainView`. [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Main/RawCullApp.swift) passes the stable
-view model into Settings; [CacheSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/Settings/CacheSettingsTab.swift)
+`RawCullMainView`. [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullApp.swift) passes the stable
+view model into Settings; [CacheSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/Settings/CacheSettingsTab.swift)
 shows Saved Files separately from the cache total.
 
 `WriteSavedFilesJSON.diskUsage()` runs through the shared writer actor and sums
@@ -281,7 +281,7 @@ the loader's ARW/NEF/DNG cases. See
 
 ## Shared review-state serialization
 
-[BurstReviewStateMapping.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Intelligence/BurstAnalysis/BurstReviewStateMapping.swift)
+[BurstReviewStateMapping.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/BurstAnalysis/BurstReviewStateMapping.swift)
 implements snapshot/restore rules for cached analysis and live review. It derives
 membership signatures, omits `.none`, filters missing file references and
 restores compatible decisions onto current group IDs. Groups without a valid
@@ -291,3 +291,7 @@ signature cannot restore state. The stored schema is unchanged.
 retain persistence orchestration. Thumbnail preload now also owns its saves
 through completion: each worker awaits saving before returning its slot. The
 interactive save path is unchanged.
+
+## October 31 integration
+
+Normal ZoomView fit requests reuse an existing developed JPEG before rendering a bounded RAW preview. New direct fit pixels and adjusted exposure inspection do not write that persistent cache. Normal native development, loupe, burst and exports retain their established JPEG paths. See [RAW viewing policy]({{< relref "raw-inspection.md" >}}).

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawCull AI models"
 date = "2026-09-26"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]

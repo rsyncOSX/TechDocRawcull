@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -514,7 +514,7 @@ that concern belongs in RawCull's adapter or policy layer.
 | Metal source and compiled resource   | `Sources/PhotoAnalysisKit/Resources/`                                             |
 | Extraction decisions                 | `Documentation/ExtractionMap.md`                                                  |
 | Public behavior tests                | `Tests/PhotoAnalysisKitTests/`                                                    |
-| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
+| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
 
 Next, see how package-neutral measurements become culling-domain decisions in
 [How RawCullCore Is Constructed](../rawcullcore/).

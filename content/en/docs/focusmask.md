@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-10-25"
+lastmod = "2026-10-31"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
@@ -242,9 +242,9 @@ for overlay rendering.
 
 | Boundary or invariant                                                                                | Tests                                                          |
 | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull/package Metal integration and scoring-source adaptation                                      | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
-| Preset/quality mapping, descriptor signatures, legacy invalidation, coalesced runs, UI normalization | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/SharpnessScoringTests.swift)                     |
-| Persistence merge and file/signature validation behavior                                             | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/CullingModelTests.swift)                         |
+| RawCull/package Metal integration and scoring-source adaptation                                      | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| Preset/quality mapping, descriptor signatures, legacy invalidation, coalesced runs, UI normalization | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SharpnessScoringTests.swift)                     |
+| Persistence merge and file/signature validation behavior                                             | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CullingModelTests.swift)                         |
 | Batch bounds, ordering, progress, decode failure, cancellation                                       | [PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          |
 | Descriptor inclusions/exclusions and policy versions                                                 | [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) |
 | Numeric score helpers, aperture policy, ISO curve, focus-failure classification                      | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
@@ -252,21 +252,21 @@ for overlay rendering.
 
 ## Restoring scores without repeated normalization
 
-[RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift) restores persisted scores by building one
+[RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift) restores persisted scores by building one
 filename index and validating the scoring signature, source byte size and
 modification date (within 0.001 seconds). It collects the valid values before
 publishing dictionaries, so normalization runs once per restoration. AF-center
 scores additionally require a valid current AF point, finite value and value
 above 1e-6. Empty restoration clears stale evidence. Store recovery invokes this
 same path before refreshing filters and selection; see
-[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ReviewPersistenceTests.swift).
+[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewPersistenceTests.swift).
 
 ## Current presentation owners
 
 Loupe mask task/generation state now lives in
-[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift); zoom mask
+[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift); zoom mask
 coordination lives in
-[ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift).
+[ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift).
 `AnalysisPreviewPreparation` shares the AI preview/focus preparation path.
 The PhotoAnalysisKit pin and scalar algorithm are unchanged by these view
 extractions. A mask may remain visible during a same-photo source transition,
@@ -279,7 +279,7 @@ image can differ; follow the coordinator's actual input when evaluating detail.
 
 Older burst caches can contain blended scores without AF-center scores.
 `loadMissingAFPointScores(for:)` in
-[SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
+[SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
 analyzes valid AF points with missing evidence unless ordinary scoring is active.
 It retains access, checks cancellation and the scoring signature, and publishes
 only AF-center values. Existing blended scores and winners remain intact. The

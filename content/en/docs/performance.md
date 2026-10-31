@@ -1,9 +1,9 @@
 ---
 title: Performance Measurement
 linkTitle: Performance
-description: October 25 performance findings, progress coalescing, catalog benchmark semantics, and remaining validation limits.
+description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-10-25
+lastmod: 2026-10-31
 ---
 
 # Performance Measurement
@@ -12,7 +12,62 @@ Treat performance claims as workload-specific evidence. A bounded task group
 establishes an ownership/admission invariant; it does not by itself establish
 faster browsing, lower total CPU work or a leak-free application.
 
-## Current findings — 25 October 2026
+## RAW ZoomView measurements — 31 October 2026
+
+The selected build-428 policy uses direct bounded fit previews on a completed-pixel
+and persistent-JPEG cache miss. Native zoom retains the established JPEG pipeline;
+inspection remains native. See [source selection]({{< relref "raw-inspection.md" >}}).
+
+The [app measurement record](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/RAW9PreviewPerformance.md)
+and [raw results](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/RAW9PreviewPerformanceResults.json)
+cover six filename-sorted Sony ARWs, all RAW 9 at 9984 × 6656 pixels, three passes
+per mode (18 samples). Fit uses 3072 pixels; modes run in separate processes.
+
+| Pipeline | Median image delivery | Median materialized bitmap | Process peak RSS |
+| --- | ---: | ---: | ---: |
+| Legacy JPEG, disk-cache miss | 4382 ms | 4644 ms | 919 MiB |
+| Selected native policy, disk-cache miss | 4372 ms | 4632 ms | 919 MiB |
+| Direct fit, 3072 pixels | 1418 ms | 1425 ms | 391 MiB |
+| Completed fit-pixel cache hit | 0.040 ms | 7.8 ms | 499 MiB |
+
+Uncached fit delivery was approximately 3.1× faster with 57% lower process peak
+RSS in this standalone workload. These compare different display resolutions;
+normal native performance stayed effectively unchanged. Cache-hit delivery is
+lookup/readiness, not a painted frame. RSS includes frameworks and benchmark
+bitmap materialization, not just the renderer's 256 MiB cache. OS/storage caches
+were not flushed. GUI first paint, hitches, other cameras and real portrait RAWs
+were not measured.
+
+Native geometry and successive fit/native size transitions passed on all six
+photos. Maximum fit mean absolute RGB error against the native JPEG was 0.779/255
+(bound 3/255); native exposure checks at −1, 0 and +1 EV matched sampled reference
+pixels at 0/255. This bounded cohort does not establish universal decoder quality.
+Direct-native rendering was rejected (4807 ms delivery median, 1394 MiB peak RSS).
+
+The recorded focused run passed 32 tests, including 10 new RAW preview tests.
+The recorded full run executed 696 tests with three pre-existing failures:
+README/project version mismatch (3.3.5 versus 3.3.6), README/parser pin mismatch
+(1.3.2 versus 1.3.3), and a launch-context expectation of thumbnail while the
+unchanged default is embedded JPEG. These are source-recorded results; this
+documentation pass did not rerun them. Temporary full logs/images were under
+`/tmp/rawcull-raw9-20261031`; the committed JSON retains samples and source hashes.
+
+## Deferred catalog source-load tails
+
+The [October 25 follow-up](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/DecodeLatencyFollowUp-2026-10-25.md)
+records a separate matched 809-file comparison: empty-cache median 8.617 → 8.188 s,
+warm median 3.973 → 3.634 s, but maximum source-load latency 343.486 → 2011.928 ms.
+Its 200-pixel grid output differs from the earlier 200-point path, so memory and
+resize improvements require that workload qualification. The wrapper includes
+access, scheduling, parser waits, I/O and journal delivery; it does not isolate
+decoder CPU time. Rare-tail causes and user impact remain unproven.
+
+That comparison predates the RawParserKit 1.3.3 executor update. Package/RawBrowse
+thumbnail experiments do not replace a new RawCull catalog measurement. Preserve
+the source/load-stage diagnostics and collect matched runs before attributing
+an app speedup or tail fix to the new pin.
+
+## Historical catalog findings — 25 October 2026
 
 RawCull **3.3.5, build 426** closed the October 24–25 investigation with
 qualified acceptance. The retained Phase 2 changes coalesce metadata and
@@ -61,9 +116,9 @@ coverage and long-duration stability remain incomplete. Phase 7 did not rerun
 Swift report tests; its Python runner/exporter suite passed 18 tests. Performance
 close-out permits the normal release process, not complete release certification.
 
-See [the final findings](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/PerformancePhase7.md),
-[Phase 2 measurements](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/PerformancePhase2.md), and
-[the phase plan and outcomes](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/performancefixes.md) for provenance, validation and deferred work.
+See [the final findings](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/PerformancePhase7.md),
+[Phase 2 measurements](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/PerformancePhase2.md), and
+[the phase plan and outcomes](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/performancefixes.md) for provenance, validation and deferred work.
 The durable final trace/app/dSYM/export archive is
 `/Volumes/MacMini4/TestRunPerformance/phase7-evidence-2026-10-25`;
 the benchmark reference is stored separately under
@@ -93,8 +148,8 @@ for compatible catalog, machine/OS, Xcode, settings, version and harness identit
 Do not bypass fingerprint checks. An optional `--max-regression-percent 20` gate
 requires both a median increase over 20% and over 5 ms; tails still need review.
 
-[Benchmark semantics](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/CatalogPerformance.md) and
-[the Instruments workflow](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/Docs/MeasurePerformance.md) explain the complete procedure.
+[Benchmark semantics](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/CatalogPerformance.md) and
+[the Instruments workflow](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/Docs/MeasurePerformance.md) explain the complete procedure.
 App phase instrumentation uses subsystem `no.blogspot.RawCull`, category
 `CatalogPerformance`, intervals `CatalogOpen`, `CatalogMetadataScan`,
 `CatalogThumbnailPreload` and event `CatalogThumbnailPreloadComplete`.
@@ -114,7 +169,7 @@ performance status.
 The October 23 remeasurement used the approved preload-save implementation
 from `54058fce`, built as optimized Release with coverage disabled. The arm64
 build UUID was `60782AD2-A618-385A-A5BA-3BD3A30B07A9`. These measurements predate
-the current build-426 documentation baseline; do not describe them as a new
+the historical build-426 documentation baseline; do not describe them as a new
 recording of every later source change.
 
 The catalog contained 1,198 ARW files totaling 68,527,349,760 bytes, matching the
@@ -126,7 +181,7 @@ Raw Instruments traces were temporary files; do not assume they still exist.
 
 ## Preload owns its pending saves
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanAndCreateThumbnails.swift)
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndCreateThumbnails.swift)
 returns encoded JPEG data and its cache key from processing. Each worker:
 
 1. Processes the image and prepares any cache-save payload.
@@ -141,7 +196,7 @@ background atomic writer. Interactive `RequestThumbnail` saves are unchanged.
 The catalog grant remains retained through the group's completion, and an
 atomic write already underway is awaited rather than interrupted.
 
-[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
+[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
 stalls saves to check the bound, gate ordering, completion ownership,
 cancellation, unchanged preview-RAM admission and disk-backed warm reload.
 A cache-preserved real catalog does not necessarily stress this write path.

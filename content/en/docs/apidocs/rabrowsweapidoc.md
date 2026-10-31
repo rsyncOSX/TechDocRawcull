@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "API RawBrowse"
 date = "2026-10-15"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]

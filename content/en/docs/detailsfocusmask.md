@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
@@ -61,10 +61,10 @@ view, app model, URL, or persistence object.
 
 The RawCull entry files are:
 
-- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
-- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
-- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
-- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
+- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
+- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
+- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
+- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
 
 Views snapshot the effective config, inject ISO, aperture, and normalized AF
 point, cancel a previous mask task when image or config identity changes, and
@@ -412,7 +412,7 @@ the owning SwiftUI task is the final stale-result boundary.
 
 | Stage                                                                                   | Tests                                                          |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
 | Public analyze/mask/calibration behavior and cancellation                               | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
 | Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | [PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift)           |
 | Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |

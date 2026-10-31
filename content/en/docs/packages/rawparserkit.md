@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-25"
+lastmod = "2026-10-31"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
 tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -15,7 +15,7 @@ weight = 40
 
 > **Revision scope:** This walkthrough was written against RawParserKit `1.3.0`
 > at `d2175ed880d39021bdb5f5a2a842b460af0b316c`. The current RawCull
-> checkout resolves **1.3.2** at `07801a34a82d7720d301a80724c36a5b8c9f1d6c`.
+> checkout resolves **1.3.3** at `26df4abc2178d5c07d08f3883d84d0648f5141d3`.
 > The earlier audit remains explicitly historical. The 1.3.1 RAW 9 and
 > 1.3.2 generic-format additions below describe the current application boundary.
 
@@ -547,7 +547,7 @@ Use the existing extension points:
 | Decode admission control                  | [Sources/RawParserKit/DecodeConcurrencyLimiter.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/DecodeConcurrencyLimiter.swift)                                |
 | Parser diagnostics                        | [Sources/RawParserKit/RawParserDiagnostics.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Sources/RawParserKit/RawParserDiagnostics.swift)                                    |
 | Behavior and binary-fixture tests         | `Tests/RawParserKitTests/`                                                           |
-| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Actors/ScanFiles.swift)              |
+| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift)              |
 
 Continue from decoded images into
 [How PhotoAnalysisKit Is Constructed](../photoanalysiskit/), or return to the
@@ -566,8 +566,8 @@ The renderer caps scale to the requested longest edge without upscaling and
 renders RGBA8 sRGB. `CIRAWFilter` applies source orientation. Its detached render
 checks cancellation before and after work; cancellation does not interrupt a
 framework call already executing. See [Tests/RawParserKitTests/RAWDecoderTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/f0e5b02a10294798afd86781da5d6510e146a7ba/Tests/RawParserKitTests/RAWDecoderTests.swift).
-In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/7b8e200f07ceb8a6f10947236a5f3de5a099fb45/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
-access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
+In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
+access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
 than this display-oriented facade.
 
 ## Version 1.3.2: generic macOS-backed RAW formats
@@ -600,4 +600,21 @@ RawCull preload returns encoded JPEG data to its bounded worker, which releases
 the file's grid gate, awaits saving, then returns its slot. Each preload group
 bounds pending saves and retains its catalog grant through completion.
 Interactive saving is unchanged. RawParserKit's decode limiter, coalescing and
-resolved 1.3.2 APIs are unchanged by this host-side change.
+public thumbnail APIs remain unchanged by this host-side change. Version 1.3.3 changes executor placement as described below.
+
+## Version 1.3.3: bounded concurrent thumbnail execution
+
+The app now pins `26df4abc2178d5c07d08f3883d84d0648f5141d3` (1.3.3).
+`RawImageLoader.thumbnail` calls a private static `@concurrent decodeThumbnail`
+inside the existing six-slot limiter. Admission alone did not move synchronous
+ImageIO work onto the concurrent executor under the package isolation settings.
+The slot stays held until decode returns. Request coalescing, priority,
+cancellation checks, fallback order, orientation and public APIs are preserved;
+full-size preview loading is unchanged. Synchronous decode remains non-preemptive
+between cancellation checks.
+
+The [package evaluation](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Docs/ThumbnailExecutorEvaluation.md)
+records 105 passing tests in each Debug/Release package suite and ARW throughput
+experiments. Paired RawBrowse empty-cache cohorts improved; warm disk cohorts
+showed no established benefit. Those are package/companion observations, not a
+fresh RawCull whole-catalog speed or UI smoothness measurement.

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawBrowse AI models"
 date = "2026-09-26"
-lastmod = "2026-10-23"
+lastmod = "2026-10-31"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "github", "release"]
 categories = ["technical details"]
