@@ -11,6 +11,7 @@ command = """
 publish = "public"
 
 [build.environment]
+NODE_VERSION = "26"
 DART_SASS_VERSION = "1.102.0"
 GO_VERSION = "1.22.2"
 
