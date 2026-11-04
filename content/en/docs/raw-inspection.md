@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RAW Formats and Exposure Inspection"
 date = "2026-10-22"
-lastmod = "2026-10-31"
+lastmod = "2026-11-04"
 description = "Distinguish extension admission, macOS decoding, embedded export, RAW development and display-referred exposure inspection."
 weight = 16
 mermaid = true
@@ -79,18 +79,18 @@ The helper name is a concrete call boundary, not a guarantee that every
 registry extension supports full development. The system filter determines
 whether an attempted input can be developed. In particular, generic browsing
 support does not extend the export loader's explicit three-format switch.
-See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/EmbeddedJPGExportLoader.swift) and
-[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
+See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/EmbeddedJPGExportLoader.swift) and
+[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
 
 ## Enter and leave exposure inspection
 
-[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
+[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
 selection, current/committed EV and clipping visibility before selecting
 `.developedRAW` and enabling inspection. Ending inspection restores that
 snapshot. A selected-file reset ends inspection and resets EV to zero.
 No editing sidecar is written by this mode.
 
-[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
+[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
 local slider draft from −5 to +5 EV in 0.1 steps. Dragging updates the small
 control view; release updates committed EV and triggers rendering. Reset
 commits zero. Closing inspection or pressing Escape restores the earlier
@@ -101,7 +101,7 @@ not RawBrowse's persistent RAW 9 editor.
 
 ## Rendering and resource ownership
 
-The `RAWPreviewRenderer` actor in [RAWPreviewRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/RAWPreviewRenderer.swift)
+The `RAWPreviewRenderer` actor in [RAWPreviewRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/RAWPreviewRenderer.swift)
 serializes fit and inspection renders and lazily constructs its `CIContext` on its own
 executor. `ZoomPreviewHandler.loadOverlayRAWPreview` owns the display-source policy. The operation retains catalog access through completion and checks
 cancellation before and after expensive phases. Its synchronous Core Image
@@ -127,8 +127,8 @@ adjustments. They cannot establish sensor saturation or recoverable RAW detail.
 
 | Product | Sample cap | Near-white rule | Near-black rule |
 | --- | --- | --- | --- |
-| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
-| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
+| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
+| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
 
 The overlay draws near-white pixels red and near-black pixels blue with alpha
 180. The histogram has 256 bins per channel, normalized against the largest
@@ -144,9 +144,9 @@ task also includes whether the warning is enabled for a developed source.
 ## Read and verify the boundaries
 
 Start with registry tests, then generic preview tests in RawParserKit. In
-RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/RawImageLoadingIntegrationTests.swift) for
-display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ZoomSessionModelTests.swift)
-for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ZoomKeyboardControllerTests.swift)
+RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/RawImageLoadingIntegrationTests.swift) for
+display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ZoomSessionModelTests.swift)
+for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ZoomKeyboardControllerTests.swift)
 for suppressed inspection actions. Those tests do not qualify camera coverage,
 exposure recovery accuracy or the current histogram predicates on real files.
 Record OS/decoder, camera, render source and actual pixels when validating
@@ -177,3 +177,23 @@ images still have distinct roles.
 See [viewer ownership]({{< relref "viewer-architecture.md" >}}),
 [preview memory]({{< relref "cache.md" >}}), and
 [measured results]({{< relref "performance.md" >}}).
+
+## RAW status and request timing — November 2–3
+
+Zoom chrome shows “Preparing RAW preview…” for a bounded request and “Preparing
+full-detail RAW…” for a native request, with a small progress indicator. After
+completion it shows “RAW Preview” or “RAW Full detail” and the latest successful
+request duration in seconds, rounded to one decimal place.
+
+The completed label follows `RAWPreviewRenderer.Preview.isReducedResolution`,
+which is set from the renderer's actual `scale < 1` decision. It is independent
+of the native-dimensions label and the current zoom selection. A bounded request
+can reuse a native developed JPEG and therefore display “RAW Full detail”.
+During a preserved-image upgrade, the previous image and its decode metadata
+remain until replacement pixels publish; the preparing label describes the
+pending request.
+
+Timing wraps the awaited RAW preview loader, including cache retrieval. It is
+not isolated decoder CPU time or time to the first painted frame. Thumbnail and
+embedded-JPEG display have no completed RAW status. See
+[viewer ownership]({{< relref "viewer-architecture.md" >}}) for state and cleanup.

@@ -2,7 +2,7 @@
 author = "Thomas Evensen"
 title = "RawCull Internal Swift API"
 date = "2026-10-22"
-lastmod = "2026-10-31"
+lastmod = "2026-11-04"
 description = "Application-internal catalog, culling, preview, scoring, similarity, AI, persistence and copy method contracts."
 weight = 25
 mermaid = true
@@ -12,7 +12,7 @@ mermaid = true
 
 Use this reference alongside the
 [application walkthrough]({{< relref "rawcullapidoc.md" >}}). These are internal
-Swift interfaces in RawCull 3.3.6, build 428, not an independently versioned SDK.
+Swift interfaces in RawCull 3.3.6, build 429, not an independently versioned SDK.
 Observable progress and completion state remain part of asynchronous contracts.
 Source excerpts show the reviewed implementation; usage examples are illustrative
 calls inside the application target.
@@ -25,7 +25,7 @@ Examples below run inside the app module. Names such as `viewModel`, `runtime`, 
 
 ### 1. Catalog loading and sorting
 
-Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift).
+Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Actors/ScanFiles.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -59,7 +59,7 @@ Helper functions: `beginCatalogLoad`, `isActiveCatalogLoad`, `resetCatalogWorkin
 
 ### 2. Culling decisions and persistence
 
-Source: [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/CullingModel.swift).
+Source: [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/CullingModel.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -91,7 +91,7 @@ Helper functions: `rebuildRatingCache`, `refreshCullingDerivedState`, and `sched
 
 ### 3. Preview loading, zoom and JPEG export
 
-Source: [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/RequestThumbnail.swift), [RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ExtractAndSaveJPGs.swift).
+Source: [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Actors/RequestThumbnail.swift), [RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Actors/ExtractAndSaveJPGs.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -124,7 +124,7 @@ Helper functions: `SaveJPGImage.outputURL`, JPEG encoding, timing estimates, pro
 
 ### 4. Sharpness and focus analysis
 
-Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
+Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
 
 `calibrateAndScoreCurrentCatalog() async` calibrates and scores `sharpnessScoringTargetFiles`, re-sorts, and persists compatible scoring metadata after a non-cancelled run. Despite its name, the target may be a selection or filtered scope:
 
@@ -145,7 +145,7 @@ Helper functions: calibration adapters, persisted-score hydration, mask renderin
 
 ### 5. Similarity indexing and semantic search
 
-Source: [RawCullSimilarityFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift).
+Source: [RawCullSimilarityFeature.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -172,7 +172,7 @@ Helper functions: generation checks, application binding, identity probes, backe
 
 ### 6. Burst grouping and decisions
 
-Source: [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift), [BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
+Source: [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift), [BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -198,7 +198,7 @@ Helper functions: group signatures, cache snapshots, ranking assembly, undo capt
 
 ### 7. AI analysis input and feature actions
 
-Source: [RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
+Source: [RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
 
 `aiAnalysisFiles(for:) -> [FileItem]` resolves `.gridSelection` or `.taggedImages`. Grid selection uses `selectedFileIDs`, falling back to the focused ID, and admits only visible filtered files. Tagged input uses persisted ratings of at least 2 within the active scope. `preserveAIAnalysisGridSelection()` freezes the fallback batch before browsing tagged images changes focus.
 
@@ -225,7 +225,7 @@ Helper functions: response decoders, validation feedback, mask outlines, object 
 
 ### 8. Combined Review
 
-Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), and execution/backend files in the same directory.
+Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), and execution/backend files in the same directory.
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -259,7 +259,7 @@ Helper functions: manifest construction, work IDs, evidence grounding, geometry,
 
 ### 9. Model installation and settings
 
-Source: [RawCullAIModelDownloadsModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift), [RawCullAIModelDownloadService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift), [SettingsViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/SettingsViewModel.swift).
+Source: [RawCullAIModelDownloadsModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift), [RawCullAIModelDownloadService.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift), [SettingsViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/SettingsViewModel.swift).
 
 | Function | Input | Response and effects |
 |---|---|---|
@@ -285,7 +285,7 @@ Helper functions: catalogue descriptors, capability validation, licence provenan
 
 ### 10. RAW copy and process completion
 
-Source: [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift).
+Source: [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift).
 
 `ExecuteCopyFiles.startCopyFiles() -> Result<Void, CopyStartupFailure>` resolves configuration and selected files, obtains source/destination access, writes an operation-specific include list and launches streaming rsync. Its instance carries `config`, `dryrun`, `rating`, `copyTaggedFiles` and the bound view model. A successful return means the process started; it does not mean copying completed.
 
@@ -309,7 +309,7 @@ When following an async function, track three things: the state captured before 
 
 `handleSortOrderChange()` is a compact example. It captures the sort generation, catalog identity, selected source, sort order and text. After sorting, it verifies that those inputs still describe the current request.
 
-**Source excerpt — publication guard in [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift):**
+**Source excerpt — publication guard in [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift):**
 
 ```swift
 let sorted = await sortFiles(files, order, text)
@@ -330,12 +330,12 @@ After following the implementation, open the corresponding tests. Their arranged
 
 | Question | Test reference | What to look for |
 |---|---|---|
-| Can an old sort overwrite a new one? | [CatalogConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CatalogConcurrencyTests.swift) | Gates deliberately release an older sort before the newer one; the older result must not publish or clear current progress. |
-| Does analysis use selection or focus? | [AIAnalysisSelectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/AIAnalysisSelectionTests.swift) | Explicit selection is resolved in visible catalog order; focus is a fallback, and browsing tagged images preserves the captured batch. |
-| Are the runtime services shared? | [RawCullIntelligenceRuntimeTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/RawCullIntelligenceRuntimeTests.swift) | Follow assembly and configuration expectations alongside the runtime’s identity assertions. |
-| What happens when saving during quit fails? | [QuitRecoveryTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/QuitRecoveryTests.swift) | Read the injected flush, recovery and termination callbacks alongside `AppDelegate.beginTermination`. |
-| What counts as a valid review run? | [ReviewRunContractTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewRunContractTests.swift) | Compare snapshot and work-contract validation with `ReviewRunContract.swift`. |
-| Why did copying fail before starting? | [ExecuteCopyFilesStartupTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ExecuteCopyFilesStartupTests.swift) | Compare setup failures with the typed startup result instead of assuming a subprocess ran. |
+| Can an old sort overwrite a new one? | [CatalogConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/CatalogConcurrencyTests.swift) | Gates deliberately release an older sort before the newer one; the older result must not publish or clear current progress. |
+| Does analysis use selection or focus? | [AIAnalysisSelectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/AIAnalysisSelectionTests.swift) | Explicit selection is resolved in visible catalog order; focus is a fallback, and browsing tagged images preserves the captured batch. |
+| Are the runtime services shared? | [RawCullIntelligenceRuntimeTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/RawCullIntelligenceRuntimeTests.swift) | Follow assembly and configuration expectations alongside the runtime’s identity assertions. |
+| What happens when saving during quit fails? | [QuitRecoveryTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/QuitRecoveryTests.swift) | Read the injected flush, recovery and termination callbacks alongside `AppDelegate.beginTermination`. |
+| What counts as a valid review run? | [ReviewRunContractTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ReviewRunContractTests.swift) | Compare snapshot and work-contract validation with `ReviewRunContract.swift`. |
+| Why did copying fail before starting? | [ExecuteCopyFilesStartupTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ExecuteCopyFilesStartupTests.swift) | Compare setup failures with the typed startup result instead of assuming a subprocess ran. |
 
 For example, this excerpt from the first selection test starts with three visible files and selects the third and first. The resolver returns the first and third because it walks the visible array, rather than iterating the unordered ID set.
 
@@ -351,7 +351,7 @@ state.viewModel.selectedFileIDs = [third.id, first.id]
 )
 ```
 
-For further test setup, read [TestIsolationHelpers.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/TestIsolationHelpers.swift) and [TEST_ARCHITECTURE.md](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/TEST_ARCHITECTURE.md). Injected loaders, writers, settings and temporary paths let tests exercise failures without depending on the user’s production catalogs or installed models.
+For further test setup, read [TestIsolationHelpers.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/TestIsolationHelpers.swift) and [TEST_ARCHITECTURE.md](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/TEST_ARCHITECTURE.md). Injected loaders, writers, settings and temporary paths let tests exercise failures without depending on the user’s production catalogs or installed models.
 
 
 ## Viewer and inspection interfaces
@@ -365,10 +365,10 @@ For further test setup, read [TestIsolationHelpers.swift](https://github.com/rsy
 | `WriteSavedFilesJSON` | `diskUsage() async -> Int` | Current primary plus backup byte sizes via writer actor |
 | `RawCullViewModel` | `burstGroupReviewState(groupID:)` | For ID −1, common explicit singleton state or `.none` |
 
-Read [ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/ZoomSessionModel.swift),
-[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift),
-[SubjectOutlinePresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/SubjectOutlinePresentationModel.swift)
-and [WriteSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/JSON/WriteSavedFilesJSON.swift).
+Read [ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/ZoomSessionModel.swift),
+[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift),
+[SubjectOutlinePresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/SubjectOutlinePresentationModel.swift)
+and [WriteSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/JSON/WriteSavedFilesJSON.swift).
 The [viewer guide]({{< relref "../viewer-architecture.md" >}}) explains
 task ownership; the [RAW guide]({{< relref "../raw-inspection.md" >}})
 defines the render and display-evidence contracts.
@@ -376,7 +376,7 @@ defines the render and display-evidence contracts.
 ## Dedicated review and semantic owners
 
 The view model exposes read-only result/state dictionaries from
-[BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/BurstReviewSessionModel.swift). Use commands:
+[BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/BurstReviewSessionModel.swift). Use commands:
 
 | Owner | Command | Contract |
 | --- | --- | --- |
@@ -390,7 +390,7 @@ The view model exposes read-only result/state dictionaries from
 | `RawCullSemanticSearchModel` | `rankSemantically(query:files:) async` | Query cached evidence and publish guarded results |
 | `RawCullSemanticSearchModel` | `acceptArtifacts(_:sources:preservingExisting:catalogFileCount:)` | Replace indexing evidence or preserve existing legacy-import entries |
 
-[RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift)
+[RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift)
 is retained by `SimilarityScoringModel`, whose forwarding API remains available.
 App admission and selection remain in the semantic feature. Combined Review's
 orchestration/work/comparison extensions still share one feature/run owner;
@@ -417,3 +417,16 @@ and signpost semantics, historical comparison restrictions and incomplete UI val
 ## October 31 integration
 
 `handleOverlay` now accepts `maximumDimension`, `preservingImage`, injectable `renderRAW`/`loadAnalysis`, and `onFinished`. `loadOverlayRAWPreview(url:maximumDimension:inspectionExposureEV:renderer:diskCache:)` returns `RAWPreviewRenderer.Preview` with `image` and `nativeSize`. `ZoomSessionModel.beginPreviewLoad(preservingImage:)` returns an optional operation UUID; `finishPreviewLoad(_:)` accepts only the active ID. `rawPreviewMaximumDimension` selects fit/native. `RAWPreviewRenderer` exposes `render`, `cachedPreview`, `releaseSource` and `clearCache`; renderer calls cross its actor boundary. These are internal interfaces, not package API.
+
+## RAW preview result metadata — November 2–3
+
+`RAWPreviewRenderer.Preview` also exposes `var isReducedResolution: Bool = false`.
+The direct renderer sets it to `scale < 1`; native/JPEG results keep the default.
+Callers injecting `renderRAW` should set it explicitly for reduced fixture images.
+
+`RawCullViewModel.zoomOverlayRAWIsReduced: Bool?` and
+`zoomOverlayRAWRenderSeconds: Double?` describe the displayed RAW result.
+`handleOverlay` measures the awaited renderer/loader call, including cache hits,
+and publishes these with the image. Preserved-image replacement retains the
+previous values until publication; ordinary clearing and overlay reset set them
+to nil. These remain application-internal presentation data.

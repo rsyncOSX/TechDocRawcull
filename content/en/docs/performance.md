@@ -3,7 +3,7 @@ title: Performance Measurement
 linkTitle: Performance
 description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-10-31
+lastmod: 2026-11-04
 ---
 
 # Performance Measurement
@@ -181,7 +181,7 @@ Raw Instruments traces were temporary files; do not assume they still exist.
 
 ## Preload owns its pending saves
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndCreateThumbnails.swift)
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Actors/ScanAndCreateThumbnails.swift)
 returns encoded JPEG data and its cache key from processing. Each worker:
 
 1. Processes the image and prepares any cache-save payload.
@@ -196,7 +196,7 @@ background atomic writer. Interactive `RequestThumbnail` saves are unchanged.
 The catalog grant remains retained through the group's completion, and an
 atomic write already underway is awaited rather than interrupted.
 
-[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
+[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
 stalls saves to check the bound, gate ordering, completion ownership,
 cancellation, unchanged preview-RAM admission and disk-backed warm reload.
 A cache-preserved real catalog does not necessarily stress this write path.
@@ -287,3 +287,38 @@ October 23 trace does not establish that downscaling causes foreground latency. 
 the intermittent reopening issue independently before assigning its cause.
 Keep photographic quality, task ownership and runtime performance as separate
 validation questions.
+
+## Current preview instrumentation and scripts — November 4 review
+
+Build 429 adds a ZoomView duration badge around the awaited RAW preview loader.
+It includes memory/disk-cache retrieval and excludes the later analysis wait;
+it does not measure decoder-only CPU work or first paint. This instrumentation
+is separate from the October 31 standalone measurements above. No new benchmark
+or application test run was performed for this documentation update.
+
+The November 1 README corrects the version/parser-pin statements implicated in
+two of that recorded run's failures. This source correction does not establish a
+new passing run or resolve the separately recorded launch-context expectation.
+
+Run the standalone preview benchmark with a clean checkout of the pinned parser:
+
+```sh
+python3 Scripts/RunRAW9PreviewBenchmark.py "/path/to/ARWs" \
+  --parser-source "/path/to/pinned/RawParserKit" \
+  --output /tmp/rawcull-raw-preview-new
+```
+
+The runner checks the parser HEAD against the app lockfile and rejects dirty
+parser `Sources`. Defaults select six files, three passes and separate processes
+for baseline, native, fit, revisit and validation modes; validation uses one pass.
+It writes per-mode JSONL/stderr, compiled artifacts and `summary.json`, including
+renderer/benchmark source hashes. Use a fresh output directory: unlike the catalog
+runner, this tool allows an existing directory and opens per-mode logs for writing.
+
+The expanded
+[scripts guide](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/Scripts/README.md)
+also covers trace export, grid/source-load analysis, model evidence runners and
+`make test-scripts`. Script tests use temporary fixtures and mocked Xcode calls;
+real photographs and installed models are not required. They do not run Swift
+diagnostics, real-catalog/model probes or release uploads. Source-load durations
+include scheduling, waits and I/O; summed overlapping durations are not CPU time.
