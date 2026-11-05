@@ -7,7 +7,7 @@ lastmod = "2026-11-05"
 description = "RawCull 3.3.6 features, a cross-platform photo-culling comparison, and prioritized opportunities for evidence-based review and editor interoperability."
 tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
-weight = 55
+weight = 10
 +++
 
 # RawCull 3.3.6: Features and Competitive Opportunities
@@ -306,3 +306,11 @@ The commercial hypothesis is that photographers will adopt RawCull when it
 **reduces difficult review time while preserving control and dependable editor
 handoff**. Local processing supports that promise, but it cannot substitute for
 measured workflow value.
+
+## Detailed P0 plans
+
+The following proposed plans expand the two P0 entries into workflows, scope,
+implementation stages and release evidence:
+
+1. [XMP import/export and editor handoff]({{< relref "xmp-editor-handoff.md" >}}).
+2. [Unified burst evidence and comparable subject crops]({{< relref "unified-burst-evidence.md" >}}).
