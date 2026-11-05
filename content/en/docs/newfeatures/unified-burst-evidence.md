@@ -114,6 +114,103 @@ metadata**, **Source changed**, **Analysis failed** and **Not comparable**. Only
 transient work displays progress. Error and unavailable states offer an
 appropriate action, such as retry, select region or inspect manually.
 
+### 3.1 Close-ups concepts for further study
+
+The following sketches were discussed on 2026-11-05 using the supplied RawCull
+review screenshots. They are **AI-generated design references, not implemented
+UI or acceptance-ready specifications**. Enlarged details are illustrative,
+including the alternative frame in the burst sketch; they are not extracted
+full-resolution RAW crops and must not be used to judge photographic sharpness.
+The built-in image generation tool produced both sketches.
+
+The proposed home is a **collapsible Close-ups panel inside the existing review
+screen**, beside the full photograph and above the existing filmstrip. Burst
+review is the primary P0 workflow. The same inspection component could also
+serve single-image review, without implying that unrelated single images form
+a burst or are automatically comparable. Narrative's context-and-detail layout
+is the reference; study the interaction carefully before committing the layout.
+
+![Burst review concept showing the full photograph, current and pinned close-ups, and filmstrip.](/images/newfeatures/burst-close-ups-concept.png)
+
+**Sketch A — Burst review.** Keep the whole composition visible while comparing
+two subject crops: **Current** and **Reference**. The filmstrip remains available
+for navigation and ratings. The drawn panel uses **Pinned** for the reference;
+final terminology should be consistent. Add explicit **Pin reference** and
+**Replace reference** controls: these are missing from the sketch. Pinning a
+reference must remain distinct from marking a frame as the photographer's winner.
+
+![Single-image review concept showing the full photograph and one selected-region close-up.](/images/newfeatures/single-image-close-ups-concept.png)
+
+**Sketch B — Single-image review.** The second supplied screenshot is labeled
+**Single Images**. Show one larger inspection crop here, with **Choose region**
+and **Reset**. Keep the same panel location and crop controls as burst review;
+a pinned comparison is not required for this basic inspection state.
+
+### 3.2 Proposed framing and comparison interactions
+
+These interaction notes are proposals for study, not claims about current
+automatic detection or tracking:
+
+1. **Propose a region.** Start from an available subject mask or region. A head
+   crop is useful for these deer only when suitable head-region evidence exists;
+   otherwise use subject bounds or ask for a manual region. Do not silently
+   label a general subject crop as a detected head or eye.
+2. **Let the photographer correct it.** Clicking a detail centers the inspection
+   region there; dragging a rectangle defines its bounds. Allow moving and
+   resizing the region. Show the corresponding blue rectangle on the full
+   photograph. Manual regions remain labeled as manual selections.
+3. **Pin a reference.** Open a frame and select **Pin reference** on its crop
+   card. Then select another frame in the filmstrip to populate **Current**.
+   Advancing the candidate leaves the reference fixed. **Replace reference**
+   deliberately changes it; unpinning returns to a single-crop inspection state.
+4. **Match the intended subject.** Propose the corresponding region in each
+   candidate, but expose uncertainty and allow correction by clicking the
+   correct subject. Reusing the same image coordinates is insufficient when
+   the animal moves. Automatic cross-frame matching needs separate validation.
+5. **Make selection unambiguous.** Give both cards filenames and clear
+   **Current / Reference** labels, with matching filmstrip highlights. Clicking
+   a crop makes that frame active for rating; distinguish the active target
+   from the pinned-reference state. Keyboard focus and asynchronous updates
+   must not redirect a rating to another frame.
+6. **Keep scale explicit.** Offer **Fit subject** for pose inspection and
+   **Source pixels** for detail at a consistent source-pixel-to-screen-point
+   ratio. Link pan/zoom around each region's local anchor, with unlink/reset.
+   Begin with two crops; study up to four only if they remain readable.
+
+Study panel width, visibility of the full composition, region editing, pinning
+discoverability, active-frame feedback, keyboard operation and smaller windows.
+Verify that the controls above can be used without repeatedly opening another
+screen. Do not reproduce generated text, altered photo details or incidental
+spacing from these sketches as implementation requirements.
+
+### 3.3 Existing human-subject support and its limits
+
+Local source inspection on 2026-11-05 confirms coarse human-subject support:
+`RawCullSemanticSearchModel.classifySubjects` compares existing CLIP artifacts
+against six prompts, including **a photo of a person**, and assigns the
+highest-scoring label. This is relative classification, not calibrated proof
+that a person is present, a count of people, or a localized face detection.
+When the required model/runtime is available, Deep Review's SAM prompt selection
+for person/people/human/face labels tries **face → person → subject**. The
+segmentation contract supports both person and face prompts.
+
+This provides an existing route toward human or face inspection regions, but
+is not evidence of named-person recognition, reliable enumeration of every face,
+eye landmarks, blink detection or eye-sharpness assessment. A usable mask from a
+face prompt does not prove verified facial anatomy. Those capabilities must be
+verified or scoped separately before promising Narrative-style face assessments.
+See [Deep Analysis: SAM 3 and CLIP]({{< relref "../ai/aiinrawcull.md" >}})
+for the documented pipeline and fallback behavior.
+
+Source checkpoints for later study:
+
+- `RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift`,
+  `classifySubjects(in:)`.
+- `RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift`,
+  prompt selection and requested-prompt/fallback handling.
+- `PhotoAIKit/Sources/PhotoAIContracts/SubjectSegmentation.swift`,
+  `SubjectSegmentationPrompt`.
+
 ## 4. Crop and comparison semantics
 
 Provide two explicitly named modes:
