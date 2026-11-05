@@ -422,3 +422,137 @@ For later pickup, begin with the source ownership trace and fixtures, then revis
 this document with confirmed contracts and stage acceptance results. The related
 [XMP plan]({{< relref "xmp-editor-handoff.md" >}}) defines how the resulting
 photographer decisions eventually reach an editor.
+
+
+## 12. Modular implementation blueprint
+
+### 12.1 Evaluation and ownership
+
+**Recommendation:** implement Close-ups and unified evidence as a self-contained
+feature comprising a view, presentation model, value contracts and injected
+workers. Self-contained means a small integration surface, not a single large
+class owning decoding, inference, persistence and review decisions. Burst review
+embeds the feature; single-image review can supply the same contract with one
+frame and comparison disabled.
+
+Source inspection on 2026-11-05 found useful existing boundaries:
+`BurstWorkspaceSessionModel` owns viewport/image-cache state;
+`BurstReviewSessionModel` owns application-lifetime review state;
+`ImageReviewFeatureDependencies.swift` already separates selection, rating reads
+and rating actions through narrow protocols. Build on that direction. The
+current manual-winner method changes `recommendedFileID`; the adapter must expose
+manual choice and technical suggestion separately. Do not invent a second
+technical suggestion from an already overridden result: retain/recompute an
+independent analysis projection as part of that integration change.
+
+### 12.2 Module layout and dependency direction
+
+Start with explicit feature folders/targets; extract Swift packages when the
+contracts stabilize. Enforce the same dependency rules from the first slice.
+Suggested names below are architectural proposals, not existing APIs.
+
+| Boundary | Owns | Must not depend on |
+| --- | --- | --- |
+| `EvidenceContracts` | IDs, source descriptors, regions, snapshots, requests, outcomes and intents | SwiftUI, AppKit images, RawCullViewModel, inference runtimes |
+| `EvidenceEngine` | Geometry, comparability, recommendation policy and bounded crop scheduling | App views, JSON decision storage, concrete model providers |
+| `EvidenceUI` | `BurstEvidencePanel`, `BurstEvidenceModel`, crop cards, local interaction state | RawCullViewModel, catalog storage, global model managers |
+| RawCull integration adapters | FileItem mapping, source access, existing analysis/image services, decision commands and persistence | Internal panel layout or worker implementation details |
+
+Dependencies flow UI → contracts and engine interfaces; engine → contracts;
+application composition → all required implementations. Keep geometry and
+eligibility policy as pure functions. Workers use explicit concurrency isolation;
+the presentation model is main-actor isolated. Render handles remain confined to
+the rendering adapter rather than crossing the value-only contracts as NSImage.
+Avoid exporting all these types through a general-purpose core package simply
+to make imports convenient.
+
+### 12.3 Required host data contract
+
+The host supplies an immutable `EvidenceContext` and revisioned updates. It does
+not hand over the entire catalog or view model.
+
+| Value | Required fields and invariants |
+| --- | --- |
+| Context | Session ID, optional stable group identity, ordered frame summaries, current frame ID, context revision and capabilities; current/reference IDs must belong to this context |
+| Frame summary | Stable source identity, current-session FileItem ID mapping, display name, source revision and read-only photographer decision projection |
+| Render descriptor | Source fingerprint/class, dimensions, orientation, coordinate transform, development/preprocessing revision and available resolution; no implicit source fallback |
+| Evidence snapshot | Frame/source/region revisions, typed availability per evidence item, metric identity/version/units, sampling policy and provenance |
+| Region selection | Frame identity, normalized oriented-image bounds, optional mask artifact reference, origin, revision and confirmation; reject non-finite or invalid bounds |
+| Decision projection | Manual winner, stars and review/defer state, each with authoritative revision; separate technical recommendation |
+| Capabilities | Available source classes, manual-region editing, subject proposals, scoring and Combined Review availability, with disabled reasons |
+
+Normalized coordinates use one documented oriented-image convention: origin,
+axis directions and edge inclusion are fixed in the contract. Conversion from
+camera/mask/render coordinates happens through explicit transforms. Session-only
+UUIDs and integer group IDs are insufficient persistence keys: resolve durable
+identity in the application adapter, including regrouping/moved-file behavior.
+
+Represent evidence as `notRequested`, `loading`, `available(value, provenance)`,
+`unavailable(reason)`, `failed(retryInformation)` or `stale(previousRevision)`.
+Comparability is a separate policy result, not inferred from presence of scores.
+A mask reference identifies a versioned artifact, not a model instance or an
+unbounded pixel buffer in every snapshot.
+
+### 12.4 Service and action contracts
+
+Inject only services used by the current delivery slice:
+
+- `EvidenceProviding`: load/observe evidence for explicit frame/source/region
+  revisions; return typed results carrying the same identities.
+- `CropRendering`: accept a crop request with region, transform, scale, target
+  pixel bounds and generation; return a bounded render handle plus actual source
+  and scale information. Reject unsupported requests explicitly.
+- `SubjectRegionProposing`: optional proposals with origin, uncertainty and
+  confirmation requirements. Absence leaves manual inspection usable.
+- `SubjectSelectionStoring`: load and commit durable subject choices with expected
+  revision; storage schema and migrations belong to the host adapter.
+- `EvidenceActionHandling`: accept typed intents with explicit target IDs and
+  expected context/decision revisions; return applied, rejected or conflict.
+
+Intents include activate frame, commit subject region, set manual winner, rate,
+defer, retry evidence and request Combined Review for an explicit shortlist.
+Local pin/unpin, panel collapse and linked pan/zoom stay in the panel model.
+When activation changes the rating target, await host acknowledgement and render
+the returned authoritative selection. A rating command captures its frame ID
+when invoked; asynchronous evidence cannot retarget it. Failed durable commands
+remain visible and do not appear successfully saved.
+
+The host constructs one model per review session, passes it to the panel and
+feeds authoritative context updates back. The panel emits intents through the
+injected handler; there is no bidirectional binding to arbitrary host internals.
+Closing/collapsing the panel cancels unnecessary work and releases render leases;
+reopening restores choices through the adapter. Define whether temporary pin and
+viewport state survive collapse separately from durable subject persistence.
+
+### 12.5 Incremental implementation and integration gates
+
+1. **Contracts and ownership audit.** Map the existing source/image/rating paths;
+   document durable identity and orientation. Add representative value fixtures.
+   Gate: a fake host can supply all required inputs without RawCullViewModel.
+2. **Read-only panel.** Implement a model and view showing existing snapshots and
+   unavailable reasons. Integrate through a small `BurstEvidenceAdapter` at the
+   workspace composition boundary. Gate: opening/closing changes no decisions
+   and does not start optional inference.
+3. **Manual crops.** Implement one-frame inspection, then current/reference,
+   explicit scale and linked viewport transforms. Reuse existing image services
+   through adapters and one bounded cache policy rather than double-caching full
+   frames. Gate: orientation fixtures, memory limits and rapid-navigation stale
+   results pass; single-image integration needs no burst-specific model.
+4. **Subject persistence and evidence eligibility.** Add revisioned region
+   commits, invalidation, comparability and independent technical suggestions.
+   Gate: manual winners survive reload/reanalysis and rejected commands stay
+   recoverable; region changes invalidate only dependent results.
+5. **Optional providers and escalation.** Add subject proposal/scoring adapters
+   and bounded Combined Review. Gate: removing optional providers still leaves
+   the manual feature fully usable; uncertain matching requires confirmation.
+6. **Extraction and cleanup.** Move stable contracts/engine/UI into targets or
+   packages, remove duplicate evidence presentation after parity, and document
+   the small host setup API. Gate: compile/test with a fixture host and no app
+   view-model import. Existing ordinary review remains a usable fallback.
+
+Use focused geometry/eligibility tests, adapter identity and decision tests,
+worker cancellation/race tests, and UI checks for pinning, active rating target,
+keyboard use and narrow windows. Acceptance from sections 8–9 still applies.
+Record numeric memory/latency budgets before stage 3 is accepted. Changing a
+provider, storage implementation or panel layout must not require changes across
+all four boundaries; demonstrate that with a fake provider and storage adapter.

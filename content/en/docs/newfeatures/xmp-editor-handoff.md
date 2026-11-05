@@ -222,3 +222,153 @@ budgets. These decisions gate implementation milestones, not basic exploration.
 
 The [second P0]({{< relref "unified-burst-evidence.md" >}}) produces evidence and
 manual choices. Only explicit photographer decisions enter this exchange path.
+
+
+## 9. Modular implementation blueprint
+
+### 9.1 Evaluation and ownership
+
+**Recommendation:** implement XMP exchange as a UI-independent engine with a
+self-contained preview/job UI. Editor handoff is a separate orchestrator that
+consumes exchange outcomes. Combining all three into a view model would couple
+XML preservation, decision storage, copy execution and editor behavior, making
+future editor profiles or storage changes expensive.
+
+Source inspection on 2026-11-05 confirms `SavedFiles`/`FileRecord` contain optional
+ratings and generated UUIDs; decode reconstructs records. Do not assume those
+UUIDs are durable exchange identities. `ExecuteCopyFiles` currently obtains its
+file list through a weak RawCullViewModel reference and reports process-level
+outcomes. Its rsync success cannot by itself prove each RAW/sidecar pair is
+complete. Add a boundary adapter and per-entry verification before reusing it
+for qualified handoff. Do not expand that class into the XMP engine.
+
+### 9.2 Boundaries and dependency direction
+
+| Boundary | Owns | Dependencies allowed |
+| --- | --- | --- |
+| `DecisionExchangeContracts` | Field values/operations, identities, previews, resolutions, results and versioned profiles | Foundation/value contracts only |
+| `XMPDocument` | Safe parsing and preservation-aware patching of owned fields | Contracts and qualified XML implementation |
+| `DecisionExchangeEngine` | Baseline comparison, planning, per-destination scheduling, journal/recovery and outcomes | Contracts, document layer and narrow I/O/storage interfaces |
+| `DecisionExchangeUI` | Scope, preview, conflict choices, job progress, retry and summaries | Contracts and engine interface |
+| `EditorHandoff` | Paired-copy manifest, verification, qualified editor instructions and optional launch | Exchange results, copy/file-access and editor adapters |
+| RawCull adapters | Decision projection/commit, JSON persistence, catalog identity, permissions and existing copy integration | Application models and public feature interfaces |
+
+Application composition injects concrete adapters. Neither engine nor document
+layer imports SwiftUI, RawCullViewModel, rsync process wrappers or editor UI.
+Begin in cohesive feature targets/folders; use Swift packages once their APIs
+are stable. Keep concrete editor profiles out of the XML parser and keep the
+ledger separate from existing saved decision JSON ownership.
+
+### 9.3 Explicit operation contracts
+
+| Contract | Minimum contents and behavior |
+| --- | --- |
+| `ExchangeScope` | Frozen explicit source list, catalog identity/revision and operation direction; selection changes after preview do not change this list |
+| `SourceReference` | Durable catalog/source key, current URL, source fingerprint and association revision; permissions acquired separately |
+| `DecisionSnapshot` | Source key, authoritative decision revision, rating presence/value and explicit user intent; no automatic inference from winner or AI score |
+| `FieldOperation` | Leave unchanged, set supported value, or explicit clear; profile defines clear encoding and distinguishes absent from zero |
+| `EditorProfile` | ID/version, supported values/fields, naming policy and qualified editor/version instructions; unsupported operations fail visibly |
+| `ExchangePreview` | Immutable preview ID/revision, scope, profile version, local/ledger revisions, sidecar hash or absence token, association and proposed field changes per entry |
+| `Resolution` | Preview/entry ID, expected revision and use-local/use-sidecar/skip choice; cannot apply to a regenerated preview implicitly |
+| `ExchangeResult` | Operation/entry IDs, verified before/after hashes, committed decision revision, outcome/reason and recovery reference |
+| `HandoffManifest` | Source and destination associations, required RAW/sidecar artifacts, expected fingerprints, per-artifact verification and pair completion |
+
+A clear is an operation, not an ambiguous nil. Parser output separately models
+missing packet, absent field, supported value, unsupported value and invalid
+packet. A snapshot is an explicit decision projection, not a FileRecord or
+SavedFiles object passed into a generic engine. Hashes describe observed bytes;
+they are not permissions or a substitute for durable source association.
+
+### 9.4 Injected services and lifecycle
+
+- `DecisionRepository`: read snapshots and apply imported decisions with expected
+  revisions and operation IDs. Commit through existing application persistence,
+  with idempotent retry; an import is successful only after durable commit.
+- `SidecarAssociating`: resolve or reject source/destination ownership and naming
+  collisions without parsing or changing photographer decisions.
+- `SidecarStore`: acquire scoped access, read bytes/fingerprint, stage and verify,
+  and perform guarded replacement/restore. Expose external-change outcomes and
+  the limits of coordination; never promise filesystem compare-and-swap across
+  arbitrary editor processes.
+- `ExchangeLedger`: persist baseline, pending intent and completion records,
+  recover incomplete entries and migrate schema. Store recovery bytes securely
+  enough for the existing access model and define retention before release.
+- `CopyExecuting`: consume an explicit manifest, report artifact-level outcomes
+  and support verification/retry. Existing rsync execution can implement an
+  adapter but must not choose scope from live UI state during the job.
+- `EditorHandoffProviding`: return qualified instructions/capabilities and,
+  optionally, launch the explicitly chosen installed application. Launch success
+  is separate from metadata ingestion, which RawCull cannot assume happened.
+
+The engine serializes work by resolved destination, including overlapping jobs;
+a single job actor is insufficient if two jobs can target the same sidecar.
+Parsing/hashing/copying run away from the presentation actor. UI subscribes to
+operation-ID-scoped progress; closing the view follows an explicit job-lifetime
+policy rather than silently abandoning a write. Cancellation finishes the active
+safe replacement and marks remaining entries not attempted.
+
+Revalidate both disk fingerprints and local decision revisions at apply time.
+A rating changed during preview must not be overwritten by a stale import, and
+an export must not silently change to the newest local value without a revised
+preview. After sidecar replacement, baseline advancement records the exact
+exported value/revision; a newer local change remains pending export.
+
+Journal imports as well as exports. A crash between durable local import and
+ledger commit is reconciled by operation ID and expected before/after decision
+revisions; do not replay against a newer local edit. No cross-store atomicity is
+assumed between saved decision JSON, the ledger and external sidecar bytes.
+Uncertain recovery remains a visible unresolved entry. Skips and failures never
+advance a baseline.
+
+### 9.5 Delivery sequence with module gates
+
+1. **Domain/profile spike.** Trace getRating, tagging, neutral/clear semantics and
+   persistence; define source identity and the first qualified profile. Capture
+   real editor fixtures and refresh procedures. Gate: explicit mapping examples
+   and unsupported cases approved as product behavior, not parser assumptions.
+2. **Pure contracts and planning.** Implement field semantics, three-way merge,
+   association policy and immutable preview using fake repositories/stores.
+   Gate: no app or UI dependency; absent versus zero, first contact and stale
+   local decisions all have deterministic outcomes.
+3. **Read-only integration.** Add RawCull decision/access adapters and a reusable
+   preview model/view for selected and catalog scopes. Gate: fixture host and
+   real catalog produce previews with no disk or decision mutations.
+4. **Durable import.** Add revision-checked decision commands and recovery across
+   local persistence/ledger boundaries. Gate: failed persistence and interrupted
+   imports cannot appear successful or erase subsequent local decisions.
+5. **Controlled export.** Qualify preservation-aware patching, guarded writes,
+   shared destination scheduling, backup and journal recovery. Gate: independent
+   inspection and editor round trips pass; unrelated adjustments survive.
+6. **Handoff integration.** Implement manifest-driven paired copy, per-artifact
+   verification and retry of incomplete pairs; then add instructions/optional
+   launch through editor profiles. Gate: an exchange-only host works without
+   rsync or an installed editor, and partial pairs never count as handed off.
+7. **Package and release qualification.** Enforce target dependency rules, add
+   profile/ledger migrations and run section 7's failure/performance matrix.
+   Gate: replacing the parser, copy backend or UI does not change merge policy
+   or the application decision model. Publish the qualified editor versions.
+
+Do not expand v1 into continuous sync or editor catalog automation. Future label
+fields require explicit ownership and baseline policy; new editor profiles add
+capabilities through the same contracts rather than branches in RawCull views.
+
+## 10. Shared modularity policy for both P0 features
+
+Unified evidence and XMP exchange meet only through authoritative photographer
+decisions in the application domain. They must not import each other's UI,
+workers, caches or ledger. An evidence result cannot directly trigger sidecar
+writing. A manual rating flows through the existing decision command boundary;
+exchange later reads the committed projection on explicit request.
+
+For both implementations, maintain a short module README containing ownership,
+public inputs/outputs, lifecycle, error states, schema/policy versions and a
+minimal fixture-host example. Add a dependency check or target-level build gate
+against app-view-model imports. Use narrow protocols at real replaceable service
+boundaries, not a protocol for every class. Keep domain values immutable across
+worker boundaries and prevent service locators or hidden singletons from
+bypassing injected dependencies.
+
+Before declaring a module complete, demonstrate three changes independently:
+replace a worker/provider, replace persistence through an adapter, and change the
+view layout. Each should leave unrelated modules untouched. This is the practical
+maintainability acceptance criterion for future RawCull enhancements.
