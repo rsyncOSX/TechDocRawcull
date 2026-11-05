@@ -1,857 +1,308 @@
 +++
 author = "Thomas Evensen"
-title = "Future Features and Competitive Evaluation"
-linkTitle = "Future Features"
+title = "RawCull 3.3.6: Features and Competitive Opportunities"
+linkTitle = "Features and Competition"
 date = "2026-09-01"
-lastmod = "2026-10-31"
-description = "Competitive feature review and a prioritized roadmap for RawCull after version 3.2.2, including an evaluation of additional Core AI models."
-tags = ["roadmap", "features", "culling", "ai", "core-ai", "competition", "xmp", "faces"]
+lastmod = "2026-11-05"
+description = "RawCull 3.3.6 features, a cross-platform photo-culling comparison, and prioritized opportunities for evidence-based review and editor interoperability."
+tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
 weight = 55
 +++
 
-# Future Features and Competitive Evaluation
-
-> **Historical roadmap, implementation note (31 October 2026):** The
-> competitive review and version 3.2.2 recommendations below retain their original
-> planning context. The reviewed app is now 3.3.6 (build 428), with Qwen, SAM 3
-> Objects and Combined Review already implemented. Those are no longer merely
-> future candidates. Follow [AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}})
-> and [Combined Review]({{< relref "ai/aicombined.md" >}}) for current behavior.
-> Competitor offerings and model redistribution terms were not requalified by
-> this source-code review.
-
-This historical page evaluates possible RawCull features after version 3.2.2. It compares
-the implementation at that review date with representative professional culling products,
-identifies the most important workflow gaps, and evaluates additional models
-from Apple's Core AI model catalog.
-
-The comparison was researched on 1 September 2026. Competitor products and
-Apple's model catalog change frequently, so links to primary vendor sources are
-included. The comparison is based on documented functions and inspection of
-the RawCull source; it is not a controlled image-quality or speed benchmark.
-
-The term *leading applications* in this document means representative products
-with significant professional culling functionality. It is not a market-share
-ranking.
-
-## Executive Recommendation
-
-RawCull should remain a focused, local, explainable culling application. It
-should not try to become a complete editor, retouching suite, cloud gallery, or
-delivery platform.
-
-The most valuable next release would combine three features:
-
-1. XMP interoperability with Lightroom Classic and Capture One;
-2. face and eye inspection for portraits, events, and group photographs; and
-3. an explainable, non-destructive first pass that organizes photographs into
-   **Keep**, **Review**, and **Likely Reject**.
-
-A suitable product description would be:
-
-> RawCull First Pass: private, local, and explainable culling with face and eye
-> inspection and seamless XMP handoff.
-
-The first additional Core AI model to evaluate should be **EfficientSAM**. The
-RawCull and PhotoAIKit integration already contains an EfficientSAM backend,
-and the model is much smaller than SAM 3. Object detection and a small
-vision-language model are reasonable later experiments, but they should not be
-added until a measured culling problem justifies their download, memory, and
-maintenance costs.
-
-## Product Position
-
-RawCull's strongest differentiator is not simply that it uses AI. Several
-competitors also run culling locally. Its differentiator is the combination of:
-
-- fast embedded RAW previews;
-- Sony and Nikon camera autofocus-point extraction;
-- full-frame, salient-subject, and AF-region sharpness evidence;
-- visible focus masks and an explanation of ranking cautions;
-- local visual similarity and burst grouping;
-- local CLIP semantic search;
-- non-destructive rating and review decisions; and
-- no requirement to upload photographs for analysis.
-
-This is a credible position: **show the photographer why one frame is stronger,
-and leave the decision with the photographer**.
-
-Future automation should preserve that contract. RawCull should not silently
-delete a file, conceal a low-confidence result, or present a generative
-explanation as measured fact.
-
-## Historical Version 3.0.0 And 3.2.2 Baseline
-
-Version 3.0.0 is sometimes described as the non-AI version. More precisely, it
-does not require separately downloaded AI models. It still uses Apple Vision
-feature prints for image similarity and burst grouping, and PhotoAnalysisKit
-uses Vision and Metal-based analysis. It does not provide CLIP text-to-image
-search or segmentation-backed Deep Review.
-
-The current 3.2 line adds the optional Core AI layer and later 3.2.2 work
-completes the SAM 3 release path, subject outlines, and batch grid selection:
-
-| Capability | Version 3.0.0 | Version 3.2.2 |
-|---|---|---|
-| Embedded-preview culling | Yes | Yes |
-| Sony ARW, Nikon NEF, and Adobe DNG | ARW and NEF | Yes |
-| EXIF and camera AF point | Yes | Yes |
-| Sharpness calibration and focus masks | Yes | Yes |
-| Vision feature-print similarity | Primary backend | Fallback backend |
-| Burst grouping and candidate ranking | Yes | Yes |
-| Local CLIP similarity | No | Optional |
-| Natural-language semantic search | No | Optional; requires CLIP |
-| SAM 3 Deep Review | No | Production-enabled, optional download |
-| Managed model download workflow | No | Yes |
-| Cached Deep Review subject outlines | No | Loupe, zoom, burst workspace, and review sheet |
-| Badge-based batch selection/rating | No | Yes |
-
-The normal culling workflow is deliberately shared. Features such as XMP,
-improved ingest, broader formats, better review queues, and keyboard workflow
-can therefore benefit both release lines. Model-dependent features should
-degrade cleanly when no model is present.
-
-## RawCull Capabilities At The Original Review
-
-Source inspection confirms the following current application behavior:
-
-- catalog discovery for registered Sony ARW, Nikon NEF, and Adobe DNG files;
-- concurrent EXIF, dimensions, camera, lens, ISO, aperture, and AF metadata;
-- two-tier thumbnail caching plus full-size embedded/developed preview caches;
-- AF overlays and GPU-generated focus masks;
-- configurable sharpness scoring using full-frame, salient-subject, and
-  AF-region evidence;
-- visual grouping of neighboring frames and ranked burst candidates;
-- manual comparison, burst workspaces, review/defer state, and manual winners;
-- local CLIP image embeddings and text-query embeddings;
-- Vision fallback when CLIP is unavailable or disabled;
-- optional SAM 3 subject-mask Deep Review, including multi-subject union masks
-  and cached orange subject outlines;
-- badge-based batch selection and rating in the culling grid;
-- reject, neutral keeper, and two- through five-star rating states;
-- persisted ratings, analysis artifacts, burst decisions, cache signatures,
-  and settings;
-- embedded or developed JPEG export;
-- rsync-based copying of tagged or minimum-rated RAW files, with progress and
-  cancellation; and
-- memory-pressure monitoring and live cache accounting in Settings.
-
-The application currently stores its rating decisions in RawCull's own JSON
-data rather than writing standard XMP sidecars. This protects source files but
-limits interoperability.
-
-## Competitive Products Reviewed
-
-### Aftershoot
-
-Aftershoot offers automated, assisted, and manual culling. Its documented
-workflow includes duplicate grouping, key faces, blur and closed-eye detection,
-image scores, Selected/Highlight/Maybe/Blur/Closed Eyes groups, Survey Mode,
-strictness controls, and preserved ratings and labels when exporting to
-Lightroom Classic or Capture One.
-
-Aftershoot also describes local/offline culling and non-destructive XMP
-sidecars for RAW photographs. Its 2026 material promotes selection-style
-learning and culling to a requested yield, although individual functions can
-have staged availability.
-
-Sources:
-
-- [Aftershoot culling guide](https://support.aftershoot.com/en/articles/5223473-get-started-with-aftershoot-culling)
-- [Aftershoot culling FAQ](https://aftershoot.com/culling-faq/)
-- [Aftershoot technical behavior and XMP](https://support.aftershoot.com/en/articles/10601968-technical-answers-about-aftershoot)
-- [Aftershoot cull-to-target status](https://support.aftershoot.com/en/articles/11533911-cull-to-target-with-aftershoot)
-
-### Narrative Select
-
-Narrative Select emphasizes assisted rather than opaque automatic decisions.
-Its notable functions are synchronized face close-ups, individual face focus
-and eye-state assessments, scene grouping, first-pass indicators, image
-sharpness ranking, a people filter, rapid RAW loading, and direct handoff to an
-editing workflow.
-
-Narrative documents support for Canon CR2/CR3/CRW, Nikon NEF/NRW, Fuji RAF,
-Sony ARW, Panasonic RW2, Olympus ORF, Pentax PEF, DNG, generic RAW, JPEG, HEIC,
-and HEIF. It also states that images remain local and are not uploaded for
-processing unless the user separately opts in to improvement use.
-
-Sources:
-
-- [Narrative Select feature overview](https://narrative.so/select)
-- [Narrative face assessments](https://narrative.so/select/face-assessments)
-- [Narrative Close-Ups panel](https://narrative.so/select/the-close-ups-panel)
-- [Narrative camera and file compatibility](https://help.narrative.so/en/articles/7337390-what-camera-and-file-types-are-narrative-compatible-with)
-- [How Narrative uses photographs](https://help.narrative.so/en/articles/7337412-how-does-narrative-use-your-photos)
-
-### Adobe Lightroom Classic
-
-Lightroom Classic Assisted Culling can select by subject focus, eye focus, and
-eyes open. It can reject documents, receipts, probable misfires, and exposure
-problems, and it can auto-stack by time and visual similarity. Results can be
-turned into flags, ratings, labels, folders, or collections.
-
-The June 2026 Faces panel presents every detected face together with eye-open
-and eye-sharpness scores. Lightroom also added catalog-wide exact duplicate
-detection across folders. This integration is important because it removes the
-handoff step entirely for existing Lightroom customers.
-
-Sources:
-
-- [Lightroom Classic Assisted Culling](https://helpx.adobe.com/uk/lightroom-classic/help/assisted-culling.html)
-- [Lightroom Classic June 2026 features](https://helpx.adobe.com/au/lightroom-classic/help/whats-new.html)
-- [Lightroom Classic release notes](https://helpx.adobe.com/uk/lightroom-classic/help/whats-new/release-notes.html)
-
-### Imagen
-
-Imagen offers two clear automated policies: retain the best photograph from
-each similar group, or cull to an exact number or percentage. It can identify
-duplicates and low-rated images with blur, accidental-capture, or exposure
-problems. Users review the results before sending selected photographs into
-Imagen's editing workflow.
-
-Imagen can show an edited preview before the culling decision, but culling is
-performed on Imagen Cloud. This is a different product tradeoff from RawCull's
-fully local analysis.
-
-Sources:
-
-- [Imagen AI culling introduction](https://support.imagen-ai.com/hc/en-us/articles/17225669268253-Get-started-with-AI-culling)
-- [Imagen project and exact-target workflow](https://support.imagen-ai.com/hc/en-us/articles/29925087795357-Create-a-new-culling-project)
-
-### FilterPixel
-
-FilterPixel separates fast technical filtering from a genre-aware DeepCull.
-The documented criteria include blur, focus, expressions, composition,
-lighting, background, narrative value, brand safety, emotional moments, and
-peak sports action. It promotes Keep/Review/Reject groups, best-of-burst
-selection, target counts, and a score plus reason for each choice.
-
-FilterPixel's public pages observed during this review were inconsistent about
-whether DeepCull processing is local or cloud-based. RawCull should therefore
-not use FilterPixel's processing location as a competitive fact without a new
-verification. Its genre-aware selection and reason presentation are still
-useful product references.
-
-Sources:
-
-- [FilterPixel product overview](https://filterpixel.com/)
-- [FilterPixel DeepCull](https://filterpixel.com/deepcull)
-- [FilterPixel workflow](https://filterpixel.com/blog/posts/how-to-use-filterpixel/)
-
-### Photo Mechanic
-
-Photo Mechanic remains a useful benchmark for ingest and metadata rather than
-automatic AI selection. Its ingest can copy in the background, rename files,
-apply metadata templates, create folders, track copied photographs, and open a
-contact sheet while copying. It also provides tags, stars, configurable color
-classes, XMP/IPTC interoperability, variables, and code replacements.
-
-Sources:
-
-- [Photo Mechanic ingest](https://docs.camerabits.com/support/solutions/articles/48000207409-ingesting-photos)
-- [Photo Mechanic color classes and ratings](https://docs.camerabits.com/support/solutions/articles/48001142942-color-class-ratings)
-- [Photo Mechanic terminology and XMP](https://docs.camerabits.com/support/solutions/articles/48001206190-glossary-of-terms)
-
-## Capability Matrix
-
-| Capability | RawCull 3.2 | Leading documented pattern | Evaluation |
-|---|---|---|---|
-| Embedded RAW preview speed | Yes, with memory/disk caches | Expected in every specialist culler | Competitive |
-| Developed RAW preview | Yes | Available in broader editing products | Competitive for review |
-| Camera AF-point evidence | Sony and Nikon | Rarely exposed as ranking evidence | RawCull advantage |
-| Explainable sharpness | Full-frame, subject, AF region, confidence, cautions | Usually a single focus/blur score | RawCull advantage |
-| Visual burst grouping | Neighboring-frame similarity | Duplicate stacks, scenes, auto-stacks | Competitive |
-| Side-by-side comparison | Manual and burst workspaces | Survey and synchronized close-ups | Competitive; face synchronization missing |
-| Semantic text search | Local CLIP | Not central in most specialist cullers | RawCull advantage |
-| Face close-ups | No dedicated surface | Prominent in Narrative, Aftershoot, Lightroom | Major gap |
-| Eye-open assessment | No | Standard for people photography | Major gap |
-| Whole-shoot automatic first pass | No | Automated Keep/Review/Reject or equivalent | Major gap |
-| Target number/percentage | No | Imagen; staged/advertised elsewhere | Gap |
-| Exposure and misfire rejection | No automatic reject category | Lightroom and Imagen | Gap |
-| Genre-aware moment selection | No | FilterPixel and other automated cullers | Long-term gap |
-| Learning from corrections | No | Advertised by Aftershoot and FilterPixel | Long-term gap |
-| Stars/reject state | Internal persistence | Standard | Present but isolated |
-| Color labels and flags | No standard interchange | Common professional workflow | Gap |
-| XMP read/write | No | Essential for Lightroom/Capture One handoff | Highest workflow gap |
-| RAW formats | ARW, NEF, and DNG | Major RAW families plus JPEG/HEIC | Large addressable-market gap remains |
-| Safe card ingest | Selected-folder workflow | Rename, metadata, backup, verification | Partial |
-| Local/offline inference | Yes | Also supported by some competitors | Strong, not unique alone |
-| Exact duplicate files across folders | No | Lightroom catalog function | Low-priority gap |
-
-## Recommended Roadmap
-
-### P0: Maintain Release Qualification For 3.2.2
-
-Do not add a large new culling feature during the final release window. Finish
-the contract already presented to users:
-
-1. Run the complete automatic and manual acceptance matrix on representative
-   ARW, NEF, and DNG catalogs.
-2. Verify clean DataComp CLIP and SAM 3 installs, cancellation, removal,
-   relaunch, invalid-model recovery, explicit SAM licence acceptance, and Vision
-   fallback on the release candidate.
-3. Exercise Deep Review multi-subject masks and cached subject outlines across
-   loupe, zoom, comparison, and the review sheet.
-4. Run model-provenance and release-metadata gates against the published `v3`
-   archives and manifest.
-5. Record performance and peak memory for small, medium, and large catalogs.
-6. Preserve a non-AI path whose basic culling workflow does not depend on model
-   availability.
-
-The current production code points to the GitHub `v3` model manifest and
-filters the catalog to DataComp CLIP and Meta SAM 3. Both descriptors are
-ready; SAM 3 requires acceptance of the checksum-verified bundled licence.
-OpenAI CLIP and EfficientSAM remain prepared but excluded. Release validation
-is implemented in `make verify-model-provenance` and `make release-preflight`.
-
-### P1: XMP interoperability
-
-This remains a strong candidate for the first substantial interoperability
-feature after 3.2.2.
-
-#### Required behavior
-
-- Read existing XMP sidecars on catalog load.
-- Import standard stars, reject flags, pick state, and color labels.
-- Optionally import ratings written in-camera.
-- Write RawCull decisions to a sidecar without modifying RAW bytes.
-- Preserve unrelated XMP namespaces and fields.
-- Detect whether the XMP changed since it was read.
-- Present a conflict decision instead of overwriting newer metadata.
-- Support batch write, cancellation, and atomic replacement.
-- Offer explicit Lightroom Classic and Capture One label mappings.
-- Provide **Write XMP**, **Reveal in Finder**, and **Open in editing app** actions.
-
-#### Persistence rule
-
-RawCull's internal JSON should remain the durable application record. XMP is an
-interchange projection. That permits RawCull-specific analysis and review state
-to evolve without placing private schemas into sidecars.
-
-```mermaid
-flowchart LR
-    RAW["RAW source"] --> READ["Read existing XMP"]
-    READ --> MERGE["Merge into RawCull rating state"]
-    UI["User culling decisions"] --> STATE["RawCull JSON"]
-    STATE --> PROJECT["Project standard stars, flags, and labels"]
-    PROJECT --> CONFLICT{"Sidecar unchanged?"}
-    CONFLICT -->|yes| WRITE["Atomic XMP write"]
-    CONFLICT -->|no| REVIEW["Show conflict and preserve both choices"]
-```
-
-#### Acceptance criteria
-
-- Round-trip a representative sidecar through Lightroom Classic.
-- Round-trip stars and compatible labels through Capture One.
-- Prove unrelated IPTC and application-specific fields are unchanged.
-- Handle read-only catalogs, missing sidecars, malformed XML, and concurrent
-  external edits.
-- Never modify the RAW source while exporting rating metadata.
-
-### P1: Face and eye inspection
-
-People-specific assessment is the clearest feature gap against Narrative,
-Aftershoot, and Lightroom.
-
-#### Proposed interface
-
-- A face strip beside the loupe and burst comparison.
-- One crop for every important face, not only the largest face.
-- Synchronized crops across the frames in a burst.
-- Per-face sharpness and eye-region sharpness.
-- Eye state: **Open**, **Closed**, **Uncertain**, or **Not visible**.
-- Occlusion, profile, small-face, and low-resolution cautions.
-- Main-subject versus background-face classification.
-- An **Everyone acceptable** summary for group photographs.
-- A shortcut that moves directly between questionable faces.
-
-Eye state must not be reduced to a forced binary value. Sunglasses, profile
-faces, motion, hair, tiny background faces, and deliberate expression require
-an uncertain state. Automatic first-pass policy should send uncertainty to
-Review rather than Likely Reject.
-
-#### Evidence model
-
-Each face result should record:
-
-- normalized bounding box;
-- face identity only within the active catalog or burst, unless the user
-  explicitly enables persistent people grouping;
-- face sharpness and eye-region sharpness;
-- eye-state result and confidence;
-- source fingerprint and analysis descriptor;
-- whether the face is considered a main subject; and
-- the reasons shown in the UI.
-
-There is no dedicated face/eye-quality model in Apple's current public Core AI
-model catalog. This feature therefore needs Apple Vision face observations,
-possibly a purpose-trained eye-state model converted to Core AI, or both. A
-general object detector or VLM should not be presented as a reliable substitute
-without a labeled validation set.
-
-### P1: Explainable First Pass
-
-RawCull already produces much of the technical evidence needed for a useful
-first pass. The first implementation can be a deterministic policy engine; it
-does not need another neural network.
-
-#### Output queues
-
-| Queue | Meaning | Examples |
-|---|---|---|
-| **Keep** | Strong candidate with sufficient evidence | Best in burst, sharp subject, acceptable faces |
-| **Review** | Creative or uncertain decision | Slight motion, uncertain eye state, disagreement between AF and subject evidence |
-| **Likely Reject** | Strong technical reason to de-prioritize | Clearly missed focus, inferior duplicate, confirmed closed eyes in a posed group |
-
-#### Safety invariants
-
-- Never delete a source photograph.
-- Always keep access to every queue.
-- Retain at least one candidate per burst unless the user explicitly changes
-  the rule.
-- Put low-confidence or conflicting evidence in Review.
-- Explain every automatic placement using stored evidence.
-- Permit one-click override and undo.
-- Re-running with changed policy must not erase manual ratings or winners.
-- Persist policy identity so old results are not misrepresented after an
-  algorithm change.
-
-#### Initial evidence
-
-- burst membership and within-burst rank;
-- visual similarity distance;
-- full-frame, salient-subject, and AF-region sharpness;
-- AF-point containment and distance from the salient subject;
-- analysis confidence and existing caution reasons;
-- exposure clipping derived from image data rather than histogram appearance
-  alone;
-- face and eye results when available; and
-- existing manual ratings and winners as hard overrides.
-
-#### Target yield
-
-After Keep/Review/Reject is trustworthy, add a requested target count or
-percentage. The target is a policy constraint, not evidence of quality. RawCull
-should show when reaching the requested number requires inclusion of weaker or
-lower-confidence frames.
-
-### P2: Local preference profiles
-
-RawCull can learn useful preferences by adjusting transparent policy weights
-before attempting end-to-end personalized AI.
-
-Possible learned values include:
-
-- preferred number of retained frames per burst;
-- tolerance for subject motion and deliberate blur;
-- relative importance of salient-subject sharpness and camera AF evidence;
-- preferred subject size and framing;
-- desired delivery percentage;
-- treatment of uncertain eyes and background faces; and
-- preference for technical perfection versus moment uniqueness.
-
-Profiles should be named, inspectable, exportable, resettable, and scoped by
-genre when the user wants that behavior. A profile must never silently turn a
-manual reject into a keeper or replace a manual burst winner.
-
-Suggested first profiles:
-
-- Portrait and group;
-- Wedding and event;
-- Sports and action;
-- Wildlife and birds;
-- Landscape and architecture; and
-- General/manual assistance.
-
-Genre names should initially select documented weights and rules. Claims such
-as *emotion*, *storytelling*, or *peak action* require separate labeled
-evaluation before they become user-visible facts.
-
-### P2: Broader format support
-
-The market supports more camera systems than RawCull. A practical expansion
-order is:
-
-1. Canon CR3;
-2. Fujifilm RAF;
-3. DNG;
-4. JPEG and HEIC/HEIF companions;
-5. Panasonic RW2, Olympus ORF, and Pentax PEF.
-
-Generic culling does not have to wait for MakerNote AF support. A format can
-provide embedded preview, EXIF, sharpness, similarity, ratings, and XMP while
-reporting that camera AF metadata is unavailable.
-
-The UI should distinguish three states:
-
-- camera AF point available and used;
-- camera AF point absent or unsupported, with other evidence available; and
-- image decoding or analysis unavailable.
-
-This avoids treating broader format support as inferior or silently assigning
-a false AF coordinate.
-
-### P2: Safer ingest
-
-RawCull should adopt a focused subset of Photo Mechanic's ingest strengths:
-
-- camera-card detection;
-- primary and backup destinations;
-- optional checksum verification;
-- configurable folder and filename templates;
-- preservation of in-camera ratings;
-- copy progress and cancellation;
-- an ingest receipt containing source, destinations, counts, and failures; and
-- optional eject only after successful verification.
-
-Do not erase or format source media. Rich IPTC templates and sports code
-replacement can remain outside RawCull unless users demonstrate demand.
-
-### P3: Exact duplicates and catalog maintenance
-
-Exact byte duplicates across folders are different from visually similar burst
-frames. They require content hashing, catalog scope, and careful deletion or
-move policy. This is useful but is closer to digital-asset management than
-culling. It should follow the workflow features above.
-
-## AI Evaluation
-
-### Principles for adding another model
-
-The existence of an Apple export recipe does not mean that RawCull should ship
-the model. Every additional bundle creates:
-
-- a download and storage cost;
-- first-use specialization time;
-- memory and energy pressure;
-- another license and redistribution decision;
-- another model fingerprint and cache-compatibility dimension;
-- failure, cancellation, update, and removal states;
-- a benchmark and regression obligation; and
-- user-interface complexity.
-
-A new model is justified only when it solves a measured culling problem better
-than current Vision, CLIP, segmentation, deterministic analysis, or a small
-purpose-trained model.
-
-Apple's [Core AI Models repository](https://github.com/apple/coreai-models)
-provides export recipes and Swift runtime utilities for macOS and iOS 27. The
-[current upstream catalog](https://github.com/apple/coreai-models/blob/main/models/README.md)
-includes language models, diffusion models, Qwen3-VL, CLIP, Depth Anything v3,
-EDSR, EfficientSAM, PVT v2, SAM 3, YOLOS, audio models, and text encoders.
-RawCull pins an exact repository revision, so features present on upstream
-`main` are not automatically present in the version used by a release.
-
-### Candidate model matrix
-
-| Model or family | Possible RawCull use | Product fit | Recommendation |
-|---|---|---|---|
-| **EfficientSAM ViT-Tiny** | Subject masks from points, boxes, or a point grid; subject-detail focus scoring | High; existing PhotoAIKit and RawCull backend | Evaluate first and aim to make available after release gates |
-| **SAM 3** | Text-guided subject segmentation and Deep Review | High capability, but 848M parameters and gated redistribution | Keep optional; do not block First Pass on it |
-| **CLIP ViT-B/32** | Existing semantic search, similarity, zero-shot labels | Already central | Stabilize and benchmark; avoid model proliferation |
-| **YOLOS Tiny/Base** | Object boxes, subject occupancy, possible ball/animal/person evidence | Medium; fixed object vocabulary and not a quality model | Prototype Tiny only after face/eye and First Pass |
-| **Qwen3-VL 2B** | Local captions, scene summaries, possible moment/composition suggestions | Interesting but costly and generative | Research preview only; never technical ground truth |
-| **Depth Anything v3 Small** | Foreground/background separation, depth layering, background-distraction evidence | Medium-low; segmentation and saliency already overlap | Experiment only if a benchmark proves incremental value |
-| **PVT v2 B0** | Small visual backbone for a custom classifier | Low by itself; no culling-quality head | Use only as a base for a purpose-trained model |
-| **EDSR x2** | Sharper-looking display crop | Poor for culling evidence because reconstruction can invent detail | Do not use for scoring; optional preview only |
-| **RoBERTa/T5** | Query normalization or structured text processing | Low; CLIP queries and deterministic UI do not require them | Do not ship for current workflows |
-| **Qwen/Gemma/Mistral/GPT-OSS LLMs** | Natural-language explanations from structured evidence | Low relative to size and complexity | Prefer deterministic explanations; no near-term bundle |
-| **Stable Diffusion/FLUX** | Image generation | No culling purpose and risks changing evidence | Exclude |
-| **CLAP/Whisper/Wav2Vec** | Audio understanding/transcription | No current still-photo culling purpose | Exclude |
-
-### 1. EfficientSAM: strongest next candidate
-
-Apple's current EfficientSAM recipe describes a 10-million-parameter ViT-Tiny
-model. It supports a foreground click, box prompt, multiple point queries, and
-a segment-everything point grid. RawCull already has:
-
-- a `CoreAIEfficientSAMBackend` dependency;
-- an EfficientSAM provider path in `RawCullAIModelRuntime`;
-- an EfficientSAM model directory;
-- a `RawCullSegmentationModel.efficientSAM` identity; and
-- Deep Review code capable of consuming subject masks.
-
-The missing work is primarily product inclusion, model packaging, validation,
-license/provenance clearance, download-catalog support, and quality evaluation.
-
-Recommended use:
-
-- make EfficientSAM the lightweight Deep Review candidate;
-- discover likely foreground subjects with a bounded point grid;
-- combine masks with saliency and camera AF points;
-- let the user click or box the intended subject when automatic discovery is
-  ambiguous; and
-- cache masks using the full model and prompt identity.
-
-Required evaluation:
-
-- portraits, groups, animals, birds, sports, landscapes, and low-light scenes;
-- subject selection success rather than generic segmentation metrics alone;
-- mask placement and boundary quality;
-- AF-point containment stability;
-- detail-score stability inside the selected mask;
-- false selection of background objects;
-- latency, peak memory, first-use specialization, cache size, and energy; and
-- quality comparison against SAM 3 on the same labeled cases.
-
-EfficientSAM does not understand a text target. The UI must describe point-grid
-or user-prompted selection accurately and must not imply SAM 3-style language
-grounding.
-
-### 2. SAM 3: premium text-guided Deep Review
-
-SAM 3 remains valuable when a photographer wants to specify *bird*, *face*,
-*player*, or another text target. Apple's recipe describes an 848-million-
-parameter gated model. The capability is stronger than EfficientSAM's point
-prompts, but the size, gated access, and redistribution review make it a poor
-mandatory dependency.
-
-Recommended policy:
-
-- keep Vision and ordinary burst review fully functional without it;
-- treat SAM 3 as an optional advanced model;
-- make its managed download visible only after legal and provenance clearance;
-- require explicit license acceptance if the final legal review requires it;
-- compare its added winner-selection value with EfficientSAM, not only mask
-  appearance; and
-- avoid advertising Deep Review as turnkey while normal users cannot obtain
-  the model through the app.
-
-### 3. Dedicated face and eye model: needed but not in the catalog
-
-The most important new AI capability is face/eye quality, yet Apple's public
-Core AI model catalog currently contains no dedicated model for:
-
-- eyes open versus closed;
-- eye-region sharpness;
-- facial-expression suitability;
-- gaze or camera engagement;
-- group-photo all-faces acceptance; or
-- intentional versus accidental eye closure.
-
-RawCull should first evaluate Vision face rectangles and landmarks combined
-with the existing sharpness analyzer. If eye-state classification remains
-insufficient, a small purpose-trained classifier is a better fit than adding a
-general 2B vision-language model.
-
-Such a classifier needs consented or properly licensed training/evaluation
-data, coverage across skin tones and ages, glasses and sunglasses, profiles,
-occlusions, makeup, low light, motion, and small faces, plus explicit
-uncertainty calibration. Accuracy must be reported per condition, not only as a
-single aggregate percentage.
-
-### 4. YOLOS: possible object evidence
-
-Apple provides YOLOS Tiny at approximately 6.5 million parameters and YOLOS
-Base at approximately 127 million parameters, together with an object-detection
-runtime product. A detector could provide:
-
-- person, animal, vehicle, or sports-object boxes;
-- subject occupancy and edge-cutoff cautions;
-- possible ball-in-frame evidence for selected sports; and
-- a subject ROI when saliency is ambiguous.
-
-Limitations:
-
-- a general object vocabulary does not equal photographic importance;
-- detection confidence does not measure focus, expression, composition, or
-  peak action;
-- it cannot replace a dedicated face/eye assessment; and
-- unsupported subjects could bias the first-pass policy.
-
-If evaluated, begin with YOLOS Tiny and use detections as optional evidence,
-never as an automatic reject condition.
-
-### 5. Qwen3-VL: later research only
-
-Apple's current upstream `main` contains a Core AI export path for
-Qwen3-VL-2B-Instruct with a 448-pixel vision encoder, token embedding, text
-decoder, tokenizer, and bundle metadata. This capability may be newer than the
-exact `coreai-models` revision pinned by RawCull.
-
-Potential experiments:
-
-- create searchable catalog captions;
-- summarize a burst's visible differences;
-- suggest scene or genre labels;
-- identify possible emotional or peak-action moments; and
-- turn structured evidence into accessible natural language.
-
-Risks:
-
-- generative claims can hallucinate details or intent;
-- a 448-pixel view may miss the technical detail used for focus decisions;
-- per-image inference across a large catalog may be too slow or memory-heavy;
-- captions add a new private persistent-data category;
-- a VLM can sound more certain than its evidence; and
-- the model and tokenizer create a much larger distribution obligation.
-
-Any VLM result must be labeled as a suggestion. It must not override measured
-sharpness, face results, user ratings, or manual winners. A small deterministic
-formatter remains preferable for explanations such as “subject sharpness was
-higher and the AF point was inside the selected mask.”
-
-### 6. Depth Anything v3: limited incremental value
-
-Depth Anything v3 Small predicts monocular depth and confidence. It might help
-measure subject separation, background complexity, foreground obstructions, or
-depth-layer composition.
-
-However, RawCull already has saliency and optional segmentation. Depth is not
-itself a culling-quality measure, and incorrect monocular depth can create
-confident but irrelevant rankings. Evaluate it only against a labeled feature
-such as “background distraction” or “subject separation.” Do not add it merely
-because a Core AI recipe exists.
-
-### 7. EDSR: never use reconstructed detail for sharpness scoring
-
-EDSR can enlarge a low-resolution preview, but super-resolution creates an
-estimate of detail rather than evidence from the source. It must not feed:
-
-- sharpness scoring;
-- AF-region scoring;
-- focus masks;
-- eye sharpness;
-- burst winner selection; or
-- any label presented as source-image quality.
-
-An optional display-only enhancement could be considered, but RawCull can
-already extract embedded previews or develop the RAW. That makes EDSR a low
-priority even for presentation.
-
-## Model Admission Gates
-
-Every new model should pass all gates below before it appears in production
-Settings.
-
-### Product gate
-
-- Name the user problem and the decision improved by the model.
-- Define a non-model baseline.
-- Demonstrate incremental value on representative RawCull catalogs.
-- Confirm that the feature remains understandable and reversible.
-
-### Quality gate
-
-- Use a versioned, labeled evaluation set.
-- Separate technical metrics from subjective photographer preference.
-- Record false-positive and false-negative costs.
-- Calibrate an uncertain state where applicable.
-- Compare results across supported cameras, genres, and difficult conditions.
-- Require human review of ranking changes, not only tensor parity.
-
-### Conversion and identity gate
-
-- Pin the exact upstream revision and weight checksum.
-- Record the exact Core AI exporter and PhotoAIKit revisions.
-- Verify reference/Core AI parity using the real preprocessing path.
-- Fingerprint the complete runtime bundle and tokenizer/resources.
-- Include preprocessing, normalization, dimensions, and output interpretation
-  in the backend descriptor.
-- Invalidate only incompatible cached artifacts after a model change.
-
-### Performance gate
-
-- Measure cold specialization and warm inference separately.
-- Record median and tail latency per image.
-- Record peak resident memory and memory-pressure behavior.
-- Test bounded concurrency and cancellation.
-- Measure a realistic 500-, 2,000-, and 10,000-image workflow where relevant.
-- Confirm that UI interaction and thumbnail loading remain responsive.
-
-### Distribution gate
-
-- Complete license and redistribution review for weights and converted assets.
-- Preserve model card, notices, upstream revision, export command, and hashes.
-- Verify the archive produced by Managed Background Assets.
-- Test download, cancellation, validation, relaunch, update, removal, and
-  insufficient-storage behavior.
-- Do not confuse technical success with permission to redistribute.
-
-### Presentation gate
-
-- State whether a result is measured, inferred, or generated.
-- Show confidence and meaningful uncertainty.
-- Do not hide unavailable models behind unexplained disabled controls.
-- Provide fallback behavior and recovery steps.
-- Maintain VoiceOver descriptions for progress, result, confidence, and error
-  states.
-
-## Proposed AI Model Roadmap
-
-| Stage | Models | Goal |
-|---|---|---|
-| 3.2 release | Vision plus DataComp/OpenAI CLIP | Stable similarity, burst grouping, and semantic search |
-| 3.3 candidate | EfficientSAM | Lightweight, obtainable Deep Review and user-prompted subject masks |
-| Later optional | SAM 3 | Text-guided premium Deep Review after redistribution clearance |
-| Parallel research | Vision plus a small eye-state classifier | Face/eye inspection and group-photo review |
-| Later experiment | YOLOS Tiny | Optional object/subject evidence |
-| Research only | Qwen3-VL 2B | Captions and subjective suggestions, never technical ground truth |
-| Evidence-dependent | Depth Anything v3 | Background/subject-separation evidence only if benchmarks justify it |
-
-This ordering solves product needs rather than maximizing the number of models
-shown in Settings.
-
-## Features Not Recommended
-
-RawCull should defer or reject the following unless its product scope changes:
-
-- RAW editing profiles and automatic editing;
-- retouching and generative removal;
-- cloud galleries, proofing, print sales, and delivery;
-- diffusion-based image generation;
-- destructive automatic rejection or deletion;
-- an LLM used only to rewrite deterministic evidence in friendlier words;
-- super-resolution used as quality evidence;
-- persistent face recognition by default; and
-- a large model marketplace without a specific culling purpose for every
-  model.
-
-Aftershoot and Imagen are developing broad cull-edit-retouch-deliver systems.
-Competing on their complete scope would consume resources without strengthening
-RawCull's most defensible advantages.
-
-## Success Measures
-
-Future features should be judged by user outcomes rather than by model count.
-Useful measures include:
-
-- time from catalog open to completed first pass;
-- time spent zooming into faces;
-- percentage of automatic placements the photographer changes;
-- missed-keeper rate in Likely Reject;
-- number of unresolved Review images;
-- agreement with manually chosen burst winners;
-- XMP round-trip success rate;
-- catalog formats and cameras admitted successfully;
-- peak memory and cancellation latency; and
-- percentage of workflows completed without leaving RawCull before handoff.
-
-For automatic culling, missed keepers matter more than a superficially high
-overall accuracy score. The default policy should be conservative enough that
-uncertain photographs remain visible in Review.
-
-## Recommended Next Design Work
-
-Before implementation, prepare three focused specifications:
-
-1. an XMP mapping and conflict-resolution specification;
-2. a face/eye evidence schema and labeled acceptance matrix; and
-3. a First Pass policy document defining queue invariants, reasons, target
-   yield, overrides, persistence identity, and failure behavior.
-
-EfficientSAM can be evaluated in parallel because its backend boundary already
-exists. It should not delay XMP or the deterministic First Pass, and a new model
-should never be required merely to display existing RawCull evidence clearly.
-
-## October 22 implementation delta
-
-The reviewed app now consumes RawParserKit 1.3.2 generic RAW support, so the
-broader-format proposal below is partly implemented at extension/OS-decoder
-level. It still does not establish a camera-qualified support matrix, vendor
-AF coverage or generic embedded-byte export. See
-[RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}).
-Temporary exposure inspection is also implemented, without persistent editing
-sidecars. This update does not re-rank competitors, requalify model terms or
-claim that the earlier proposed XMP/face/first-pass roadmap is a release plan.
+# RawCull 3.3.6: Features and Competitive Opportunities
+
+RawCull's most promising position is **local, evidence-based selection for RAW
+photographers who want to understand and control the decision**. Version 3.3.6
+already combines fast preview review, camera autofocus evidence, subject-detail
+measurements, semantic search and optional multi-model review. The next gains
+should come from making those capabilities easier to use and easier to connect
+to an editor.
+
+This review replaces the September 2026 roadmap and its October implementation
+notes. RawCull was checked against application commit
+[`f75adff`](https://github.com/rsyncOSX/RawCull/tree/f75adff751e5f636f69d4cc40141c314b47ebb21)
+on **5 November 2026**. The main app configurations identify version **3.3.6,
+build 429**; some ancillary targets still identify build 428. This is a checkout
+baseline, not confirmation of the build distributed through any store.
+
+Competitor facts below come from vendor documentation checked on the same date.
+They describe advertised capabilities, not independently measured accuracy,
+latency, market share or customer satisfaction. Recommendations are product
+judgments inferred from those capabilities and RawCull's implementation. No
+hands-on comparative benchmark was performed. Availability can vary by plan,
+platform and release; prices and minimum OS versions should be checked before
+purchase.
+
+## What RawCull 3.3.6 already provides
+
+| Area | Implemented capability | Boundary that matters |
+| --- | --- | --- |
+| RAW browsing | Dedicated ARW, NEF and DNG paths, embedded previews, cached thumbnails and developed-RAW display | Generic formats use macOS decoding; extension recognition is not a tested camera-support guarantee |
+| Broader format admission | Canon CR2/CR3/CRW, Fujifilm RAF, Olympus ORF, Panasonic RW2, Pentax PEF and other registered RAW extensions | Camera, compression and OS support still require qualification; generic admission does not add dedicated vendor AF parsing |
+| Focus inspection | Camera AF overlays where available, focus masks, full-frame, salient-subject and AF-region sharpness evidence | A recorded AF location is not proof that the intended subject is sharp; scores depend on the analyzed render |
+| Burst review | Similarity grouping, ranked candidates, comparison, manual winners and review/defer state | Grouping and ranking assist the photographer; they do not establish a universally best photograph |
+| Similarity and search | Optional OpenAI/DataComp CLIP image similarity and natural-language search; Vision similarity fallback | Text search requires CLIP; Vision fallback is not semantic text search |
+| Deep Review | Optional SAM 3 subject segmentation, subject-mask detail scoring and cached subject outlines | Segmentation identifies pixels, not photographic merit or eye state |
+| Qwen Vision | Optional local Qwen3-VL-2B-Instruct photo assessment | Generated observations can be wrong; they are not measured focus evidence |
+| Objects | Qwen concept discovery, SAM 3 object instances, numbered review crops and per-object findings | Object descriptions and confidence require visual checking; an object mask is not qualified anatomical detection |
+| Combined Review | Criteria-based review of 1–8 images, with registered masks, observations, measurements, evidence inspection and multi-image comparison | Bounded shortlist review, not an unattended whole-catalog culling engine; comparison can abstain |
+| Decisions and handoff | Batch selection/rating, saved decisions, JPEG export and rsync-based copying of tagged or minimum-rated RAW files | Ratings are app JSON data, not standard XMP interchange; embedded-byte JPEG export remains ARW/NEF/DNG-specific |
+| Exposure inspection | Temporary EV/tone inspection, histogram and clipping overlays in zoom | Display-referred inspection is not a sensor-domain RAW histogram, persistent editing or an export adjustment |
+| Model management | Optional model download, validation, licence presentation and resource controls | First use requires obtaining compatible assets; local analysis does not mean zero setup, storage or memory cost |
+
+The current project targets **Apple silicon and macOS 27**. This narrow platform
+baseline is an adoption constraint compared with many competitors. It should be
+communicated clearly rather than treating every Mac owner as an eligible user.
+
+See [RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}),
+[AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}}), and
+[Combined Review]({{< relref "ai/aicombined.md" >}}) for detailed behavior.
+The source boundaries include
+[model choices](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
+[decision persistence](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
+[Combined Review](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift),
+and [build settings](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull.xcodeproj/project.pbxproj).
+
+### Important changes from the old roadmap
+
+Qwen, Objects and Combined Review are implemented capabilities, not future model
+ideas. Broader RAW admission is also implemented, although a camera-qualified
+support matrix remains work to do. XMP exchange and dedicated face/eye quality
+inspection remain gaps in the inspected application.
+
+EfficientSAM assets and a linked package product do not establish a selectable
+feature: the current application segmentation enum exposes **SAM 3 only**.
+Reintroducing an alternative should depend on a measured user benefit, not on
+its presence in the package. The roadmap should no longer be organized around
+adding more models.
+
+## Competitive landscape across operating systems
+
+The comparison covers direct AI cullers, fast manual review tools and editors
+that can absorb the culling step. Linux alternatives are included because they
+show how much local functionality is available without a commercial cloud
+workflow. Desktop capability should not be assumed to exist in a vendor's
+mobile app.
+
+| Application | Desktop platforms | Main reason to choose it | Implication for RawCull |
+| --- | --- | --- | --- |
+| Aftershoot | macOS, Windows | Automated/assisted/manual culling, duplicate groups, blur and closed-eye checks, target yield and editor handoff | Workflow completeness and automation are strong competition; offline culling is already offered [A] |
+| Narrative | macOS, Windows | Face close-ups, focus/eye assessments, scene grouping and sharpness ranking | Excellent reference for reducing zooming and comparison effort [N] |
+| Lightroom Classic | macOS, Windows | Assisted Culling inside the existing editor/catalog, including subject/eye criteria and face scores | RawCull must save enough time or provide enough evidence to justify another application [L] |
+| Capture One | macOS, Windows | Integrated Cull view plus Assisted Review for technical portrait issues | Compare against its current assisted workflow, not an obsolete manual-only baseline [C] |
+| Imagen | macOS, Windows | Best-of-group or requested-count culling connected to editing | Local analysis is a meaningful alternative to its upload-based workflow, but integration remains a strength [I] |
+| FilterPixel DeepCull | macOS, Windows | Genre-based criteria, explanations, burst grouping and target counts | Explanations and wildlife/sports criteria alone are not unique; DeepCull documents cloud AI scoring [F] |
+| Photo Mechanic | macOS, Windows | Fast manual review, multi-card ingest, renaming and metadata workflows | Responsiveness and dependable ingest can matter more than another AI score [P] |
+| FastRawViewer | macOS, Windows | RAW rendering, RAW histogram/statistics, exposure and focus inspection | Technical RAW evaluation is established competition; keep RawCull's render semantics explicit [R] |
+| Excire Foto 2027 | macOS, Windows | Local search, people/content organization, grouping and quality-assisted selection | Local semantic search and privacy are shared strengths, not exclusive advantages [E] |
+| digiKam | macOS, Windows, Linux | Open-source DAM, local optional AI, face recognition, duplicates and quality labels | Free local AI is a credible alternative; a focused, efficient review experience must earn adoption [D] |
+| darktable | macOS, Windows, Linux | Open-source RAW editor with side-by-side culling and synchronized inspection | Manual culling plus editing is already available without buying a specialist culler [T] |
+
+### Direct AI culling competitors
+
+**Aftershoot** offers automatic selection as well as assisted and manual modes.
+Its documentation describes blur/closed-eye checks, duplicate grouping, key
+faces, configurable ratings and Cull to Target. RawCull's opportunity is a
+more inspectable technical comparison for difficult bursts, rather than merely
+matching another automatic score. Its larger gap is the complete journey from
+first pass to editor. [Aftershoot guide](https://support.aftershoot.com/en/articles/5223473-get-started-with-aftershoot-culling),
+[offline/platform FAQ](https://aftershoot.com/culling-faq/) [A].
+
+**Narrative** makes close inspection efficient through face crops, eye/focus
+assessments and scene-based ranking. It also documents non-face close-ups and
+wildlife sharpness ranking, so RawCull should not assume that non-portrait
+subjects are uncontested. The useful design lesson is to reduce the number of
+manual zoom-and-pan actions. Windows support is now documented alongside macOS.
+[Narrative Select](https://narrative.so/select),
+[platform support](https://help.narrative.so/en/articles/7337410-can-i-use-narrative-on-windows) [N].
+
+**Imagen** supports selecting the best photographs in a group or a specified
+number, reviewing the choices and continuing into editing. Its FAQ describes
+uploading low-resolution files for culling/editing. RawCull can appeal to users
+working with unreliable connectivity or keeping analysis on their own machine.
+That advantage does not establish better selection quality.
+[Culling workflow](https://support.imagen-ai.com/hc/en-us/articles/17225669268253-Get-started-with-AI-culling),
+[upload behavior](https://imagen-ai.com/faq/),
+[desktop requirements](https://support.imagen-ai.com/hc/en-us/articles/4445860985361-Minimum-hardware-and-software-requirements-and-supported-file-formats) [I].
+
+**FilterPixel DeepCull** advertises genre-dependent criteria, explanations,
+best-of-burst selection and target counts. Its current specification explicitly
+says **cloud AI scoring** while original RAWs remain local. Keeping RAW originals
+on disk does not mean analysis is offline. RawCull's possible advantage is
+local, inspectable region evidence; genre-aware explanations by themselves
+are already offered. The page contains inconsistent genre counts, so this
+review does not treat its exact count as a qualified capability.
+[DeepCull specifications](https://filterpixel.com/deepcull) [F].
+
+### Editors that reduce the need for a separate culler
+
+**Lightroom Classic** documents subject sharpness, eye sharpness and eye-open
+criteria, per-face scores, reviewable selection reasons and batch actions.
+This weakens a generic “AI first pass” pitch: existing customers already have
+one in their catalog. RawCull needs a demonstrable benefit on difficult
+shortlists and a reliable return path for decisions.
+[Adobe Assisted Culling](https://helpx.adobe.com/lightroom-classic/desktop/organize-photos-in-lightroom-classic/assisted-culling.html) [L].
+
+**Capture One** offers grouped review and introduced Assisted Review for closed
+eyes, missed focus and exposure problems in May 2026; the current vendor release
+page still labels it Beta and reports subsequent updates. This makes
+studio/portrait displacement a harder initial target. RawCull can instead
+complement the editor for challenging technical comparisons.
+[Cull workflow](https://learn.captureone.com/page/17/),
+[Assisted Review introduction](https://www.captureone.com/en/explore-features/whats-new/16-8),
+[current release overview](https://www.captureone.com/en/explore-features/whats-new) [C].
+
+### Manual review, RAW inspection and local library tools
+
+**Photo Mechanic** is a benchmark for working while ingest continues, multi-card
+copying, metadata templates, renaming and fast preview review. RawCull should
+measure its basic browsing and handoff against this workflow before adding
+complex analysis to every image. **FastRawViewer** emphasizes RAW-based exposure
+statistics, focus inspection and converter handoff. RawCull must distinguish
+its temporary rendered exposure view from those RAW-data measurements.
+[Photo Mechanic tour](https://home.camerabits.com/tour-photo-mechanic/),
+[platform requirements](https://docs.camerabits.com/support/solutions/articles/48001080502-system-recommendations-compatibility) [P];
+[FastRawViewer features and platforms](https://www.fastrawviewer.com/) [R].
+
+**Excire Foto 2027**, the product currently promoted by the vendor, combines local
+semantic search, people/content organization, scene grouping and image-quality
+selection. That is direct overlap with RawCull's CLIP search and local AI pitch.
+RawCull's better opportunity is focused selection with camera and region
+evidence, rather than rebuilding a general photo library.
+[Excire Foto](https://excire.com/en/excire-foto/),
+[platforms and current products](https://excire.com/en/) [E].
+
+**digiKam** documents optional on-device models, face recognition, similarity
+search and quality-based pick labels. Face recognition identifies people; it
+should not be confused with dedicated blink or eye-sharpness assessment.
+**darktable** offers side-by-side culling with zoom and pan, integrated with RAW
+editing. These are meaningful Linux choices as well as alternatives on Mac and
+Windows, but neither cited feature set establishes the same automatic
+best-of-burst workflow as the specialist products.
+[digiKam features](https://www.digikam.org/about/features/),
+[platform documentation](https://www.digikam.org/documentation/faq/) [D];
+[darktable culling](https://docs.darktable.org/usermanual/development/en/lighttable/lighttable-modes/culling/),
+[downloads/platforms](https://www.darktable.org/install/) [T].
+
+## Where RawCull could gain momentum
+
+### 1. Explain difficult wildlife and sports burst decisions
+
+This is the strongest initial hypothesis. RawCull already has camera AF
+evidence, subject masks, detail scoring, manual winners and bounded Combined
+Review. Bring those together into a short comparison: which subject was
+measured, which render was used, where the AF point falls, and why the result
+is uncertain. Let the photographer identify the intended subject when automatic
+selection finds the wrong one.
+
+A useful example is a bird burst where the background is sharp but the bird is
+soft. Whole-frame sharpness is insufficient. Show comparable subject crops,
+mask coverage and detail evidence; distinguish a missing eye assessment from
+an actual eye-quality result. Preserve a photographer's preferred gesture even
+when another frame has a higher technical score.
+
+This is not an uncontested market: Narrative ranks wildlife sharpness and
+FilterPixel markets wildlife/sports criteria. The defensible opportunity is
+**a better, faster, verifiable decision on difficult bursts**. It requires
+photographer trials, not a uniqueness claim based on model names.
+
+### 2. Remove the cost of using an extra application
+
+XMP interoperability is the highest-priority general adoption improvement.
+Copying selected RAWs is useful, but users also need decisions to survive in
+Lightroom Classic, Capture One and other editors without reconstructing them.
+
+Define a deliberate mapping for RawCull's reject/neutral/star states to XMP
+ratings and editor-specific flags or labels. Read existing metadata, preserve
+unknown fields, detect external changes and make conflicts visible. Avoid
+claiming that every editor interprets pick flags or color labels identically.
+Qualify both directions with existing sidecars, mixed selections and externally
+changed ratings. This is proposed work, not a 3.3.6 capability.
+
+### 3. Make the first pass simple; reserve deep analysis for shortlists
+
+Present existing evidence through conservative **Keep**, **Review** and
+**Likely Reject** queues, with explicit reasons and easy overrides. Preserve
+manual winners and keep uncertain cases visible. The current 1–8-image Combined
+workflow should remain an escalation path for difficult choices; running a VLM
+on every photograph needs a separate throughput and quality justification.
+
+Target yield can follow once basic selection is trustworthy. A requested count
+must not silently discard unique moments or hide uncertain cases. This closes
+a workflow gap against Aftershoot, Imagen and FilterPixel, rather than creating
+a unique feature by itself.
+
+### 4. Add face and eye inspection if portraits become a target market
+
+Narrative, Aftershoot, Adobe and Capture One make this an important competitive
+requirement for weddings, events and groups. Start with synchronized face crops
+and eye-region inspection, then evaluate a calibrated eye-state classifier.
+Support glasses, small faces, profiles, occlusion and low light; expose
+“unknown” rather than treating every detection as reliable.
+
+Do not position general Qwen observations as a validated blink detector. For
+group photos, show each relevant face rather than hiding one poor face inside
+an average score. Face identity recognition is a separate product choice and
+is not required to solve this inspection problem.
+
+### 5. Earn trust through supported cameras and predictable performance
+
+Publish a tested camera/format table distinguishing browsing, embedded preview,
+RAW development, AF metadata and JPEG extraction. Add real samples across
+compression variants. A long extension list is less useful than knowing that a
+particular camera workflow works.
+
+Keep ordinary browsing responsive while optional models load or run. Clearly
+show model size, setup progress, cancellation and recovery. Investigate the
+cost and reach of the macOS 27 baseline before promising broader Mac adoption;
+a Windows/Linux port would be a much larger undertaking because the current
+implementation depends on Apple frameworks. XMP handoff can improve mixed-OS
+workflows much sooner than a port.
+
+## Priorities after 3.3.6
+
+These are recommendations, not release commitments. Effort is relative and
+includes integration and qualification, not just UI implementation.
+
+| Priority | Work | Expected benefit | Relative effort | Evidence required before release |
+| --- | --- | --- | --- | --- |
+| P0 | XMP import/export and editor handoff | Removes a broad adoption blocker | Medium–large | Round-trip results in Lightroom Classic and Capture One; no loss of unrelated metadata |
+| P0 | Unified burst evidence and comparable subject crops | Strengthens the most credible niche using existing capabilities | Medium | Faster difficult-burst decisions with equal or fewer missed keepers |
+| P1 | Conservative first-pass queues with override protection | Makes existing analysis usable at shoot scale | Medium–large | Lower total review time, measured false rejects and retained manual decisions |
+| P1 | Camera qualification and browsing/model performance | Makes product claims dependable | Ongoing | Camera-specific outcomes, cold/warm latency, memory and cancellation measurements |
+| P1 if targeting portraits | Face/eye inspection | Opens portrait/event workflows | Large | Per-face quality across difficult conditions and reduced manual zooming |
+| P2 | Ingest backups, renaming and metadata templates | Improves professional field workflow | Medium–large | Interrupted-copy recovery, verified output and metadata preservation |
+| P2 | Target yield and genre presets | Helps deadline-driven users after trust is established | Medium | Moment diversity, unique-frame retention and transparent target compromises |
+| Research | Alternative segmentation or other new models | Only worthwhile for demonstrated quality, latency or memory gains | Variable | Same-case improvement over current SAM 3/non-model baselines |
+
+Full RAW editing, retouching, cloud delivery and a broad model marketplace would
+spread effort across areas already served by established products. The immediate
+opportunity is to finish the selection-to-editor workflow and make RawCull's
+existing evidence easier to act on.
+
+## How to test the opportunity
+
+Use the same labeled shoots in RawCull and selected competitors. Include birds
+and wildlife, sports action, portraits/groups, landscapes and low-light scenes.
+Test supported camera/compression combinations, embedded versus developed
+renders, difficult subjects and intentional creative blur. Let photographers
+record acceptable alternatives rather than forcing a single subjective winner.
+
+Measure end-to-end time from opening a shoot to accepted editor handoff,
+including setup, uploads where applicable, review and correcting mistakes.
+Report first-use model preparation separately from warm use. Run realistic
+500-, 2,000- and 10,000-image catalogs; record hardware, storage, app versions,
+settings, failures, peak memory and tail latency.
+
+For selection quality, measure missed keepers, preferred-frame agreement,
+manual overrides and time spent inspecting faces or subject crops. Audit all
+Likely Reject placements in the labeled sample. For Combined Review, distinguish
+valid structured output from visually correct observations and useful final
+comparisons. For handoff, verify ratings and unrelated metadata after a round
+trip through the target editor.
+
+The commercial hypothesis is that photographers will adopt RawCull when it
+**reduces difficult review time while preserving control and dependable editor
+handoff**. Local processing supports that promise, but it cannot substitute for
+measured workflow value.
