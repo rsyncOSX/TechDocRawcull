@@ -56,8 +56,8 @@ baseline is an adoption constraint compared with many competitors. It should be
 communicated clearly rather than treating every Mac owner as an eligible user.
 
 See [RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}),
-[AI Models in RawCull]({{< relref "ai/aiinrawcull.md" >}}), and
-[Combined Review]({{< relref "ai/aicombined.md" >}}) for detailed behavior.
+[AI Models in RawCull]({{< relref "/docs/ai/aiinrawcull.md" >}}), and
+[Combined Review]({{< relref "/docs/ai/aicombined.md" >}}) for detailed behavior.
 The source boundaries include
 [model choices](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
 [decision persistence](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
