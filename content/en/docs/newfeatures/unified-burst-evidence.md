@@ -272,7 +272,47 @@ decisions. A structurally valid model report is insufficient evidence of visual
 accuracy. If recommendation quality fails qualification, retain manual crop and
 evidence inspection while revising or withholding the recommendation policy.
 
-## 10. Open decisions and revision record
+## 10. Reference applications and workflow patterns
+
+The following applications provide useful references for parts of this workflow.
+These observations are based on their published documentation, reviewed on
+2026-11-05, rather than a hands-on comparative evaluation. They are complementary
+design references, not evidence that any one application implements this entire
+P0.
+
+| Application | Documented workflow | What to study for RawCull |
+| --- | --- | --- |
+| [Narrative Select](https://narrative.so/select) | Close-ups keeps enlarged faces or details beside the full photograph, with separate eye/expression and focus indicators. On Macs running macOS 14 or later, it can show a non-face **Key Element**, falling back to the image center when none is found. | Full-frame context alongside subject detail, distinct evidence indicators, and clear handling of missing detections. |
+| [Aftershoot](https://aftershoot.com/) | Survey Mode compares duplicate groups side by side with synchronized zoom. Loupe View combines Key Faces, duplicate alternatives and image scores with hover explanations. | Efficient burst navigation, comparison of alternatives, and explanations close to the evidence being reviewed. |
+| [FastRawViewer](https://www.fastrawviewer.com/) | Two- or four-image comparison supports synchronized zoom/pan and inspection modes, including focus peaking. | Manual technical comparison, linked inspection controls and direct examination of RAW detail. |
+
+Supporting documentation and examples:
+
+- Narrative: [Zoom and Close-ups](https://help.narrative.so/en/articles/7337371-zoom-and-close-ups-in-narrative)
+  explains full-photo context, subject details, platform limitations and missing
+  detections. Its [Quickstart tutorial](https://narrative.so/select/lessons/quickstart-guide)
+  describes assessments as relative guidance between images in a scene rather
+  than an objective rating of a single image. This is a useful precedent for
+  RawCull's bounded technical suggestions.
+- Aftershoot: [Grid, Loupe and Survey Mode](https://support.aftershoot.com/en/articles/9189985-using-grid-loupe-and-survey-mode-views)
+  documents duplicate comparison, Key Faces, image-score explanations and
+  synchronized zoom. Synchronizing the same image location is a useful
+  interaction reference, but does not establish that a moving subject has been
+  matched across frames.
+- FastRawViewer: [Multi-window guide, pages 3–12](https://updates.fastrawviewer.com/data/pdf/About_FastRawViewer_2-0.pdf)
+  documents the comparison layout and synchronization controls. Use it as a
+  reference for manual inspection, without treating focus peaking alone as proof
+  that the intended subject is sharp.
+
+Narrative is the first reference to study for the context-and-detail layout,
+Aftershoot for group review, and FastRawViewer for technical inspection. RawCull's
+proposed combination additionally makes confirmed wildlife subjects, crop-source
+provenance, measurement comparability, unavailable evidence and protected manual
+winners explicit. The documentation reviewed here does not establish that any
+one of these applications provides that complete combination; this is a design
+opportunity to validate, not a claim of unique market coverage.
+
+## 11. Open decisions and revision record
 
 Resolve the simultaneous-crop limit, default source policy, region persistence,
 manual region scoring method, subject matching strategy, score eligibility,
