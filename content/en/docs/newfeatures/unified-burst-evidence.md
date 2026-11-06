@@ -601,7 +601,7 @@ macOS 26+.
 ### Still required for the full P0
 
 RawCull review integration; arbitrary rectangle drawing/edge resizing and main
-photograph overlays; undo policy; developed-RAW source selection; subject/mask
+photograph overlays; undo policy; RawCull-specific decoded-source wiring; subject/mask
 proposal and confirmation; validated cross-frame matching; unified AF/detail
 snapshots and typed availability; measurement provenance/comparability;
 independent technical suggestions and protected durable decisions; optional
@@ -663,8 +663,8 @@ a remote dependency URL and a release version are separate publication steps.
 | `CloseUpFrame` | Source URL identity, display name and stable string source revision; no FileItem, catalog or view-model dependency |
 | `CloseUpRegion` | Manual center and fraction in normalized oriented-image coordinates; top-left origin, x right, y down; bounds are clamped and persistence uses a finite normalized representation |
 | `CloseUpViewport` | Temporary zoom and region-relative pan offset; linking copies this inspection state, never another frame's region |
-| `CloseUpRequest` | Frame, region, scale mode, display scale, viewport state and viewport size; default viewport is 280 × 210 points |
-| `CloseUpRender` | Bounded crop/overview CGImage artifacts, actual source dimensions, source label and displayed normalized bounds; this is a rendering result, not a scored evidence snapshot |
+| `CloseUpRequest` | Frame, region, render-source descriptor, scale mode, display scale, viewport state and viewport size; default viewport is 280 × 210 points |
+| `CloseUpRender` | Bounded crop/overview CGImage artifacts, actual source dimensions, source label, matching render-source descriptor, coordinate transform and displayed normalized bounds; this is a rendering result, not a scored evidence snapshot |
 | `CloseUpRendering` | Async Sendable service accepting a request and returning a render or error; the host supplies source access and scheduling |
 | `CloseUpRegionRecord` | Codable schema-versioned region bound to source URL and revision; no images, permissions, ratings or model outputs |
 | `CloseUpRegionStoring` | Injected main-actor, synchronous, preference-sized load/save interface; use fast cached storage, not blocking catalog-file I/O |
@@ -763,9 +763,10 @@ before deciding image-service reuse. The current coordinator is tied to workspac
 state: extract or expose a narrow image-service boundary if necessary instead of
 making PhotoEvidenceKit depend on the coordinator or RawCullViewModel.
 
-For the first integration, use the same explicit preview source as the prototype.
-Developed RAW/source switching is a separate capability: add a render descriptor,
-source/processing revisions and coordinate-transform policy before mixing sources.
+Choose an explicit source policy for the first RawCull integration. The package
+now supplies render descriptors/revisions and coordinate mapping; RawBrowse
+implements JPG/RAW/RAW9 switching as described in section 17. RawCull still needs
+to map its own image pipeline and development settings into those contracts.
 A file fingerprint alone does not describe development settings or render aspect
 ratio. Never change source silently while keeping a score or crop attribution
 that describes the previous source.
@@ -818,7 +819,7 @@ qualified, consistent projection and workflow, not necessarily a new algorithm.
 | Capability | Missing implementation and ownership |
 | --- | --- |
 | Main-photograph region editing | Shared overlay/transform binding to the stage, arbitrary rectangle drawing, edge resizing and undo; current package has center/fraction controls and overview dragging |
-| Developed RAW inspection | Host renderer support plus explicit source descriptors, switching/invalidation and compatible coordinate mapping |
+| Developed RAW inspection | Package contract and RawBrowse implementation now exist; RawCull still needs its own decoder/source/settings adapter and host qualification |
 | Subject assistance | Optional mask/region proposal provider, provenance, confirmation and manual correction; validated cross-frame matching must precede automatic subject-based suggestions |
 | Unified evidence | Revisioned snapshots for AF, subject detail, whole-frame detail and generated observations; typed loading/unavailable/failed/stale states and appropriate actions |
 | Comparability | Versioned rules for source class, metric/preprocessing, region and sampling compatibility; incompatible values must not enter a common numerical comparison |
@@ -832,3 +833,43 @@ inspection, not the entire EvidenceContext/EvidenceSnapshot/Recommendation desig
 in section 12. Add those as explicit versioned contracts when their delivery
 stage begins. Keep AI providers, the RawCull decision repository and XMP exchange
 outside the package UI, and preserve a fully usable manual path throughout.
+
+
+## 17. Decoded-source contract and RawBrowse wiring — 2026-11-06
+
+PhotoEvidenceKit now distinguishes file identity from render identity. The new
+`CloseUpRenderSource` value contains a source kind, backend identifier and settings
+revision. CloseUpRequest carries it, and CloseUpRender must echo it. The panel
+accepts descriptors keyed by frame URL, including a pinned reference. Changed
+source/settings descriptors rerender the crop; they do not erase saved regions.
+Mismatched results and late results from earlier requests are rejected.
+
+The new `CloseUpCoordinateTransform` maps canonical oriented-image regions into
+the actual developed output. Rasterization, overview rectangles, inverse region
+editing and pan math share that mapping. A region outside a developed crop yields
+an explicit error instead of inspecting an unrelated part of the image. Existing
+single-source clients retain identity mapping and an unspecified-source default.
+
+RawBrowse now follows the main preview's JPG/RAW selection for all cards and the
+retained reference. Supported files use native RAW9 output and its bit depth;
+other RAW files use the existing development service. Rendered image files retain
+their original-image path. Each card uses its own saved adjustments or its own
+live/unsaved snapshot; selecting one photograph does not apply its settings to
+other photographs. Exposure/color, crop, straighten and bit-depth changes enter
+the render revision. The adapter maps RAW9's straighten-then-crop geometry, and
+labels the actual output source and dimensions. Those dimensions may differ
+from the embedded preview because of a saved development crop.
+
+RAW decoding stays in RawBrowse. PhotoEvidenceKit receives a decoded CGImage
+through its rendering/rasterization boundary and has no decoder dependency.
+Source-pixel inspection uses native decoded dimensions rather than a reduced
+fit preview. Native loading is serialized through the host renderer and reuses
+existing bounded decode/cache services; production memory/latency qualification
+remains required. Decode failure does not silently substitute a JPG.
+
+During this update, RawBrowse's Xcode dependency is intentionally changed to the
+local sibling `../PhotoEvidenceKit`, linking only Contracts, Engine and UI.
+Switching to the user's published package version is a later project-reference
+change. RawCull's integration remains pending: it must supply its own source
+selection, settings revisions, permissions, decoded images and geometry mapping
+through these same contracts.
