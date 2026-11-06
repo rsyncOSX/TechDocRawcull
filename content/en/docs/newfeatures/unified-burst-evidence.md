@@ -812,21 +812,43 @@ integration checks.
 
 ## 16. Remaining full-P0 capabilities after manual integration
 
-These are feature/policy extensions beyond simply importing the existing package.
-Several underlying analyses already exist in RawCull; the missing work is a
-qualified, consistent projection and workflow, not necessarily a new algorithm.
+Completing the full P0 requires feature/policy extensions beyond importing the
+existing package. Several underlying analyses already exist in RawCull, while
+shared inspection behavior and parts of the analysis pipeline can already be
+tested in RawBrowse. The remaining work is a qualified, consistent projection
+and workflow, not necessarily a new algorithm for every row.
 
-| Capability | Missing implementation and ownership |
-| --- | --- |
-| Main-photograph region editing | Shared overlay/transform binding to the stage, arbitrary rectangle drawing, edge resizing and undo; current package has center/fraction controls and overview dragging |
-| Developed RAW inspection | Package contract and RawBrowse implementation now exist; RawCull still needs its own decoder/source/settings adapter and host qualification |
-| Subject assistance | Optional mask/region proposal provider, provenance, confirmation and manual correction; validated cross-frame matching must precede automatic subject-based suggestions |
-| Unified evidence | Revisioned snapshots for AF, subject detail, whole-frame detail and generated observations; typed loading/unavailable/failed/stale states and appropriate actions |
-| Comparability | Versioned rules for source class, metric/preprocessing, region and sampling compatibility; incompatible values must not enter a common numerical comparison |
-| Technical recommendations | Independent suggestion/reasons, calibrated eligibility and abstention; never overwrite or reinterpret a manual winner |
-| Durable review actions | RawCull-host integration of ratings, winners, review/defer, expected revisions and undo; current package does not expose a general rating/winner command interface |
-| Combined Review | Explicit bounded shortlist request, frozen source/region inputs, run/model attribution and stale-report handling after inputs change |
-| Release qualification | Full difficult-burst fixtures, orientation/display checks, measured budgets and photographer evaluation from sections 8–9 |
+The table separates existing implementation and automated coverage from further
+RawBrowse qualification and RawCull-specific integration. A test of source identity,
+geometry or an injected renderer does not establish real-file decoding accuracy,
+measurement comparability or production performance.
+
+| Capability | Shared implementation/testing | RawBrowse qualification | Remaining RawCull integration |
+| --- | --- | --- | --- |
+| Main-photograph region editing | Package center/fraction controls, overview dragging and shared crop/overlay transforms exist; geometry tests cover bounds, local pan and portrait scaling. Arbitrary rectangle drawing, edge resizing and undo remain new work. | Validate existing overview interaction visually; prototype and test main-photograph overlay editing and undo when implemented. | Bind shared transforms and editing to the burst stage; resolve selection, focus and undo ownership. |
+| Developed RAW inspection | Render-source descriptors, settings revisions and coordinate transforms exist. Package tests cover source identity, late/mislabeled result rejection and regions outside developed crops. | Host tests cover JPG/RAW/RAW9 planning, retained references, per-file settings, bit-depth/sidecar revisions, crop/straighten mapping and frozen-plan rendering with an injected source. Qualify actual decoding, labels, dimensions and landmark accuracy using real files. | Supply RawCull's decoder/source/settings/access adapter and geometry mapping; qualify its own image pipeline and source-switch lifecycle. |
+| Subject assistance | Manual region selection exists. RawBrowse's separate Deep Review tests cover SAM prompt selection and mask processing; no Close-ups proposal/confirmation or validated cross-frame matching is established. | Can exercise existing segmentation and prototype optional proposals, provenance, confirmation and correction in Close-ups. Validate moving-subject matching before automatic subject-based suggestions. | Connect the qualified provider and confirmed subject state to burst review; preserve a usable manual path. |
+| Unified evidence | RawBrowse has separate subject-detail/AF-inside-mask tests, including rejection of unsafe or insufficient masks. Revisioned AF/subject-detail/whole-frame/generated-observation snapshots and unified typed availability remain new contracts/workflow. | Test shared projections, loading/unavailable/failed/stale states and appropriate actions once implemented; existing scorer tests do not establish the unified Close-ups workflow. | Map RawCull analyses and revisions into those contracts and present consistent evidence for the burst working set. |
+| Comparability | Source/settings identity and render-result validation are tested. Versioned metric/preprocessing, source-class, region and sampling compatibility rules remain unimplemented by the manual inspection contracts. | Can develop fixtures and test compatibility/withholding rules across preview and developed sources; identical descriptors alone do not establish comparable measurements. | Apply qualified rules to RawCull measurements and exclude incompatible values from numerical comparisons and recommendations. |
+| Technical recommendations | Independent suggestion/reasons, calibrated eligibility and abstention remain feature work; the package is not a recommendation engine. | Can test shared policy logic and difficult-frame fixtures once implemented; calibration still needs representative labeled bursts. | Integrate suggestions with burst ranking while protecting the independent manual winner. |
+| Durable review actions | Package tests cover saved regions, source invalidation, reset and save failure/retry; RawBrowse tests cover stable file revisions and preference-store restoration. These are inspection choices, not rating/winner commands. | Qualify navigation/relaunch and storage failures in the host; verify reference and inspection actions do not alter ratings. | Integrate ratings, winners, review/defer, expected revisions and undo with authoritative RawCull owners; the package has no general rating/winner command interface. |
+| Combined Review | Explicit bounded shortlist requests, frozen source/region inputs, run/model attribution and stale-report handling remain workflow work beyond the current Close-ups contracts. | Shared request/provenance/staleness logic can be tested here if introduced; existing Close-ups tests do not establish Combined Review integration. | Connect the explicit shortlist to RawCull's Combined Review and invalidate or mark reports when inputs change. |
+| Release qualification | Package tests cover bounded raster artifacts, crop geometry, retained references, linked/independent inspection, persistence and stale-result protection. These do not establish measured production budgets or full orientation coverage. | Qualify real portrait/rotated/mirrored files, display scales, keyboard/focus behavior, narrow windows, memory pressure and cold/warm latency; evaluate shared interactions with photographers. | Repeat host-sensitive checks for burst navigation, group changes, rating/winner protection and RawCull's decode/cache pipeline; measure its budgets and complete difficult-burst/photographer acceptance from sections 8–9. |
+
+Verification on 2026-11-06: PhotoEvidenceKit's 24 tests in four suites passed.
+RawBrowse host test sources were inspected, not rerun in this verification.
+Relevant coverage lives in:
+
+- `PhotoEvidenceKit/Tests/PhotoEvidenceKitTests/`: `CloseUpTests.swift`,
+  `CropGeometryTests.swift`, `ComparisonSessionTests.swift` and `RenderSourceTests.swift`.
+- `RawBrowse/RawBrowseTests/`: `CloseUpTests.swift`, `CloseUpRenderSourceTests.swift`,
+  `SubjectMaskForegroundTests.swift`, `DeepAIReviewEnhancementTests.swift` and
+  `ReviewKeyboardScopeTests.swift`. Keyboard-scope tests cover general input
+  admission, not complete Close-ups interaction acceptance.
+
+RawBrowse can therefore qualify shared behavior before RawCull integration.
+Passing those checks reduces shared implementation risk, but does not replace
+RawCull's host-specific acceptance in section 15.4.
 
 The current CloseUpFrame/Request/Render interfaces are sufficient for manual
 inspection, not the entire EvidenceContext/EvidenceSnapshot/Recommendation design
