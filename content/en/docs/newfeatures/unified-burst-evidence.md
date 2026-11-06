@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "P0: Unified Burst Evidence"
 linkTitle = "P0: Unified Burst Evidence"
 date = "2026-11-05"
-lastmod = "2026-11-05"
+lastmod = "2026-11-06"
 description = "Functional scope and implementation plan for comparable subject crops and inspectable burst decisions."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
@@ -556,3 +556,279 @@ keyboard use and narrow windows. Acceptance from sections 8–9 still applies.
 Record numeric memory/latency budgets before stage 3 is accepted. Changing a
 provider, storage implementation or panel layout must not require changes across
 all four boundaries; demonstrate that with a fake provider and storage adapter.
+
+
+## 13. RawBrowse prototype and PhotoEvidenceKit — 2026-11-06
+
+The manual inspection/comparison stage is now implemented in RawBrowse using a
+new sibling local Swift package, `PhotoEvidenceKit`. This is a working prototype
+host integration, not completion of the full RawCull P0 or a published release.
+The package preserves the existing MIT license and attribution and is prepared
+for separate public hosting; no repository URL or release tag is assumed.
+
+### Implemented
+
+- A right-side Close-ups panel for all selected images, with scrollable cards,
+  per-image manual regions, overview click/drag, sliders and reset.
+- Explicit Fit region / Source pixels modes, source dimensions and attribution.
+- Pin / Replace / Unpin reference, retained across selection changes, distinct
+  from host selection and photographer winners. Reference appears once.
+- Current / Reference labels and an explicit host Show image action for selected
+  inputs; background image completion cannot activate a different frame.
+- Independent or linked inspection pan/zoom around each frame's own region,
+  unlink and reset. Linking does not copy subject coordinates across frames.
+- Source-bound manual regions restored through an injected storage contract.
+  RawBrowse uses small versioned UserDefaults records and stable source
+  fingerprints, not session UUIDs. Reset region is durable; pin/pan/zoom remain
+  session state. Storage failures are visible and retained for retry.
+- Bounded raster artifacts, serialized host loading and stale-result protection.
+
+### Actual package boundaries
+
+| Product | Owns |
+| --- | --- |
+| `PhotoEvidenceContracts` | `CloseUpFrame`, `CloseUpRegion`, `CloseUpViewport`, `CloseUpRequest`, versioned region records and storage interface |
+| `PhotoEvidenceEngine` | Shared crop/overlay/pan geometry, owned bounded rasterization and `CloseUpRendering` |
+| `PhotoEvidenceUI` | Embeddable `CloseUpPanel`, session model, retained reference and inspection controls |
+
+RawBrowse retains frame/fingerprint, access/image, storage and activation adapters.
+SwiftPM enforces the package dependency direction; package source imports neither
+RawBrowse nor RawCull. A synthetic standalone demo consumes public APIs only.
+Package documentation defines coordinates, source-pixel scale, persistence and
+host scheduling responsibilities. The initial package targets Swift 6.2+ and
+macOS 26+.
+
+### Still required for the full P0
+
+RawCull review integration; arbitrary rectangle drawing/edge resizing and main
+photograph overlays; undo policy; developed-RAW source selection; subject/mask
+proposal and confirmation; validated cross-frame matching; unified AF/detail
+snapshots and typed availability; measurement provenance/comparability;
+independent technical suggestions and protected durable decisions; optional
+Combined Review escalation; and the orientation/performance/photographer
+qualification specified above.
+
+The existing generated sketches remain references, not a specification of the
+current prototype. The chosen right-side selected-image layout supersedes their
+placement for the RawBrowse prototype. Numerical memory/latency budgets and
+production acceptance still need measurement; bounded output and passing unit
+tests alone do not establish those results.
+
+
+## 14. Implemented package API and ownership
+
+This section records the implementation present on 2026-11-06. Sections 6 and 12
+remain the broader target architecture: their proposed evidence/recommendation
+contracts must not be mistaken for APIs already exported by the package.
+
+### 14.1 Repository and products
+
+The package is a sibling of the two application projects:
+
+```text
+RawCull/                         # shared parent directory
+├── PhotoEvidenceKit/
+│   ├── Package.swift
+│   ├── Sources/PhotoEvidenceContracts/
+│   ├── Sources/PhotoEvidenceEngine/
+│   ├── Sources/PhotoEvidenceUI/
+│   ├── Examples/PhotoEvidenceDemo/
+│   ├── Tests/PhotoEvidenceKitTests/
+│   └── Documentation/
+├── RawBrowse/
+└── RawCull/
+```
+
+Its three library products are imported as `PhotoEvidenceContracts`,
+`PhotoEvidenceEngine` and `PhotoEvidenceUI`; there is currently no umbrella
+`import PhotoEvidenceKit`. `PhotoEvidenceDemo` is an executable example and is
+not an application dependency. The manifest specifies Swift tools 6.2, Swift 6
+language mode and macOS 26 minimum. The package has no external dependencies.
+
+Contracts contain Foundation/CoreGraphics coordinate values, not image buffers
+or SwiftUI views. Engine depends on Contracts. UI depends on Engine and Contracts.
+The package does not import either app, RawParserKit or optional AI runtimes.
+Raw decoding, permissions and physical storage remain host responsibilities.
+
+The MIT license and attribution are preserved. Public API documentation lives in
+`README.md`, `Documentation/Integration.md` and `Documentation/Architecture.md`.
+The demo consumes public APIs using synthetic portrait/landscape images, so it
+can be built and run without either app or private photographs. Public hosting,
+a remote dependency URL and a release version are separate publication steps.
+
+### 14.2 Actual input/output contracts
+
+| API | Current contract |
+| --- | --- |
+| `CloseUpFrame` | Source URL identity, display name and stable string source revision; no FileItem, catalog or view-model dependency |
+| `CloseUpRegion` | Manual center and fraction in normalized oriented-image coordinates; top-left origin, x right, y down; bounds are clamped and persistence uses a finite normalized representation |
+| `CloseUpViewport` | Temporary zoom and region-relative pan offset; linking copies this inspection state, never another frame's region |
+| `CloseUpRequest` | Frame, region, scale mode, display scale, viewport state and viewport size; default viewport is 280 × 210 points |
+| `CloseUpRender` | Bounded crop/overview CGImage artifacts, actual source dimensions, source label and displayed normalized bounds; this is a rendering result, not a scored evidence snapshot |
+| `CloseUpRendering` | Async Sendable service accepting a request and returning a render or error; the host supplies source access and scheduling |
+| `CloseUpRegionRecord` | Codable schema-versioned region bound to source URL and revision; no images, permissions, ratings or model outputs |
+| `CloseUpRegionStoring` | Injected main-actor, synchronous, preference-sized load/save interface; use fast cached storage, not blocking catalog-file I/O |
+
+`CloseUpCropGeometry` is shared by rendering and overlays, including source-pixel
+scale, edge clamping and pan conversion. `CloseUpRasterizer` redraws crops into
+independently owned buffers: a small CGImage slice must not retain a complete
+full-resolution source. At the default viewport and maximum backing scale of 4,
+artifacts are limited to 1120 pixels on their longest edge. The host still owns
+source-decode concurrency and source-cache limits.
+
+The host must normalize orientation once before rasterization and supply truthful
+source attribution. **Source pixels** at zoom 1 means one source pixel per display
+point, not per physical display pixel. Fit region can use different magnification
+per frame. Neither mode establishes measurement comparability.
+
+### 14.3 Presentation model, reference and linked inspection
+
+The host creates one `CloseUpModel`, optionally injecting a region store, and
+passes it to `CloseUpPanel` with selected frames, an optional current frame URL,
+a renderer, an optional activation callback and a close callback. The panel is
+304 points wide; the host chooses its position. RawBrowse embeds it on the right.
+
+The model reconciles frame updates and owns only inspection presentation state.
+The reference appears once, first, and remains available after deselection.
+Pin/Replace/Unpin never changes a rating or selects a photographer winner. The
+optional Show image action supplies an explicit frame to the host and is offered
+for selected inputs; the host validates activation against its current context.
+
+Choose each image's region independently, then enable Link pan/zoom. Linking
+starts from the current frame's viewport when available and applies relative
+pan/zoom around every frame's own region. New candidates inherit the shared
+inspection. Unlink keeps the current views and permits independent changes.
+Reset view affects one card, or all linked cards; Reset views resets the working
+set. Reset region saves the default manual region for that image only.
+
+The overview changes the manual region. Dragging the enlarged crop changes the
+temporary inspection offset. These actions remain separate, including while
+rendering completes asynchronously. Linking is not optical registration,
+segmentation or moving-subject tracking.
+
+### 14.4 Persistence and work lifecycle
+
+RawBrowse's `BrowserCloseUpRegionStore` stores small JSON-encoded records in
+UserDefaults, under source-URL-derived keys. A record restores only when schema,
+source identity and source revision match. Its frame adapter computes stable file
+fingerprints off the UI actor; session UUIDs are not persistence revisions.
+Moving to a new URL currently creates a new identity, with no automatic relinking.
+
+Manual regions survive navigation and relaunch through the store. Reference,
+zoom and pan are session state. Storage failures remain visible and unsaved
+records are retained for retry. A different durable backend belongs in a RawCull
+adapter; an asynchronous database backend needs an explicit write-through/cache
+policy rather than claiming success before a write is committed.
+
+The host owns the model and renderer lifetime. Card tasks cancel and release
+artifacts on disappearance. Generation checks reject late provider results;
+cancellation alone is insufficient. The RawBrowse renderer serializes requests
+across suspension points, checks source fingerprints before/after loading and
+uses the existing image loader/access leases. Closing the panel can preserve its
+host-owned model while releasing rendered images.
+
+## 15. RawCull import and integration checklist
+
+**Importing the package supplies the manual inspection UI and engine.** RawCull
+still needs its own composition and adapters. No RawCull burst workspace has been
+wired to the package by the RawBrowse implementation.
+
+### 15.1 Package setup and ownership
+
+1. Add `../PhotoEvidenceKit` as a local Swift package reference to RawCull's Xcode
+   project. Link only the library products required by the app/test targets.
+   For a public release later, replace the local reference with the actual remote
+   URL and qualified version; do not fabricate a tag or add duplicate local and
+   remote copies of the same package.
+2. Create a small RawCull evidence integration folder. The proposed names below
+   describe new work, not files already present. Keep package imports/composition
+   there and at the workspace boundary, rather than spreading them through
+   RawCullViewModel.
+3. Own the inspection model at review-session scope, independent of individual
+   crop-card recreation. Keep the existing BurstReviewSessionModel authoritative
+   for winners/review state and the rating repository authoritative for ratings.
+   The CloseUpModel must not become another decision store.
+
+### 15.2 Required RawCull adapters
+
+| Proposed adapter | RawCull work required |
+| --- | --- |
+| `RawCullEvidenceFrameAdapter` | Map the chosen burst working set from FileItem to stable URL/revision values; retain a validated URL ↔ current FileItem.ID map; avoid basenames and transient group IDs as durable keys |
+| `RawCullEvidenceRenderer` | Implement CloseUpRendering using existing image-loading/access services; supply oriented images and actual source labels; reuse the frame-cache policy rather than introduce another unbounded decoded-image cache |
+| `RawCullEvidenceRegionStore` | Implement the region storage interface, decide preference versus catalog scope, expose failures, and document source/move/schema behavior; do not mix region records into rating semantics |
+| `RawCullEvidenceHost` | Supply ordered frames/current URL, validate Show image activation, preserve keyboard focus and existing filmstrip/rating behavior, and own visibility/group lifecycle |
+
+Inspect `BurstWorkspaceImageCoordinator` and the `BurstFrameCacheKey`/policy types
+before deciding image-service reuse. The current coordinator is tied to workspace
+state: extract or expose a narrow image-service boundary if necessary instead of
+making PhotoEvidenceKit depend on the coordinator or RawCullViewModel.
+
+For the first integration, use the same explicit preview source as the prototype.
+Developed RAW/source switching is a separate capability: add a render descriptor,
+source/processing revisions and coordinate-transform policy before mixing sources.
+A file fingerprint alone does not describe development settings or render aspect
+ratio. Never change source silently while keeping a score or crop attribution
+that describes the previous source.
+
+### 15.3 Workspace behavior to resolve before implementation
+
+- Embed the collapsible panel beside `BurstImageStage` while retaining
+  `BurstWorkspaceFilmstrip`, the full composition and normal burst navigation.
+  Use the chosen right-side layout as the initial prototype reference; verify
+  smaller windows against the fixed panel width.
+- Define an initial bounded working set, such as current plus nearby alternatives
+  and the retained reference. Larger groups remain accessible through the filmstrip.
+  The panel supports a scrollable selection; that does not authorize decoding the
+  entire burst concurrently.
+- Keep a reference while navigating candidates in the same burst. Initially clear
+  it deliberately on a group change, so an unrelated burst is not compared by
+  accident. Cross-group references require a separate explicit product policy.
+- Route activation through authoritative host selection. Existing rating actions
+  must capture the intended FileItem.ID at invocation; crop completion must never
+  retarget a rating. Pinning must remain separate from a manual winner.
+- Reconcile workspace keyboard monitors/focus with crop controls. Arrow keys used
+  by a focused slider must not also navigate frames through the outer burst key
+  handler. Preserve existing review shortcuts and an accessible close action.
+- Preserve saved regions when viewport/session state resets. Explicitly clear
+  temporary inspection on the selected lifecycle boundary; do not delete durable
+  regions merely because `resetForGroupChange` clears the image cache.
+
+### 15.4 Minimum manual-integration acceptance
+
+The first RawCull delivery is complete only when a photographer can open a burst,
+choose independent regions, pin a reference, advance the current frame, link and
+unlink inspection, save/reset regions and reopen the group without losing its
+manual decisions. Check that the reference is shown once and cleared according
+to group policy. Show image must activate the intended file without changing a
+winner or a rating.
+
+Test selection/group/source changes with out-of-order results; persistence failure
+and retry; portrait/rotated/mirrored images with known landmarks; source-pixel
+scale on different displays; focus/keyboard conflicts; narrow windows and memory
+pressure. Measure cold/warm first-crop latency, navigation latency and peak memory
+in RawCull. Package tests and RawBrowse UI checks do not substitute for those host
+integration checks.
+
+## 16. Remaining full-P0 capabilities after manual integration
+
+These are feature/policy extensions beyond simply importing the existing package.
+Several underlying analyses already exist in RawCull; the missing work is a
+qualified, consistent projection and workflow, not necessarily a new algorithm.
+
+| Capability | Missing implementation and ownership |
+| --- | --- |
+| Main-photograph region editing | Shared overlay/transform binding to the stage, arbitrary rectangle drawing, edge resizing and undo; current package has center/fraction controls and overview dragging |
+| Developed RAW inspection | Host renderer support plus explicit source descriptors, switching/invalidation and compatible coordinate mapping |
+| Subject assistance | Optional mask/region proposal provider, provenance, confirmation and manual correction; validated cross-frame matching must precede automatic subject-based suggestions |
+| Unified evidence | Revisioned snapshots for AF, subject detail, whole-frame detail and generated observations; typed loading/unavailable/failed/stale states and appropriate actions |
+| Comparability | Versioned rules for source class, metric/preprocessing, region and sampling compatibility; incompatible values must not enter a common numerical comparison |
+| Technical recommendations | Independent suggestion/reasons, calibrated eligibility and abstention; never overwrite or reinterpret a manual winner |
+| Durable review actions | RawCull-host integration of ratings, winners, review/defer, expected revisions and undo; current package does not expose a general rating/winner command interface |
+| Combined Review | Explicit bounded shortlist request, frozen source/region inputs, run/model attribution and stale-report handling after inputs change |
+| Release qualification | Full difficult-burst fixtures, orientation/display checks, measured budgets and photographer evaluation from sections 8–9 |
+
+The current CloseUpFrame/Request/Render interfaces are sufficient for manual
+inspection, not the entire EvidenceContext/EvidenceSnapshot/Recommendation design
+in section 12. Add those as explicit versioned contracts when their delivery
+stage begins. Keep AI providers, the RawCull decision repository and XMP exchange
+outside the package UI, and preserve a fully usable manual path throughout.
