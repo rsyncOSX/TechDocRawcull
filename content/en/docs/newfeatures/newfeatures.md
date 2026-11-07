@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "RawCull 3.3.6: Features and Competitive Opportunities"
 linkTitle = "Features and Competition"
 date = "2026-09-01"
-lastmod = "2026-11-05"
+lastmod = "2026-11-07"
 description = "RawCull 3.3.6 features, a cross-platform photo-culling comparison, and prioritized opportunities for evidence-based review and editor interoperability."
 tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
@@ -26,6 +26,13 @@ on **5 November 2026**. The main app configurations identify version **3.3.6,
 build 429**; some ancillary targets still identify build 428. This is a checkout
 baseline, not confirmation of the build distributed through any store.
 
+**7 November implementation update:** manual Close-ups is now integrated into
+RawCull’s burst workspace. It provides selected-frame crop inspection, retained
+references, saved manual regions and explicit preview/developed-RAW sources.
+See the [implementation record]({{< relref "unified-burst-evidence.md#15-rawcull-close-ups-integration-completed--2026-11-07" >}}).
+The competitive comparison below retains its 5 November baseline; unified
+measurement presentation, subject matching and XMP exchange remain planned.
+
 Competitor facts below come from vendor documentation checked on the same date.
 They describe advertised capabilities, not independently measured accuracy,
 latency, market share or customer satisfaction. Recommendations are product
@@ -41,7 +48,7 @@ purchase.
 | RAW browsing | Dedicated ARW, NEF and DNG paths, embedded previews, cached thumbnails and developed-RAW display | Generic formats use macOS decoding; extension recognition is not a tested camera-support guarantee |
 | Broader format admission | Canon CR2/CR3/CRW, Fujifilm RAF, Olympus ORF, Panasonic RW2, Pentax PEF and other registered RAW extensions | Camera, compression and OS support still require qualification; generic admission does not add dedicated vendor AF parsing |
 | Focus inspection | Camera AF overlays where available, focus masks, full-frame, salient-subject and AF-region sharpness evidence | A recorded AF location is not proof that the intended subject is sharp; scores depend on the analyzed render |
-| Burst review | Similarity grouping, ranked candidates, comparison, manual winners and review/defer state | Grouping and ranking assist the photographer; they do not establish a universally best photograph |
+| Burst review | Similarity grouping, ranked candidates, comparison, manual winners and review/defer state; manual Close-ups added 7 November | Grouping and ranking assist the photographer; they do not establish a universally best photograph |
 | Similarity and search | Optional OpenAI/DataComp CLIP image similarity and natural-language search; Vision similarity fallback | Text search requires CLIP; Vision fallback is not semantic text search |
 | Deep Review | Optional SAM 3 subject segmentation, subject-mask detail scoring and cached subject outlines | Segmentation identifies pixels, not photographic merit or eye state |
 | Qwen Vision | Optional local Qwen3-VL-2B-Instruct photo assessment | Generated observations can be wrong; they are not measured focus evidence |
@@ -268,7 +275,7 @@ includes integration and qualification, not just UI implementation.
 | Priority | Work | Expected benefit | Relative effort | Evidence required before release |
 | --- | --- | --- | --- | --- |
 | P0 | XMP import/export and editor handoff | Removes a broad adoption blocker | Medium–large | Round-trip results in Lightroom Classic and Capture One; no loss of unrelated metadata |
-| P0 | Unified burst evidence and comparable subject crops | Strengthens the most credible niche using existing capabilities | Medium | Faster difficult-burst decisions with equal or fewer missed keepers |
+| P0 | Unified burst evidence (manual Close-ups completed) | Build on implemented crop inspection with comparable measurements and explicit uncertainty | Medium | Faster difficult-burst decisions with equal or fewer missed keepers |
 | P1 | Conservative first-pass queues with override protection | Makes existing analysis usable at shoot scale | Medium–large | Lower total review time, measured false rejects and retained manual decisions |
 | P1 | Camera qualification and browsing/model performance | Makes product claims dependable | Ongoing | Camera-specific outcomes, cold/warm latency, memory and cancellation measurements |
 | P1 if targeting portraits | Face/eye inspection | Opens portrait/event workflows | Large | Per-face quality across difficult conditions and reduced manual zooming |
@@ -309,8 +316,8 @@ measured workflow value.
 
 ## Detailed P0 plans
 
-The following proposed plans expand the two P0 entries into workflows, scope,
-implementation stages and release evidence:
+The following documents track the two P0 entries, including completed manual
+Close-ups, remaining implementation stages and release evidence:
 
 1. [XMP import/export and editor handoff]({{< relref "xmp-editor-handoff.md" >}}).
 2. [Unified burst evidence and comparable subject crops]({{< relref "unified-burst-evidence.md" >}}).

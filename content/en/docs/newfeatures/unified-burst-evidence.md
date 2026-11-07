@@ -3,8 +3,8 @@ author = "Thomas Evensen"
 title = "P0: Unified Burst Evidence"
 linkTitle = "P0: Unified Burst Evidence"
 date = "2026-11-05"
-lastmod = "2026-11-06"
-description = "Functional scope and implementation plan for comparable subject crops and inspectable burst decisions."
+lastmod = "2026-11-07"
+description = "Completed RawCull Close-ups integration and remaining plans for unified burst evidence."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 30
@@ -12,7 +12,9 @@ weight = 30
 
 # P0: Unified Burst Evidence and Comparable Subject Crops
 
-**Status:** proposed plan, not a released feature. **Priority:** second P0.
+**Status:** manual Close-ups implemented in RawCull on 7 November 2026; broader
+unified evidence remains planned. **Priority:** second P0. Store-release status
+is not established by this source review.
 **Outcome:** a photographer can compare the intended subject across a difficult
 burst, inspect what was measured, understand uncertainty and retain a preferred
 frame even when its technical score is lower.
@@ -22,6 +24,11 @@ RawCull already has burst ranking, manual review decisions, AF information,
 sharpness evidence, subject segmentation and bounded Combined Review. The work
 here unifies those capabilities into a dependable comparison workflow; it does
 not presume that every frame has every kind of evidence.
+
+The original workflows and implementation blueprint below remain design context
+for the full P0. Where they describe Close-ups as proposed or RawCull integration
+as future work, the completed implementation record in section 15 supersedes
+those statements. Section 16 tracks the broader capabilities still to deliver.
 
 ## 1. Scope and product boundaries
 
@@ -727,88 +734,66 @@ across suspension points, checks source fingerprints before/after loading and
 uses the existing image loader/access leases. Closing the panel can preserve its
 host-owned model while releasing rendered images.
 
-## 15. RawCull import and integration checklist
+## 15. RawCull Close-ups integration completed — 2026-11-07
 
-**Importing the package supplies the manual inspection UI and engine.** RawCull
-still needs its own composition and adapters. No RawCull burst workspace has been
-wired to the package by the RawBrowse implementation.
+Manual Close-ups is integrated into RawCull's burst workspace. This supersedes
+the earlier import checklist: package composition and RawCull adapters are now
+implemented, rather than work waiting for import from RawBrowse.
 
-### 15.1 Package setup and ownership
+### 15.1 Using Close-ups
 
-1. Add `../PhotoEvidenceKit` as a local Swift package reference to RawCull's Xcode
-   project. Link only the library products required by the app/test targets.
-   For a public release later, replace the local reference with the actual remote
-   URL and qualified version; do not fabricate a tag or add duplicate local and
-   remote copies of the same package.
-2. Create a small RawCull evidence integration folder. The proposed names below
-   describe new work, not files already present. Keep package imports/composition
-   there and at the workspace boundary, rather than spreading them through
-   RawCullViewModel.
-3. Own the inspection model at review-session scope, independent of individual
-   crop-card recreation. Keep the existing BurstReviewSessionModel authoritative
-   for winners/review state and the rating repository authoritative for ratings.
-   The CloseUpModel must not become another decision store.
+- Open a burst and use **Close-ups** in the workspace header to show or hide the
+  panel beside the main image. The single-images group does not show this panel.
+- Choose comparison frames in the filmstrip. Command-click toggles frames;
+  Shift-click selects a range from the active frame, and Command-Shift-click
+  adds that range. Visible selection controls also toggle individual frames.
+  With no explicit comparison selection, the panel follows the current frame.
+- Inspect independent manual regions, retain a reference, and use the package's
+  linked inspection controls. A reference is an inspection aid, separate from
+  a manual burst winner or rating. Group changes reset the inspection session.
+- Use **Show image** to activate that file and open RawCull's zoom overlay with
+  burst navigation and the selected source. Existing review decisions remain
+  owned by RawCull's rating and burst-review models.
 
-### 15.2 Required RawCull adapters
+### 15.2 Implemented adapters and source policy
 
-| Proposed adapter | RawCull work required |
-| --- | --- |
-| `RawCullEvidenceFrameAdapter` | Map the chosen burst working set from FileItem to stable URL/revision values; retain a validated URL ↔ current FileItem.ID map; avoid basenames and transient group IDs as durable keys |
-| `RawCullEvidenceRenderer` | Implement CloseUpRendering using existing image-loading/access services; supply oriented images and actual source labels; reuse the frame-cache policy rather than introduce another unbounded decoded-image cache |
-| `RawCullEvidenceRegionStore` | Implement the region storage interface, decide preference versus catalog scope, expose failures, and document source/move/schema behavior; do not mix region records into rating semantics |
-| `RawCullEvidenceHost` | Supply ordered frames/current URL, validate Show image activation, preserve keyboard focus and existing filmstrip/rating behavior, and own visibility/group lifecycle |
+`BurstCullingWorkspaceView` owns the panel visibility, comparison selection,
+`CloseUpModel` and renderer. `BurstCloseUpsView` supplies URL/revision frames,
+render-source descriptors and orientation-corrected recorded AF points to
+`CloseUpPanel`. Missing or invalid AF metadata is explicitly unavailable;
+AF placement is not an eye-sharpness measurement.
 
-Inspect `BurstWorkspaceImageCoordinator` and the `BurstFrameCacheKey`/policy types
-before deciding image-service reuse. The current coordinator is tied to workspace
-state: extract or expose a narrow image-service boundary if necessary instead of
-making PhotoEvidenceKit depend on the coordinator or RawCullViewModel.
+`BurstCloseUpRenderer` uses RawCull catalog-access leases and serializes decoding
+without retaining another decoded-source cache. Preview inspection uses the
+full-size preview loader and labels sidecar JPG versus embedded preview.
+Developed-RAW inspection uses the developed-RAW preview loader and labels its
+full-size JPEG output, including RAW 9 where supported. Source and file revisions
+are checked before and after loading; a changed source rejects the result.
 
-Choose an explicit source policy for the first RawCull integration. The package
-now supplies render descriptors/revisions and coordinate mapping; RawBrowse
-implements JPG/RAW/RAW9 switching as described in section 17. RawCull still needs
-to map its own image pipeline and development settings into those contracts.
-A file fingerprint alone does not describe development settings or render aspect
-ratio. Never change source silently while keeping a score or crop attribution
-that describes the previous source.
+`BurstCloseUpRegionStore` persists versioned manual-region records in
+UserDefaults, keyed by a hash of the standardized source URL. File revision
+checks prevent restoring a region for changed content. These are inspection
+preferences, separate from rating metadata; moving a source to another URL does
+not preserve its region identity automatically.
 
-### 15.3 Workspace behavior to resolve before implementation
+### 15.3 Evidence and remaining qualification
 
-- Embed the collapsible panel beside `BurstImageStage` while retaining
-  `BurstWorkspaceFilmstrip`, the full composition and normal burst navigation.
-  Use the chosen right-side layout as the initial prototype reference; verify
-  smaller windows against the fixed panel width.
-- Define an initial bounded working set, such as current plus nearby alternatives
-  and the retained reference. Larger groups remain accessible through the filmstrip.
-  The panel supports a scrollable selection; that does not authorize decoding the
-  entire burst concurrently.
-- Keep a reference while navigating candidates in the same burst. Initially clear
-  it deliberately on a group change, so an unrelated burst is not compared by
-  accident. Cross-group references require a separate explicit product policy.
-- Route activation through authoritative host selection. Existing rating actions
-  must capture the intended FileItem.ID at invocation; crop completion must never
-  retarget a rating. Pinning must remain separate from a manual winner.
-- Reconcile workspace keyboard monitors/focus with crop controls. Arrow keys used
-  by a focused slider must not also navigate frames through the outer burst key
-  handler. Preserve existing review shortcuts and an accessible close action.
-- Preserve saved regions when viewport/session state resets. Explicitly clear
-  temporary inspection on the selected lifecycle boundary; do not delete durable
-  regions merely because `resetForGroupChange` clears the image cache.
+Source baseline: RawCull commit
+[`8b07828`](https://github.com/rsyncOSX/RawCull/tree/8b07828530dc85d74b003900784531e6c88df4aa).
+The implementation is in `BurstCullingWorkspaceView.swift`,
+`BurstWorkspaceFilmstrip.swift` and `BurstCloseUpsView.swift` under
+`RawCull/Views/ComparisonGridView/`.
 
-### 15.4 Minimum manual-integration acceptance
+`RawCullTests/BurstCloseUpTests.swift` covers AF orientation and invalid metadata,
+comparison selection, persisted regions and file/source revision identity.
+This documentation update inspected source and tests; it did not run app tests
+or certify store availability, decoding quality, performance or visual acceptance.
+Real-file orientation, keyboard focus, narrow windows, cold/warm latency and
+memory-pressure qualification remain relevant release checks.
 
-The first RawCull delivery is complete only when a photographer can open a burst,
-choose independent regions, pin a reference, advance the current frame, link and
-unlink inspection, save/reset regions and reopen the group without losing its
-manual decisions. Check that the reference is shown once and cleared according
-to group policy. Show image must activate the intended file without changing a
-winner or a rating.
-
-Test selection/group/source changes with out-of-order results; persistence failure
-and retry; portrait/rotated/mirrored images with known landmarks; source-pixel
-scale on different displays; focus/keyboard conflicts; narrow windows and memory
-pressure. Measure cold/warm first-crop latency, navigation latency and peak memory
-in RawCull. Package tests and RawBrowse UI checks do not substitute for those host
-integration checks.
+Completing manual Close-ups does not complete unified scored evidence,
+automatic subject matching, calibrated eye assessment or Combined Review
+provenance/staleness integration. Those remain the broader P0 work below.
 
 ## 16. Remaining full-P0 capabilities after manual integration
 
