@@ -62,7 +62,7 @@ resize improvements require that workload qualification. The wrapper includes
 access, scheduling, parser waits, I/O and journal delivery; it does not isolate
 decoder CPU time. Rare-tail causes and user impact remain unproven.
 
-That comparison predates the RawParserKit 1.3.3 executor update. Package/RawBrowse
+That comparison predates the RawParserKit 1.3.3 executor update. Separate package
 thumbnail experiments do not replace a new RawCull catalog measurement. Preserve
 the source/load-stage diagnostics and collect matched runs before attributing
 an app speedup or tail fix to the new pin.

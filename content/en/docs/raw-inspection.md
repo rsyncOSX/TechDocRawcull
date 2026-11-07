@@ -96,8 +96,7 @@ control view; release updates committed EV and triggers rendering. Reset
 commits zero. Closing inspection or pressing Escape restores the earlier
 session state; Escape during inspection does not close the entire zoom overlay.
 Navigation is blocked by session policy, and the keyboard controller suppresses
-recognized navigation/rating/source actions. This is an inspection workflow,
-not RawBrowse's persistent RAW 9 editor.
+recognized navigation/rating/source actions. These adjustments are temporary inspection state and are not saved edits.
 
 ## Rendering and resource ownership
 

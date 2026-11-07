@@ -615,6 +615,6 @@ between cancellation checks.
 
 The [package evaluation](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Docs/ThumbnailExecutorEvaluation.md)
 records 105 passing tests in each Debug/Release package suite and ARW throughput
-experiments. Paired RawBrowse empty-cache cohorts improved; warm disk cohorts
-showed no established benefit. Those are package/companion observations, not a
+experiments. Paired host-application empty-cache cohorts improved; warm disk cohorts
+showed no established benefit. Those are separate package-evaluation observations, not a
 fresh RawCull whole-catalog speed or UI smoothness measurement.

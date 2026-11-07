@@ -46,8 +46,8 @@ including RawParserKit 1.3.3; no package algorithm re-audit was needed.
 
 The other 28 pages retain their previous reviewed contracts, dates and immutable
 source revisions. Updated guides advance live implementation links; historical
-measurement/design links retain their original commits. RawBrowse and package
-baselines are unchanged.
+measurement/design links retain their original commits. Package baselines are
+unchanged.
 
 ## Verification and limits
 

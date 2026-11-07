@@ -29,7 +29,7 @@ baseline, not confirmation of the build distributed through any store.
 **7 November implementation update:** manual Close-ups is now integrated into
 RawCull’s burst workspace. It provides selected-frame crop inspection, retained
 references, saved manual regions and explicit preview/developed-RAW sources.
-See the [implementation record]({{< relref "unified-burst-evidence.md#15-rawcull-close-ups-integration-completed--2026-11-07" >}}).
+See the [implementation record]({{< relref "unified-burst-evidence.md#implemented-in-rawcull" >}}).
 The competitive comparison below retains its 5 November baseline; unified
 measurement presentation, subject matching and XMP exchange remain planned.
 
