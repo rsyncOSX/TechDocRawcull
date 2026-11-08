@@ -13,6 +13,10 @@ weight = 60
 
 # RawCull Packages
 
+Start here: [One Package, Three Imports: Understanding Swift Modules]({{< relref "package-modules.md" >}})
+explains packages, products, targets and imports using PhotoEvidenceKit before
+you read the individual package architecture guides.
+
 RawCull is the composition root for five architecture packages and four small
 rsync/persistence support packages. Package repositories are separately versioned;
 paths under `Sources/` and `Tests/` refer to the named repository, not files copied
