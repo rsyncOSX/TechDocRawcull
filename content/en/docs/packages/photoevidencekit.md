@@ -14,18 +14,22 @@ weight = 50
 # How PhotoEvidenceKit Is Constructed
 
 > **Revision reviewed:** RawCull resolves PhotoEvidenceKit **1.0.7** at
-> `7614fd1528bb7cf2549799fb937678ea39d90228`. This guide reviews that source and
+> [ `7614fd1528bb7cf2549799fb937678ea39d90228`](https://github.com/rsyncOSX/PhotoEvidenceKit/commit/7614fd1528bb7cf2549799fb937678ea39d90228). This guide reviews that source and
 > the RawCull 3.4.0 build 434 integration on November 8, 2026. The package README
 > and changelog still use initial/unreleased wording; the application's lockfile
 > is the authority for the consumed version.
 
-PhotoEvidenceKit is a reusable manual image-inspection package. It lets a
+[PhotoEvidenceKit on GitHub](https://github.com/rsyncOSX/PhotoEvidenceKit) is a reusable manual image-inspection package. It lets a
 photographer compare selected regions, retain a reference while navigating, and
 inspect crops with explicit pixel-source attribution. It was extracted from
 RawBrowse and preserves the original MIT attribution.
 
 The package requires Swift tools 6.2, Swift 6 language mode, and macOS 26 or newer.
 It has no external package dependencies, bundled photo assets or model downloads.
+
+Repository references: [README](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/README.md),
+[package manifest](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift),
+and [MIT license](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/LICENSE).
 
 ## 1. Products And Dependency Direction
 
@@ -279,17 +283,17 @@ Paths below belong to the PhotoEvidenceKit repository at the reviewed revision:
 
 | Source | Read for |
 | --- | --- |
-| `Package.swift` | Products, platform and dependency graph |
-| `Sources/PhotoEvidenceContracts/CloseUpContracts.swift` | Frame, region, request, viewport and storage contracts |
-| `Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift` | Render identity and affine coordinate transform |
-| `Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift` | Validated AF targets and availability |
-| `Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift` | Fit/source-pixel bounds and coordinate mapping |
-| `Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift` | Owned bounded raster buffers |
-| `Sources/PhotoEvidenceEngine/CloseUpRendering.swift` | Async provider, result and error contracts |
-| `Sources/PhotoEvidenceUI/CloseUpModel.swift` | Reference, regions, AF session preference, linked inspection and retry |
-| `Sources/PhotoEvidenceUI/CloseUpCardModel.swift` | Generation checks, result validation and release |
-| `Sources/PhotoEvidenceUI/CloseUpPanel.swift` | Embedding API and controls |
-| `Tests/PhotoEvidenceKitTests/` | Synthetic public-contract tests |
+| [Package.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift) | Products, platform and dependency graph |
+| [Sources/PhotoEvidenceContracts/CloseUpContracts.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpContracts.swift) | Frame, region, request, viewport and storage contracts |
+| [Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift) | Render identity and affine coordinate transform |
+| [Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift) | Validated AF targets and availability |
+| [Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift) | Fit/source-pixel bounds and coordinate mapping |
+| [Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift) | Owned bounded raster buffers |
+| [Sources/PhotoEvidenceEngine/CloseUpRendering.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpRendering.swift) | Async provider, result and error contracts |
+| [Sources/PhotoEvidenceUI/CloseUpModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpModel.swift) | Reference, regions, AF session preference, linked inspection and retry |
+| [Sources/PhotoEvidenceUI/CloseUpCardModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpCardModel.swift) | Generation checks, result validation and release |
+| [Sources/PhotoEvidenceUI/CloseUpPanel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpPanel.swift) | Embedding API and controls |
+| [Tests/PhotoEvidenceKitTests/](https://github.com/rsyncOSX/PhotoEvidenceKit/tree/7614fd1528bb7cf2549799fb937678ea39d90228/Tests/PhotoEvidenceKitTests/) | Synthetic public-contract tests |
 
 Continue with [RawParserKit]({{< relref "rawparserkit.md" >}}) for decoding,
 [PhotoAnalysisKit]({{< relref "photoanalysiskit.md" >}}) for measurements,

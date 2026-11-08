@@ -38,7 +38,7 @@ package owns the dependency. There are 19 resolved entries.
 | ParseRsyncOutput | app | `1.0.0` | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
 | PhotoAIKit | app | `1.0.0` | `4b85056e6c2603b5e382987710ca2f16f4c5c155` |
 | PhotoAnalysisKit | app | `1.3.1` | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
-| PhotoEvidenceKit | app | `1.0.7` | `7614fd1528bb7cf2549799fb937678ea39d90228` |
+| [PhotoEvidenceKit](https://github.com/rsyncOSX/PhotoEvidenceKit) | app | `1.0.7` | `7614fd1528bb7cf2549799fb937678ea39d90228` |
 | RawCullCore | app | `1.1.2` | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
 | RawParserKit | app | `1.3.3` | `26df4abc2178d5c07d08f3883d84d0648f5141d3` |
 | RsyncArguments | app | `1.0.0` | `0ff6518136c208dfbecc1a918f045048ca79853d` |
