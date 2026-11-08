@@ -2,11 +2,17 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Focus Mask And Sharpness
@@ -284,3 +290,13 @@ analyzes valid AF points with missing evidence unless ordinary scoring is active
 It retains access, checks cancellation and the scoring signature, and publishes
 only AF-center values. Existing blended scores and winners remain intact. The
 workspace requests this when its file set changes; package formulas are unchanged.
+
+## Close-up AF assistance is independent of scoring
+
+The burst workspace synchronizes its AF-overlay preference with
+`CloseUpModel.usesAFPoint`. The model centers available manual regions on current,
+orientation-corrected camera AF targets and removes displaced viewport pan.
+Group changes preserve that preference while resetting the inspection session.
+This does not call `PhotoAnalyzer`, rerank candidates or replace AF-center scores.
+Moving a manual region is not a request to recompute the focus mask or score.
+See [viewer ownership]({{< relref "viewer-architecture.md" >}}).

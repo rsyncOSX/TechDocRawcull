@@ -9,6 +9,12 @@ weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # AI Models in RawCull

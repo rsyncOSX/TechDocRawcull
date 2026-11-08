@@ -2,10 +2,16 @@
 author = "Thomas Evensen"
 title = "Sony, Nikon, and DNG Metadata Parsers"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 tags = ["focus points", "sony", "nikon", "dng", "arw", "nef", "parser"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Sony, Nikon, and DNG Metadata Parsers
@@ -126,7 +132,7 @@ body-specific metadata require a dedicated conformer. See
 
 ## Current app pin
 
-RawCull 3.3.6 build 428 pins RawParserKit 1.3.3 at
+RawCull 3.4.0 build 434 pins RawParserKit 1.3.3 at
 `26df4abc2178d5c07d08f3883d84d0648f5141d3`. The 1.3.2 parser walkthrough above
 retains its source identity: the intervening source delta changes thumbnail
 executor placement, not MakerNote parsing or AF interpretation. See the

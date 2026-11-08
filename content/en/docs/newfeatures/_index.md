@@ -3,17 +3,23 @@ author = "Thomas Evensen"
 title = "New Features"
 linkTitle = "New Features"
 date = "2026-11-05"
-lastmod = "2026-11-07"
+lastmod = "2026-11-08"
 description = "Implemented Close-ups and remaining P0 plans for RawCull development."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 55
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # New Features
 
 These documents track implemented work and proposed development after the
-RawCull 3.3.6 baseline. Manual **Close-ups is implemented in RawCull** as of
+RawCull 3.4.0 build 434 baseline. Manual **Close-ups is implemented in RawCull** as of
 7 November 2026; the broader unified-evidence workflow and XMP handoff remain
 planned. Implementation status does not establish store-release availability.
 
@@ -26,7 +32,8 @@ Read them in this order:
 3. [P0: Unified burst evidence]({{< relref "unified-burst-evidence.md" >}}):
    completed manual Close-ups integration and the remaining work to unify evidence.
 
-The overview retains its dated source baseline. The detailed plans distinguish
+The overview identifies the current application baseline while preserving its dated
+competitor research. The detailed plans distinguish
 existing integration points from proposed contracts and behavior. Before coding,
 recheck those integration points against the chosen application revision. Record
 resolved decisions and validation results in the relevant plan as work proceeds.

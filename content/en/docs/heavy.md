@@ -2,11 +2,17 @@
 author = "Thomas Evensen"
 title = "Synchronous Code"
 date = "2026-05-19"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 tags = ["concurrency", "imageio", "blocking"]
 categories = ["technical details"]
 mermaid = true
 weight = 85
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Synchronous Code
@@ -220,3 +226,16 @@ speedup or claiming all expensive paths run away from the main thread.
 ## October 31 integration
 
 The renderer uses a half-float working context with intermediate caching disabled and eagerly completes sRGB display pixels. Fit rendering scales the RAW filter; inspection stays native. Closing releases the active graph. See [RAW preview policy]({{< relref "raw-inspection.md" >}}); serialized native work can still be expensive.
+
+## Close-up decode serialization
+
+The close-up host renderer uses an explicit task chain plus an `@concurrent`
+worker for file access, preview/developed loading and synchronous rasterization.
+A renderer actor's reentrant methods alone would not serialize all awaited work.
+Cancellation is checked before and after native loading; a synchronous decoder
+already running can finish before cancellation is observed.
+
+Owned bounded crop/overview buffers limit retained results, not the temporary
+cost of full-size decoding. The main burst stage uses a separate loader and cache.
+Read [Concurrency]({{< relref "concurrency.md" >}}) for the task chain and
+[Viewer Architecture]({{< relref "viewer-architecture.md" >}}) for session lifetime.

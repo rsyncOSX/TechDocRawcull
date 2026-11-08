@@ -3,7 +3,13 @@ title: Memory Pressure
 description: How RawCull measures memory and reacts to macOS pressure events
 weight: 30
 mermaid: true
-lastmod: 2026-10-31
+lastmod: 2026-11-08
+
+reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version: "3.4.0"
+reviewed_build: 434
+reviewed_on: "2026-11-08"
+review_scope: "source delta and reference verification"
 ---
 
 # Memory Pressure
@@ -209,3 +215,15 @@ source-build identity and measurement limits.
 ## October 31 integration
 
 Warning/critical events now also clear `RAWPreviewRenderer.shared`, releasing its completed-pixel LRU and active source/context. Its 256 MiB cache budget excludes the active RAW graph, Core Image/framework allocations and other app caches. Closing ZoomView releases the graph but retains completed previews; see [cache ownership]({{< relref "cache.md" >}}).
+
+## Close-ups is outside the thumbnail cache budget
+
+Manual Close-ups retains bounded crop/overview artifacts while cards are visible;
+its host can still decode a full-size source transiently. Its renderer serializes
+its own requests but does not impose a process-wide limit on the main burst stage,
+ZoomView or other loaders. Existing thumbnail pressure actions and RAW preview
+cache clearing do not explicitly clear PhotoEvidenceKit's card state.
+
+Do not infer a new memory measurement from these ownership rules. Qualify several
+visible cards, source toggles, retained references and rapid navigation as a
+separate workload. No Close-ups memory-pressure benchmark was run in this pass.

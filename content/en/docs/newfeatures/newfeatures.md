@@ -1,39 +1,45 @@
 +++
 author = "Thomas Evensen"
-title = "RawCull 3.3.6: Features and Competitive Opportunities"
+title = "RawCull 3.4.0: Features and Competitive Opportunities"
 linkTitle = "Features and Competition"
 date = "2026-09-01"
-lastmod = "2026-11-07"
-description = "RawCull 3.3.6 features, a cross-platform photo-culling comparison, and prioritized opportunities for evidence-based review and editor interoperability."
+lastmod = "2026-11-08"
+description = "RawCull 3.4.0 features, a cross-platform photo-culling comparison, and prioritized opportunities for evidence-based review and editor interoperability."
 tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
 weight = 10
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
-# RawCull 3.3.6: Features and Competitive Opportunities
+# RawCull 3.4.0: Features and Competitive Opportunities
 
 RawCull's most promising position is **local, evidence-based selection for RAW
-photographers who want to understand and control the decision**. Version 3.3.6
+photographers who want to understand and control the decision**. Version 3.4.0
 already combines fast preview review, camera autofocus evidence, subject-detail
 measurements, semantic search and optional multi-model review. The next gains
 should come from making those capabilities easier to use and easier to connect
 to an editor.
 
-This review replaces the September 2026 roadmap and its October implementation
-notes. RawCull was checked against application commit
-[`f75adff`](https://github.com/rsyncOSX/RawCull/tree/f75adff751e5f636f69d4cc40141c314b47ebb21)
-on **5 November 2026**. The main app configurations identify version **3.3.6,
-build 429**; some ancillary targets still identify build 428. This is a checkout
-baseline, not confirmation of the build distributed through any store.
+Application implementation was rechecked on **8 November 2026** at
+[`a5f35b05c1e206ed4d6aa599522f5c8622b5308a`](https://github.com/rsyncOSX/RawCull/commit/a5f35b05c1e206ed4d6aa599522f5c8622b5308a):
+**3.4.0 build 434** on `version-3.4.0`. This is the checkout's project baseline,
+not confirmation of a store or downloadable release. The competitor research
+below remains explicitly dated **5 November 2026** and was not requalified in
+this source review.
 
 **7 November implementation update:** manual Close-ups is now integrated into
-RawCull’s burst workspace. It provides selected-frame crop inspection, retained
+RawCull’s shared burst/Single Images workspace. It provides selected-frame crop inspection, retained
 references, saved manual regions and explicit preview/developed-RAW sources.
 See the [implementation record]({{< relref "unified-burst-evidence.md#implemented-in-rawcull" >}}).
 The competitive comparison below retains its 5 November baseline; unified
 measurement presentation, subject matching and XMP exchange remain planned.
 
-Competitor facts below come from vendor documentation checked on the same date.
+Competitor facts below come from vendor documentation checked on 5 November 2026.
 They describe advertised capabilities, not independently measured accuracy,
 latency, market share or customer satisfaction. Recommendations are product
 judgments inferred from those capabilities and RawCull's implementation. No
@@ -41,7 +47,7 @@ hands-on comparative benchmark was performed. Availability can vary by plan,
 platform and release; prices and minimum OS versions should be checked before
 purchase.
 
-## What RawCull 3.3.6 already provides
+## What RawCull 3.4.0 already provides
 
 | Area | Implemented capability | Boundary that matters |
 | --- | --- | --- |
@@ -66,10 +72,10 @@ See [RAW Formats and Exposure Inspection]({{< relref "raw-inspection.md" >}}),
 [AI Models in RawCull]({{< relref "/docs/ai/aiinrawcull.md" >}}), and
 [Combined Review]({{< relref "/docs/ai/aicombined.md" >}}) for detailed behavior.
 The source boundaries include
-[model choices](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
-[decision persistence](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
-[Combined Review](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift),
-and [build settings](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull.xcodeproj/project.pbxproj).
+[model choices](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
+[decision persistence](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
+[Combined Review](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift),
+and [build settings](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull.xcodeproj/project.pbxproj).
 
 ### Important changes from the old roadmap
 
@@ -225,7 +231,7 @@ ratings and editor-specific flags or labels. Read existing metadata, preserve
 unknown fields, detect external changes and make conflicts visible. Avoid
 claiming that every editor interprets pick flags or color labels identically.
 Qualify both directions with existing sidecars, mixed selections and externally
-changed ratings. This is proposed work, not a 3.3.6 capability.
+changed ratings. This is proposed work, not a 3.4.0 capability.
 
 ### 3. Make the first pass simple; reserve deep analysis for shortlists
 
@@ -267,7 +273,7 @@ a Windows/Linux port would be a much larger undertaking because the current
 implementation depends on Apple frameworks. XMP handoff can improve mixed-OS
 workflows much sooner than a port.
 
-## Priorities after 3.3.6
+## Priorities after 3.4.0
 
 These are recommendations, not release commitments. Effort is relative and
 includes integration and qualification, not just UI implementation.

@@ -2,10 +2,16 @@
 author = "Thomas Evensen"
 title = "Security-Scoped URLs"
 date = "2026-02-05"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 tags = ["security", "sandbox", "bookmarks"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Security-Scoped URLs
@@ -308,3 +314,18 @@ or cancelling a catalog does not prove every native operation has stopped.
 ## October 31 integration
 
 `ZoomPreviewHandler` retains catalog access around the awaited RAW overlay render. The renderer owns pixels and source state, while the handler owns this access lifetime. Cancellation is checked around expensive native calls; grant ownership must cover their completion.
+
+## Close-ups retain the catalog grant through rendering
+
+[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
+retains `RawCullCatalogAccess` while reading source revisions/orientation and again
+for each render worker. `withExtendedLifetime` holds the worker's access reference
+through preview/developed loading and rasterization, including failure paths.
+Closing a panel or cancelling a task does not justify stopping a grant while a
+native decoder still uses it. The host revalidates file/render identity after the
+awaited load before returning pixels.
+
+Saved manual regions are preference-sized UserDefaults records, not writes to
+the photo catalog, XMP sidecars or the rating store. The renderer itself writes
+no region file into the catalog; existing developed-JPEG loader persistence
+continues to follow its own established policy.

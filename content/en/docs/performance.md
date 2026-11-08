@@ -3,7 +3,13 @@ title: Performance Measurement
 linkTitle: Performance
 description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-11-04
+lastmod: 2026-11-08
+
+reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version: "3.4.0"
+reviewed_build: 434
+reviewed_on: "2026-11-08"
+review_scope: "source delta and reference verification"
 ---
 
 # Performance Measurement
@@ -181,7 +187,7 @@ Raw Instruments traces were temporary files; do not assume they still exist.
 
 ## Preload owns its pending saves
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Actors/ScanAndCreateThumbnails.swift)
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ScanAndCreateThumbnails.swift)
 returns encoded JPEG data and its cache key from processing. Each worker:
 
 1. Processes the image and prepares any cache-save payload.
@@ -196,7 +202,7 @@ background atomic writer. Interactive `RequestThumbnail` saves are unchanged.
 The catalog grant remains retained through the group's completion, and an
 atomic write already underway is awaited rather than interrupted.
 
-[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
+[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift)
 stalls saves to check the bound, gate ordering, completion ownership,
 cancellation, unchanged preview-RAM admission and disk-backed warm reload.
 A cache-preserved real catalog does not necessarily stress this write path.
@@ -316,9 +322,27 @@ renderer/benchmark source hashes. Use a fresh output directory: unlike the catal
 runner, this tool allows an existing directory and opens per-mode logs for writing.
 
 The expanded
-[scripts guide](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/Scripts/README.md)
+[scripts guide](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/Scripts/README.md)
 also covers trace export, grid/source-load analysis, model evidence runners and
 `make test-scripts`. Script tests use temporary fixtures and mocked Xcode calls;
 real photographs and installed models are not required. They do not run Swift
 diagnostics, real-catalog/model probes or release uploads. Source-load durations
 include scheduling, waits and I/O; summed overlapping durations are not CPU time.
+
+## November 8 source review: Close-ups is a separate workload
+
+The current checkout is 3.4.0 build 434. The earlier tables remain measurements of
+their recorded versions and actions. Adding Close-ups does not supply new latency,
+first-paint, photographic-quality or memory-pressure measurements.
+
+The panel's host renderer serializes its own full-size loads and returns bounded
+crop/overview artifacts. The main stage and other loaders remain separate
+consumers. A future comparison should record frame count, selected source,
+sidecar/cache state, pinned-reference membership, crop/viewport settings, peak
+process memory and cancellation behavior. Do not transfer the ZoomView fit-preview
+results directly to this full-size crop pipeline.
+
+The README still identifies 3.3.6 and lists the older dependency snapshot, while
+`project.pbxproj` identifies 3.4.0 build 434 and the lockfile has 19 pins. Use project
+settings and the lockfile as the current source baseline; this documentation
+review does not modify the app README or establish release availability.

@@ -3,19 +3,25 @@ author = "Thomas Evensen"
 title = "P0: Unified Burst Evidence"
 linkTitle = "P0: Unified Burst Evidence"
 date = "2026-11-05"
-lastmod = "2026-11-07"
+lastmod = "2026-11-08"
 description = "Implemented Close-ups, remaining evidence integration, and possible next features for RawCull burst review."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 30
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Unified Burst Evidence: Current State and Next Features
 
 **Manual Close-ups is complete.** RawCull imports the tested
 [PhotoEvidenceKit](https://github.com/rsyncOSX/PhotoEvidenceKit) package from
-GitHub. The current project and lockfile pin **1.0.5**, revision
-`59554c504eb0eb8ea4452471475bb9ff13557d79`. Package development and required testing
+GitHub. The current project and lockfile pin **1.0.7**, revision
+`7614fd1528bb7cf2549799fb937678ea39d90228`. Package development and required testing
 are complete; importing the package, building the manual panel and qualifying
 its shared inspection behavior are no longer roadmap tasks.
 
@@ -29,13 +35,13 @@ for editor interoperability.
 
 | Capability | Current behavior |
 | --- | --- |
-| Burst workspace | A Close-ups button shows a right-side panel beside the main photograph and filmstrip. It is available for burst groups, not the single-images group. |
+| Burst workspace | A Close-ups button shows a right-side panel beside the main photograph and filmstrip. The shared workspace exposes it for burst groups and Single Images. |
 | Comparison selection | Command-click toggles frames; Shift-click selects a range in displayed order; Command-Shift-click adds a range. Filmstrip controls also toggle inclusion. With no explicit selection, Close-ups uses the current frame. |
 | Manual regions | Each frame has its own region center and size. The overview supports click/drag placement; region-size controls and reset are available. |
 | Inspection scale | Fit region and Source pixels modes, zoom, crop panning with drag or focused arrow keys, and view reset are implemented. Fit-region magnification can differ between frames. |
 | Linked inspection | Pan/zoom can be linked around each frame's own region. Linking does not identify or track the same subject across frames. |
 | Retained reference | A frame can be pinned, replaced or unpinned independently of current selection. Group changes create a new inspection session. Pinning is separate from declaring a burst winner. |
-| AF placement | Use AF point centers a region on valid recorded camera AF metadata, transformed for image orientation. Missing or invalid metadata has an explanation. |
+| AF placement | One-time AF placement and an AF session preference use valid, orientation-corrected camera metadata. The preference is synchronized with the main AF overlay, reapplies centers and clears displaced pan. Missing or invalid metadata has an explanation. |
 | Image sources | The host supplies full-size preview or developed-RAW output. Cards show the actual source label and decoded dimensions. Preview labels distinguish sidecar JPG from embedded preview; developed output is a full-size JPEG, labeled RAW 9 where supported. |
 | Region persistence | Versioned region records are saved in UserDefaults under standardized URL identity and checked against file revisions. New sessions restore valid records; replaced files invalidate them. A moved file has a different URL identity. |
 | Rendering lifecycle | The renderer retains catalog access, serializes native decoding, checks file/source revisions before and after loading, and produces bounded raster artifacts. The package rejects obsolete results and releases card imagery on disappearance. |
@@ -46,6 +52,10 @@ PhotoEvidenceKit supplies `PhotoEvidenceContracts`, `PhotoEvidenceEngine` and
 `PhotoEvidenceUI`. RawCull supplies file identity, permissions, source loading,
 AF metadata, persistence and workspace activation. RAW decoding and durable
 culling decisions remain host responsibilities.
+
+The source picker shares selection with the main stage. Its RAW 9 label requires
+support across comparison frames, the active frame and a retained reference.
+A group change preserves the AF-overlay preference while creating a new model.
 
 Source identity is distinct from render identity: a sidecar preview can change
 without changing the RAW file revision. The current developed-RAW descriptor
@@ -81,7 +91,7 @@ Close-ups delivery or commitments to ship.
 | Region editing on the main photograph | Draw or resize a region directly on the large burst image, with undo. | Overview placement and region-size controls already exist; the new work is stage interaction and undo ownership. |
 | Cross-frame subject matching | Follow a moving bird, athlete or other intended subject without manually positioning every region. | Linked pan/zoom currently copies inspection state, not subject identity. Matching needs confidence, correction and a manual fallback. |
 | Face and eye inspection | Provide dedicated face/eye crops and, if qualified, eye-state or eye-sharpness assessments for portraits and groups. | Neither a camera AF point nor Qwen commentary is a calibrated blink detector. Include unknown results for small or occluded faces. |
-| Close-ups in single-image review | Make the same detail-inspection panel available outside a burst. | The current workspace deliberately gates the panel to burst groups. |
+| Loupe or other standalone inspection surfaces | Reuse the panel outside the shared burst/Single Images workspace. | Single Images already uses the panel; additional screen integration would need its own host lifecycle and activation policy. |
 | Richer development-aware inspection | Support explicit per-file development settings and crop/straighten transforms in the host adapter if RawCull gains that workflow. | The package has render-source/coordinate contracts; RawCull currently supplies its default development pipeline, not a persistent editor. |
 
 XMP exchange remains a separate adoption priority. Full RAW editing, whole-catalog
@@ -109,9 +119,10 @@ package.
 
 ## Implementation references
 
-RawCull source baseline: commit
-[`8b07828`](https://github.com/rsyncOSX/RawCull/tree/8b07828530dc85d74b003900784531e6c88df4aa),
-with dependency configuration checked in the current checkout on 7 November 2026.
+RawCull source baseline: **3.4.0 build 434**, commit
+[`a5f35b05c1e206ed4d6aa599522f5c8622b5308a`](https://github.com/rsyncOSX/RawCull/commit/a5f35b05c1e206ed4d6aa599522f5c8622b5308a),
+reviewed on **8 November 2026**. Package tests were previously recorded as complete;
+this pass verifies source integration and does not rerun those tests.
 
 - `RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift`: host model,
   visibility, comparison selection, group lifecycle and zoom activation.

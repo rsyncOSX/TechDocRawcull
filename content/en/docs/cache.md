@@ -2,11 +2,17 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Cache System
@@ -288,3 +294,22 @@ bounded completed previews. Warning/critical memory pressure and `clearCaches()`
 clear both previews and source/context. Normal native previews retain the existing
 persistent developed-JPEG policy. These caches are independent of thumbnail budgets,
 export output and burst's three-frame working set.
+
+## Close-up artifacts and source identity
+
+Close-ups adds a separate inspection working set. Its renderer retains no decoded
+source cache of its own, although the host preview/developed loaders can reuse
+their existing caches. PhotoEvidenceKit redraws crop and overview into owned,
+bounded raster buffers, and card disappearance releases those artifacts. A crop
+must not accidentally retain the whole source through a shared image backing.
+
+This does not extend the burst stage's three-frame cache budget to every card.
+Source decoding can allocate full-size transient images; serialization applies
+within the close-up renderer, not across every image consumer. Thumbnail budgets
+and the RAWPreviewRenderer LRU are not a cap on the complete panel/process.
+
+Frame identity includes the RAW file revision; render identity separately includes
+preview sidecar or development settings. A sidecar change rerenders pixels while
+preserving a valid RAW-bound manual region. The UserDefaults region store is a
+preference store and is not included in the existing Settings cache byte total or
+explicit purge paths. See [file storage]({{< relref "filereadandwrite.md" >}}).

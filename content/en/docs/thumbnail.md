@@ -2,11 +2,17 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Thumbnails and Scan Pipeline
@@ -448,3 +454,13 @@ helper inside its existing six-slot limiter. RawCull's preload worker bound
 remains separate; this dependency update does not increase it. Decode ordering,
 coalescing and cancellation checks are retained. See the
 [package delta]({{< relref "packages/rawparserkit.md" >}}) for evidence and limits.
+
+## Close-ups does not change preload admission
+
+The November integration leaves scan/preload worker limits and thumbnail identity
+unchanged. Close-ups loads full-size preview/developed sources through its own
+host renderer, separately from the main stage's three-frame working set and the
+grid/preview thumbnail caches. A small displayed crop is not proof that only a
+small source bitmap was decoded. See
+[viewer ownership]({{< relref "viewer-architecture.md" >}}) and
+[cache lifetimes]({{< relref "cache.md" >}}).

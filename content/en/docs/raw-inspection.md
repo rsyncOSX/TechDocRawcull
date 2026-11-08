@@ -2,15 +2,21 @@
 author = "Thomas Evensen"
 title = "RAW Formats and Exposure Inspection"
 date = "2026-10-22"
-lastmod = "2026-11-04"
+lastmod = "2026-11-08"
 description = "Distinguish extension admission, macOS decoding, embedded export, RAW development and display-referred exposure inspection."
 weight = 16
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # RAW Formats and Exposure Inspection
 
-RawCull 3.3.6 resolves RawParserKit **1.3.3** at `26df4abc2178d5c07d08f3883d84d0648f5141d3`.
+RawCull 3.4.0 resolves RawParserKit **1.3.3** at `26df4abc2178d5c07d08f3883d84d0648f5141d3`.
 This adds a generic macOS-backed format route alongside the dedicated Sony,
 Nikon and DNG parsers. The app also has a temporary zoom exposure-inspection
 mode. These capabilities have separate contracts: discovering a file is not
@@ -79,18 +85,18 @@ The helper name is a concrete call boundary, not a guarantee that every
 registry extension supports full development. The system filter determines
 whether an attempted input can be developed. In particular, generic browsing
 support does not extend the export loader's explicit three-format switch.
-See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/EmbeddedJPGExportLoader.swift) and
-[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
+See [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/EmbeddedJPGExportLoader.swift) and
+[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
 
 ## Enter and leave exposure inspection
 
-[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
+[ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/ZoomSessionModel.swift) snapshots source
 selection, current/committed EV and clipping visibility before selecting
 `.developedRAW` and enabling inspection. Ending inspection restores that
 snapshot. A selected-file reset ends inspection and resets EV to zero.
 No editing sidecar is written by this mode.
 
-[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
+[RAWExposureInspectionControls.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ZoomViews/RAWExposureInspectionControls.swift) keeps a
 local slider draft from −5 to +5 EV in 0.1 steps. Dragging updates the small
 control view; release updates committed EV and triggers rendering. Reset
 commits zero. Closing inspection or pressing Escape restores the earlier
@@ -100,7 +106,7 @@ recognized navigation/rating/source actions. These adjustments are temporary ins
 
 ## Rendering and resource ownership
 
-The `RAWPreviewRenderer` actor in [RAWPreviewRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/RAWPreviewRenderer.swift)
+The `RAWPreviewRenderer` actor in [RAWPreviewRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/RAWPreviewRenderer.swift)
 serializes fit and inspection renders and lazily constructs its `CIContext` on its own
 executor. `ZoomPreviewHandler.loadOverlayRAWPreview` owns the display-source policy. The operation retains catalog access through completion and checks
 cancellation before and after expensive phases. Its synchronous Core Image
@@ -126,8 +132,8 @@ adjustments. They cannot establish sensor saturation or recoverable RAW detail.
 
 | Product | Sample cap | Near-white rule | Near-black rule |
 | --- | --- | --- | --- |
-| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
-| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
+| [Raster warning overlay](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/RAWPreviewClippingOverlay.swift) | Longest side 2048 px | All RGB channels ≥254 | All RGB channels ≤1 |
+| [RGB histogram and percentages](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/Histogram/RAWExposureHistogramView.swift) | Longest side 512 px | Any RGB channel ≥254 | Any RGB channel ≤1 |
 
 The overlay draws near-white pixels red and near-black pixels blue with alpha
 180. The histogram has 256 bins per channel, normalized against the largest
@@ -143,9 +149,9 @@ task also includes whether the warning is enabled for a developed source.
 ## Read and verify the boundaries
 
 Start with registry tests, then generic preview tests in RawParserKit. In
-RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/RawImageLoadingIntegrationTests.swift) for
-display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ZoomSessionModelTests.swift)
-for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/f75adff751e5f636f69d4cc40141c314b47ebb21/RawCullTests/ZoomKeyboardControllerTests.swift)
+RawCull, read [RawImageLoadingIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/RawImageLoadingIntegrationTests.swift) for
+display/export separation, [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ZoomSessionModelTests.swift)
+for snapshot/restore, and [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ZoomKeyboardControllerTests.swift)
 for suppressed inspection actions. Those tests do not qualify camera coverage,
 exposure recovery accuracy or the current histogram predicates on real files.
 Record OS/decoder, camera, render source and actual pixels when validating
@@ -196,3 +202,19 @@ Timing wraps the awaited RAW preview loader, including cache retrieval. It is
 not isolated decoder CPU time or time to the first painted frame. Thumbnail and
 embedded-JPEG display have no completed RAW status. See
 [viewer ownership]({{< relref "viewer-architecture.md" >}}) for state and cleanup.
+
+## Close-ups source selection in build 434
+
+The shared burst/Single Images workspace now offers a JPG/RAW source picker while
+Close-ups is visible. It updates the source state used by both the main stage and
+the panel. RAW 9 wording is used only when all relevant selected/current/reference
+URLs support it; otherwise the label is RAW, and individual crops describe their
+actual decoder/source. Availability of a registered extension alone does not
+prove RAW 9 support.
+
+The close-up renderer requests full-size preview pixels or a developed RAW JPEG
+through the host loaders. These are separate from ZoomView's bounded fit-render
+policy and temporary EV/clipping inspection. Cards distinguish sidecar JPG,
+embedded preview and developed full-size JPEG; they are not sensor-domain RAW
+measurements or a persistent editing/export adjustment. See
+[Viewer Architecture]({{< relref "viewer-architecture.md" >}}).

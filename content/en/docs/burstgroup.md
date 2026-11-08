@@ -2,11 +2,17 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
 mermaid = true
+
+reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version = "3.4.0"
+reviewed_build = 434
+reviewed_on = "2026-11-08"
+review_scope = "source delta and reference verification"
 +++
 
 # Burst Groups
@@ -437,3 +443,28 @@ It does not start while ordinary scoring is active. Existing blended scores
 and recommended winners are not replaced. Read
 [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
 and [SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SharpnessScoringTests.swift).
+
+## Manual Close-ups in the current workspace
+
+The Close-ups button opens a right-side manual comparison panel in the same
+workspace used by bursts and Single Images. Comparison membership is a separate
+URL set: plain click selects one frame, Command-click toggles, Shift-click selects
+a displayed-order range, and Command-Shift-click adds a range. Filmstrip clicks
+also activate the clicked frame; inclusion checkboxes only change membership.
+With no explicit members, the current frame is inspected.
+
+Each frame has an independent region. A pinned reference survives selection
+changes, while changing groups creates a new inspection session. Regions persist
+in source-revision-bound UserDefaults records. Linked pan/zoom works around each
+frame's own region and does not track the same subject across photos.
+
+JPG/RAW selection is shared with the main stage; RAW 9 wording requires support
+across the relevant frames. AF assistance is synchronized with the stage's AF
+preference and respects EXIF orientation. A recorded location is not evidence of
+sharpness. Pinning, region editing and comparison membership do not write a
+rating, override a winner, rerank a burst or submit Combined Review automatically.
+
+The panel currently receives no scored-evidence projection. Existing AF/detail
+measurements and recommendations remain owned by their existing features. See
+[viewer ownership]({{< relref "viewer-architecture.md" >}}) and
+[remaining unified evidence work]({{< relref "newfeatures/unified-burst-evidence.md" >}}).

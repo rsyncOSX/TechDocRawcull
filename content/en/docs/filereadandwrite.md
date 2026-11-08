@@ -3,7 +3,13 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-10-31
+lastmod: 2026-11-08
+
+reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
+reviewed_version: "3.4.0"
+reviewed_build: 434
+reviewed_on: "2026-11-08"
+review_scope: "source delta and reference verification"
 ---
 
 # File Read and Write Reference
@@ -295,3 +301,25 @@ interactive save path is unchanged.
 ## October 31 integration
 
 Normal ZoomView fit requests reuse an existing developed JPEG before rendering a bounded RAW preview. New direct fit pixels and adjusted exposure inspection do not write that persistent cache. Normal native development, loupe, burst and exports retain their established JPEG paths. See [RAW viewing policy]({{< relref "raw-inspection.md" >}}).
+
+## Close-up regions are a separate preference store
+
+`BurstCloseUpRegionStore` in
+[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
+encodes `CloseUpRegionRecord` as JSON `Data` in UserDefaults. Keys begin with
+`PhotoEvidenceKit.ManualRegion.v1.` followed by a SHA-256 hash of the standardized
+source URL string. The record stores schema version, source URL/revision and
+normalized region; it does not store crop images, viewport pan/zoom, ratings or
+manual winners. Loading rejects a replaced source revision; moving a file changes
+its URL identity.
+
+The key namespace is separate from `savedfiles.json`, burst-cache snapshots and
+Combined Review stores. Existing Delete Saved Files and Delete Cache paths do not
+explicitly clear these keys. Do not promise that either action resets manual
+regions. A preview-sidecar change updates render identity without invalidating a
+manual region still bound to the unchanged RAW file.
+
+The host supplies synchronous main-actor storage methods. Package save failures
+remain pending for retry and surface in the panel; successful rendering does not
+establish that a region was saved. See the
+[PhotoEvidenceKit guide]({{< relref "packages/photoevidencekit.md" >}}).
