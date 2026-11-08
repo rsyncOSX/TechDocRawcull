@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -526,3 +526,47 @@ without replacing blended scores or recommended winners. Cancellation and
 scoring identity guard publication. The resolved PhotoAnalysisKit 1.3.1 formula
 is unchanged. The host's optional `releaseafcomparison` workflow exports crops
 for a separately labeled comparison; it is not photographic qualification.
+
+## November 8 Integration Review: Measurement And Inspection
+
+RawCull continues to resolve PhotoAnalysisKit 1.3.1 at
+`2a1466e04d821fa2628d6985296643e0d0c7e465`. Its measurement boundary is unchanged
+by the addition of [PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}).
+The latter displays manually chosen regions; it does not call `PhotoAnalyzer`
+or recompute a score when a photographer moves or zooms a crop.
+
+### Build Cache Identity Around The Actual Analysis Input
+
+`SharpnessAnalysisDescriptor` describes algorithm/policy versions and configurable
+non-mask analysis settings. The host must additionally identify the source file,
+the chosen decoding path and decoded resolution. A score computed from an embedded
+preview must not silently become the score for a developed RAW image after a
+source toggle. Per-image ISO and aperture belong to `PhotoAnalysisInput` and must
+remain consistent with the metadata used for that cached computation.
+
+A manual inspection's `CloseUpRenderSource` is a separate identity. It enables
+fresh display pixels without overwriting analysis identity or implying that a
+previous score was computed from the newly displayed crop.
+
+### Interpret Batch Outcomes Precisely
+
+| Batch outcome | Meaning | Host behavior |
+| --- | --- | --- |
+| Empty input | Successful empty array | Finish with no work |
+| Result with `analysis == nil` | That input provider failed to supply a usable image | Retain the item's failure state rather than inventing a zero score |
+| Outer result is `nil` | Parent task was cancelled | Discard partial publication for that batch |
+| Progress callback | Next completion, not next input position | Update progress using the supplied identifier |
+| Final result array | Original request order | Associate results with their stable identifiers |
+
+The default `maximumConcurrentTasks` is eight; the implementation clamps it to
+at least one and at most the request count. Input providers execute within that
+bounded work, so hosts can avoid eagerly decoding a whole catalog. This bounds
+active batch tasks, not every cache or retained image elsewhere in the app.
+
+### Keep AF Evidence And Manual Placement Distinct
+
+Analysis AF evidence contributes to measurement interpretation. PhotoEvidenceKit's
+recorded AF point assists region placement in canonical oriented coordinates.
+Neither the presence of an AF location nor successful region placement establishes
+that the subject is sharp. Supply metadata appropriate to each API and perform
+sensor-to-oriented coordinate conversion in the host adapter.

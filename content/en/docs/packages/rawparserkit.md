@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawParserKit Is Constructed"
 linkTitle = "RawParserKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 description = "A detailed guide to RawParserKit's vendor dispatch, TIFF and MakerNote parsing, embedded previews, structured capture and exposure metadata, orientation, decode limiting, cancellation, compatibility APIs, and tests."
 tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -618,3 +618,54 @@ records 105 passing tests in each Debug/Release package suite and ARW throughput
 experiments. Paired host-application empty-cache cohorts improved; warm disk cohorts
 showed no established benefit. Those are separate package-evaluation observations, not a
 fresh RawCull whole-catalog speed or UI smoothness measurement.
+
+## November 8 Integration Review: Close-up Source Delivery
+
+The app still resolves RawParserKit 1.3.3 at
+`26df4abc2178d5c07d08f3883d84d0648f5141d3`. Adding
+[PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}) does not make the parser
+depend on a UI package. RawCull implements `CloseUpRendering` and supplies decoded
+pixels to the evidence engine.
+
+### Follow The Actual Host Renderer
+
+`BurstCloseUpRenderer` in RawCull's
+`RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift` is the adapter:
+
+1. Retain catalog access for the requested file.
+2. Check the file revision and render-source descriptor before decoding.
+3. For developed RAW, call `ZoomPreviewHandler.loadDevelopedRAWPreview`; for a
+   preview, call `FullSizePreviewLoader.shared.loadEmbeddedPreview`.
+4. Label the returned source as developed RAW/full-size JPEG, sidecar JPG preview,
+   or embedded preview as appropriate.
+5. Check cancellation and both identities again before rasterizing the crop.
+
+These are host pipelines, not new `RawImageLoader` public methods. A developed
+image may be labeled RAW 9 only when the decoder reports RAW 9 support. A sidecar
+preview's modification changes the preview render descriptor independently of
+the RAW file revision. The adapter does not silently replace unavailable preview
+pixels with a different source class.
+
+### Separate Decode Limits From Raster Limits
+
+The package's `DecodeConcurrencyLimiter` queues work and transfers a released slot
+to the next waiter. Cancellation while waiting removes that waiter; native work
+already running remains subject to cooperative cancellation behavior. In 1.3.3,
+thumbnail work runs on the concurrent executor under its existing bounded policy.
+
+RawCull's close-up renderer additionally serializes its own render tasks across
+actor suspension. PhotoEvidenceKit bounds returned crop/overview buffers, but it
+does not cap the memory needed to decode the full source. Audit thumbnail,
+full-preview and close-up concurrency together when assessing peak image memory.
+
+### Map AF Coordinates Once At The Host Boundary
+
+The host reads EXIF orientation and maps sensor-normalized AF positions through
+all eight orientation cases into canonical top-left, x-right, y-down coordinates.
+Invalid points or unavailable orientation produce unavailable AF assistance.
+Do not pass sensor coordinates directly to a close-up whose pixels are already
+orientation-corrected, or apply orientation normalization a second time.
+
+A close-up source change invalidates displayed pixels; a file-revision change also
+invalidates saved source-bound regions and stale AF targets. This distinction
+allows preview/development toggles to preserve a photographer's manual region.

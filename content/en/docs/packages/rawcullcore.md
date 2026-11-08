@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
@@ -485,3 +485,48 @@ RawCull stores live decisions in `BurstReviewSessionModel` and maps snapshots
 through `BurstReviewStateMapping`. The app restores membership signatures onto
 current group IDs and coordinates persistence. This extraction does not change
 RawCullCore's pure grouping/ranking models or its resolved 1.1.2 pin.
+
+## November 8 Integration Review: Recommendations And Close-ups
+
+The resolved RawCullCore baseline remains 1.1.2 at
+`d25a51e65ad32a82bf82f86fa0ec07d6e14498e9`. The new
+[PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}) integration adds a manual
+inspection surface beside grouping and ranking. It introduces no compile-time
+dependency into RawCullCore.
+
+### Three Kinds Of State Have Different Lifetimes
+
+| State | Owner | Effect |
+| --- | --- | --- |
+| Grouping/ranking evidence | RawCullCore values produced from host inputs | Explains boundaries, candidate scores and recommendation confidence |
+| Photographer review decisions | RawCull host review/persistence layer | Records explicit choices independently of recomputation |
+| Close-up region/reference/viewport | PhotoEvidenceKit session plus injected region store | Supports visual comparison without setting a winner or rating |
+
+Pinning a close-up reference does not select a recommended winner. Moving a manual
+region does not alter the analysis score. Selecting several comparison frames
+does not regroup the burst. RawCull's `BurstCloseUpSelection` keeps comparison
+membership separate from the active review frame, including command-toggle and
+shift-range interactions.
+
+### Preserve Missing Evidence And Time Provenance
+
+Grouping consumes files in shot order and adjacent-pair similarity evidence.
+A missing comparison is a reason for a boundary, not a zero-distance match.
+Capture-time fallback is recorded in boundary evidence and influences the allowed
+time gap. Keep the distinction between capture metadata and file modification
+time when constructing the input values.
+
+Ranking also records cautions for missing sharpness or AF evidence. Reliable
+capture times participate in the high-confidence gate, alongside score separation
+and metadata conditions. A candidate appearing first in a ranked result does not
+by itself establish that a one-click action is safe. Preserve the package's
+confidence and eligibility fields when adapting results for the UI.
+
+### Recompute Without Overwriting Review Intent
+
+When upstream source identity, sharpness configuration or similarity backend
+changes, regenerate the affected input evidence before ranking again. Publish the
+new recommendation only for the current host request and preserve separately
+owned photographer decisions. Refresh a pinned close-up's source revision through
+`updateReference` so manual inspection can stay current without modifying the
+ranking input or host selection.

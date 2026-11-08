@@ -3,7 +3,7 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-08"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
@@ -619,3 +619,44 @@ cached evidence, capability, hydration and query presentation, retained behind
 SimilarityScoringModel's existing API. The package still owns encoding and
 comparison of compatible embeddings; this host extraction does not alter its
 models, artifact compatibility or ranking algorithms.
+
+## November 8 Integration Review: Identity Across Workflows
+
+The app still resolves PhotoAIKit 1.0.0 at
+`4b85056e6c2603b5e382987710ca2f16f4c5c155`. The newer transitive versions in the
+[package snapshot]({{< relref "_index.md" >}}) do not imply a new PhotoAIKit API
+revision. Review backend behavior against the resolved source when changing the
+lockfile; a sibling development checkout can contain later code.
+
+Treat an AI artifact's identity as more than its file URL. Backend, model asset
+fingerprint, preprocessing/configuration and representation dimensions establish
+whether two artifacts can be compared. Source identity determines whether an
+artifact still belongs to the current photo. Equal vector length alone is not
+proof that representations share an embedding space.
+
+| Change | Host integration consequence |
+| --- | --- |
+| Replace a model asset | Resolve its identity again and invalidate artifacts that no longer match |
+| Switch CLIP/Vision backend | Rebuild or retrieve compatible artifacts and use that backend's comparator |
+| Change source pixels or preprocessing | Revise the corresponding source/configuration identity |
+| Change the active query or selection | Suppress publication from the previous host request generation |
+| Open a manual close-up | Render inspection pixels through the host; do not treat the crop as an AI result |
+
+Cancellation and artifact validation solve different problems: a cancelled task
+can finish native work late, while an incompatible persisted artifact can arrive
+from a perfectly current task. Keep both request-generation checks and descriptor
+validation at publication boundaries.
+
+### Relationship To PhotoEvidenceKit
+
+[PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}) provides manual inspection,
+including pinned references and independently positioned regions. It neither
+runs PhotoAIKit providers nor converts segmentation masks into selected subjects.
+If a host later offers an AI-assisted region action, the host must explicitly
+translate coordinates, identify the source revision and distinguish that action
+from a photographer's existing manual region.
+
+Model-download errors, incompatible artifacts, and unavailable inference should
+remain observable in the AI workflow. They do not prevent a host from offering
+manual close-ups when a renderable image is available. Conversely, a close-up
+render failure says nothing about whether an existing embedding is valid.
