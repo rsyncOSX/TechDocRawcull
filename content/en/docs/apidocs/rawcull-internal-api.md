@@ -442,7 +442,7 @@ to nil. These remain application-internal presentation data.
 These app-internal adapters are defined in
 [BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift).
 The three `PhotoEvidence*` imports expose package modules; they are not app facade
-methods. See [package/import concepts]({{< relref "packages/package-modules.md" >}}).
+methods. See [package/import concepts]({{< relref "/docs/packages/package-modules.md" >}}).
 
 | Owner | Entry point | Contract |
 | --- | --- | --- |
