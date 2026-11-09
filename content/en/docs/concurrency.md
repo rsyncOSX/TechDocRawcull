@@ -9,11 +9,11 @@ mermaid = true
 weight = 35
 slug = "concurrency-revised"
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # Concurrency
@@ -448,3 +448,12 @@ The main burst stage retains its separate cache and loading coordinator. This
 renderer serializes its own work; it is not a global cap shared by all image
 pipelines. See [cache ownership]({{< relref "cache.md" >}}) and
 [security-scope lifetime]({{< relref "security.md" >}}).
+
+## Automatic detection scheduling
+
+The current URL scopes the detection task. The view delays starting work
+briefly, removes the detection strip during similarity indexing and cancels
+obsolete loads when the current URL changes. The loader retains catalog access
+and checks cancellation and source revision before saving or returning results.
+Manual card metadata loads off the main actor and is published after a
+cancellation check.

@@ -9,15 +9,19 @@ tags = ["close-ups", "image-inspection", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 50
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; existing content retained; historical package audit retained"
 +++
 
 # How PhotoEvidenceKit Is Constructed
 
-> **Revision reviewed:** RawCull resolves PhotoEvidenceKit **1.0.7** at
+> **November 8 baseline:** RawCull resolved PhotoEvidenceKit **1.0.7** at
 > [ `7614fd1528bb7cf2549799fb937678ea39d90228`](https://github.com/rsyncOSX/PhotoEvidenceKit/commit/7614fd1528bb7cf2549799fb937678ea39d90228). This guide reviews that source and
 > the RawCull 3.4.0 build 434 integration on November 8, 2026. The package README
-> and changelog still use initial/unreleased wording; the application's lockfile
-> is the authority for the consumed version.
+> and changelog still use initial/unreleased wording; the lockfile records that historical remote version.
 
 [PhotoEvidenceKit on GitHub](https://github.com/rsyncOSX/PhotoEvidenceKit) is a reusable manual image-inspection package. It lets a
 photographer compare selected regions, retain a reference while navigating, and
@@ -252,6 +256,19 @@ can rerender without resetting a manual region bound to the RAW source.
 `BurstCullingWorkspaceView` owns panel visibility, the model, renderer and
 comparison membership. The package has no knowledge of the app's ranking results,
 rsync transfers, rating persistence or selected winner.
+
+### Detected crops in the local integration
+
+The November 9 development build uses the sibling `../PhotoEvidenceKit`
+checkout. RawCull's `BurstDetectedFacesView` supplies normalized rectangles
+to `DetectedFaceRasterizer`, which adds context and clips the crop to the
+upright preview. The app obtains human face rectangles from PhotoAnalysisKit
+and derives animal head and eye rectangles from Vision landmarks in
+`AnimalCloseUpDetector`. These tiles sit above the manual `CloseUpPanel`
+and have no region records of their own.
+
+See [using Close Up]({{< relref "closeups.md" >}}) for the source picker,
+manual regions and detected tiles.
 
 ## 10. Tests And Qualification
 

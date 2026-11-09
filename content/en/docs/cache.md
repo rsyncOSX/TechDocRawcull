@@ -8,11 +8,11 @@ tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # Cache System
@@ -313,3 +313,13 @@ preview sidecar or development settings. A sidecar change rerenders pixels while
 preserving a valid RAW-bound manual region. The UserDefaults region store is a
 preference store and is not included in the existing Settings cache byte total or
 explicit purge paths. See [file storage]({{< relref "filereadandwrite.md" >}}).
+
+## Disposable human face evidence
+
+`FaceEvidenceCache` writes JSON atomically under the app cache directory,
+using a hash of the standardized file URL. The signature checks the source
+revision, preview configuration, algorithm version, Vision revision and OS.
+The saved preview dimensions must also match. Cache hits reuse human face
+geometry and detail, while RawCull renders new crop pixels from the decoded
+preview. Animal landmarks are evaluated separately and remain transient.
+Manual region records are stored separately.

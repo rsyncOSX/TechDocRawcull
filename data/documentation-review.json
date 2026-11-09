@@ -1,17 +1,28 @@
 {
   "schema_version": 1,
-  "reviewed_on": "2026-11-08",
+  "reviewed_on": "2026-11-09",
   "application": {
-    "commit": "a5f35b05c1e206ed4d6aa599522f5c8622b5308a",
-    "branch": "version-3.4.0",
-    "version": "3.4.0",
-    "build": 434,
-    "lockfile": "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
+    "commit": "a68253b73cbad14a7b1030dba6b439e6bce7d3da",
+    "branch": "version-3.4.5",
+    "version": "3.4.5",
+    "build": 436,
+    "lockfile": "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+    "merge_status": "unmerged into main",
+    "local_packages": [
+      {
+        "identity": "photoanalysiskit",
+        "path": "../PhotoAnalysisKit",
+        "observed_revision": "27d422b100214dd1520f7ca11123f58a86f04e99"
+      },
+      {
+        "identity": "photoevidencekit",
+        "path": "../PhotoEvidenceKit",
+        "observed_revision": "35e8aca4135ac2151cbce033e4e9baefb8bafabc"
+      }
+    ]
   },
-  "previous_application_commit": "f75adff751e5f636f69d4cc40141c314b47ebb21",
-  "excluded": [
-    "content/en/docs/packages/**"
-  ],
+  "previous_application_commit": "a5f35b05c1e206ed4d6aa599522f5c8622b5308a",
+  "excluded": [],
   "pins": [
     {
       "identity": "coreai-models",
@@ -56,24 +67,6 @@
       "state": {
         "revision": "4b85056e6c2603b5e382987710ca2f16f4c5c155",
         "version": "1.0.0"
-      }
-    },
-    {
-      "identity": "photoanalysiskit",
-      "kind": "remoteSourceControl",
-      "location": "https://github.com/rsyncOSX/PhotoAnalysisKit.git",
-      "state": {
-        "revision": "2a1466e04d821fa2628d6985296643e0d0c7e465",
-        "version": "1.3.1"
-      }
-    },
-    {
-      "identity": "photoevidencekit",
-      "kind": "remoteSourceControl",
-      "location": "git@github.com:rsyncOSX/PhotoEvidenceKit.git",
-      "state": {
-        "revision": "7614fd1528bb7cf2549799fb937678ea39d90228",
-        "version": "1.0.7"
       }
     },
     {
@@ -188,21 +181,21 @@
   "pages": [
     {
       "path": "content/en/_index.md",
-      "review_scope": "editorial/reference check; no application-runtime contract",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "322f34966c4bd566b3552d32b1cee2459cf4eaa551017a3b04675983cf0e5078"
+      "sha256": "4706883c1552d30020ef25fd5e326a3476fa91a1a5e9a2ec39cca2012f0bcc5e"
     },
     {
       "path": "content/en/about/index.md",
-      "review_scope": "editorial/reference check; no application-runtime contract",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "ded08bc5795c12d97bff6c0939c45bbccfd20b3dca0881e784cc1b39513c3c49"
+      "sha256": "ad4ac949fc66fafa2675eaad61ec3867d257bb4bbbbd8df98ff14024ac782aa1"
     },
     {
       "path": "content/en/docs/_index.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "Config/*",
         "Makefile",
@@ -236,11 +229,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "ceb6565abdf2217afe35ea313dacc8f15864c71553c403118055041021d69ba1"
+      "sha256": "6ec818e947d83276e4c657892cfea147be2ecca743c2f485e87ad7a8acc22ed5"
     },
     {
       "path": "content/en/docs/ai/_index.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull.xcodeproj/*",
         "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
@@ -270,11 +263,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "f7a6fac9a86ab6ae531f897f644f72159c4c4ba797f8ccf359b0d3f0535c9534"
+      "sha256": "c460023ad0b29bf61b960567c3c011f768957ed057ae1edf232a248813bf3883"
     },
     {
       "path": "content/en/docs/ai/aicombined.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull/Intelligence/CombinedReview/*",
         "RawCull/Intelligence/CombinedReview/CombinedReviewComparisonExecution.swift",
@@ -314,11 +307,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "f4150ee45a2b52ce36d6d69dfe51a250be0b91e74e0b992c9897d0da2ec75d2a"
+      "sha256": "c642376f36d759a637b806f158b5c5d1ad469bc1d147147b9ff8ffa89fba06fc"
     },
     {
       "path": "content/en/docs/ai/aidiagnostics.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "Makefile",
         "RawCull/Intelligence/*",
@@ -369,11 +362,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "90bb204adf88de6f6393ee1afa6be4f46d9a8ce11c9f28486b79870498cfaec6"
+      "sha256": "d084bc0fcea24f1a9184174ce0536638acf6cdaf04832ed16e6084c07b636966"
     },
     {
       "path": "content/en/docs/ai/aiinrawcull.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "Docs/sam3qwen.md",
         "ModelAssets/*",
@@ -438,11 +431,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "b0862361cff817a391c2ee0082230b794f0f721e5f43866526c205cdc4f7c0f5"
+      "sha256": "89427990d9df5e7c2f2ffd602e99a20a65fbb5d11b0022ba9f24013044c4a70a"
     },
     {
       "path": "content/en/docs/ai/airuntime.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Intelligence/*",
         "RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift",
@@ -490,11 +483,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "c6b28b8f4a00a5cc104bdbc14e81405128001fa6ee1971f20e24096bbc2fbfdc"
+      "sha256": "1e165dca1d280b4111475edb9b87a82c297cd0b010aa3366502130a24a90f116"
     },
     {
       "path": "content/en/docs/ai/rawcullai.md",
-      "review_scope": "source delta/reference check; existing content retained; historical exporter recipe not rerun or externally requalified",
+      "review_scope": "source delta and reference check; existing content retained; dated external evidence not requalified",
       "watch_paths": [
         "Docs/newmodels.md",
         "ModelAssets/*",
@@ -516,11 +509,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "ca763538318131194821eb0107a9747f370a453a21cfac8a820331dbee0d04db"
+      "sha256": "c8d2c6d750b70f65ec12e67abd3f97ec4fc24e1f484a9a84b33143da2f2f1b25"
     },
     {
       "path": "content/en/docs/apidocs/_index.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "Config/*",
         "Makefile",
@@ -544,11 +537,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "acdd8704902b30ec1bb19a5cf2de268d360c2677899d5e9f8b06717c5d3bf190"
+      "sha256": "9c888b6df311c1100a66e7946dc8ee273e7f879952c57539d414b1f1e1732573"
     },
     {
       "path": "content/en/docs/apidocs/rawcull-internal-api.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull.xcodeproj/*",
         "RawCull/*",
@@ -606,11 +599,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "703c2f0230e5190c24b404883f70d6c59cc8529af6a0ea19ed2ff4d098444218"
+      "sha256": "3634389ba1ae9accfeb5a46b4741627835f9370eb16dc989ffbf428f9934c430"
     },
     {
       "path": "content/en/docs/apidocs/rawcullapidoc.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "Makefile",
         "ModelAssets/README.md",
@@ -655,11 +648,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "83db40769fe3068c78c131c41df03e73549e57b59585534e66648467004d6624"
+      "sha256": "5258ec148e88433e59cc352984afa07dd555e7dabd7c44f12317c2b3a689794f"
     },
     {
       "path": "content/en/docs/burstgroup.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull/Intelligence/BurstAnalysis/*",
         "RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift",
@@ -715,11 +708,11 @@
         "photoevidencekit",
         "rawcullcore"
       ],
-      "sha256": "c30b147b700ef05ce7ef9b3535c31339bbf8b1a4db1bfad361e41f95ec5900d5"
+      "sha256": "831a39b335d1e96f0b9f7634620d118b8fdef758cb1985c043f356c953f97a19"
     },
     {
       "path": "content/en/docs/cache-accounting.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/SharedMemoryCache.swift",
         "RawCull/Model/Cache/TrackedThumbnailCache.swift",
@@ -727,11 +720,11 @@
         "RawCullTests/CacheAccountingConcurrencyTests.swift"
       ],
       "watch_packages": [],
-      "sha256": "0cdbe48a517c1fe275e95da0924fa20b6b0fedcbebac9870ef7f81052c4fd5d7"
+      "sha256": "9d266c59e7c5853184de0d76b41e2e7e89205fc1dac5d61ecb116e59a4ee002a"
     },
     {
       "path": "content/en/docs/cache.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/*Thumbnail*",
@@ -778,11 +771,26 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "c637fb7f578f72d3c717ceb0e12380fb3aa4d122931aadaf4a116caa4abf7e98"
+      "sha256": "fc57f19e6c452d16d94f69df54ebec10c74acabaae345048e877c52a606b1bc7"
+    },
+    {
+      "path": "content/en/docs/closeups.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull/Intelligence/AnimalCloseUpDetector.swift",
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+      ],
+      "watch_packages": [
+        "photoanalysiskit",
+        "photoevidencekit"
+      ],
+      "review_scope": "source delta and reference check; content updated",
+      "sha256": "0ad5ca67d6ce712eef55b6ff235d71fa7ebdcf22b4c387a4e5147c8c06efb7b1"
     },
     {
       "path": "content/en/docs/concurrency.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/*Thumbnail*",
@@ -861,11 +869,11 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "1cdb3de260d091a85d765739faf8fb327e13215016a4477d951a711cd79caefa"
+      "sha256": "80566bc231bbe5a5036affe4dd667df0a2087b419717ee25d56c246e78cd3487"
     },
     {
       "path": "content/en/docs/detailsfocusmask.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Model/Handlers/*Analysis*",
         "RawCull/Model/Handlers/*Focus*",
@@ -885,11 +893,11 @@
       "watch_packages": [
         "photoanalysiskit"
       ],
-      "sha256": "963a40b529c4983c38112d0b7193aa8b3447069123ff05401fe0db7f4e23c967"
+      "sha256": "1654ace6bcb6a3c4845a519b0719aeab2deb3c449a9377da7012103b992c968e"
     },
     {
       "path": "content/en/docs/detailsharpnessscoring.md",
-      "review_scope": "source delta/reference check; existing content retained",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Model/Handlers/*Analysis*",
         "RawCull/Model/Handlers/*Focus*",
@@ -911,11 +919,11 @@
         "photoanalysiskit",
         "rawparserkit"
       ],
-      "sha256": "9402d5201d5f123a6cc96a50f3bc5051a4aae81566f27a0dc07c45a5041c93ce"
+      "sha256": "95fd7d1b8a24eb21136e1ca211336a6bc91aab665b0ccfa7a03ca6b18f35087d"
     },
     {
       "path": "content/en/docs/filereadandwrite.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/*Disk*",
         "RawCull/Actors/Extract*",
@@ -956,11 +964,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "8a3340dcc0e50ea90a0758b3648c458b7a2fd08d9089dba068976ba54625102b"
+      "sha256": "d5823ee278af3757b064a759ba9e7347c00f76c9098379f251703a9f9f05149f"
     },
     {
       "path": "content/en/docs/focusmask.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Model/FullSizePreviewLoader.swift",
         "RawCull/Model/Handlers/*Analysis*",
@@ -992,11 +1000,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "2e8ff563b7c57417670170fa0bc5cfd0832d788f0d216cbfda1d34113bcc7337"
+      "sha256": "af7bfc189632cf162912c26acb99d668de018e277f74e16ab638c373f38a4276"
     },
     {
       "path": "content/en/docs/heavy.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/*",
         "RawCull/Actors/*Cache*",
@@ -1049,11 +1057,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "7a683d46087eb5cae67ccbe8dca188295d1fe9fb395f67f4ae24c8266f43d9c6"
+      "sha256": "89130700297ff3f116ca6cedb9df136cd01e2e3d98dc914f39bc5e54970fa03c"
     },
     {
       "path": "content/en/docs/memorypressure.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/SharedMemoryCache.swift",
@@ -1076,11 +1084,11 @@
       "watch_packages": [
         "photoevidencekit"
       ],
-      "sha256": "2f147c89325307afc496ce2a31b7b52b0843932f8c1f7b5975742ec5c5c810d5"
+      "sha256": "9d7cff759e992e5c7b78a2b2174179bc63c42c49c947431352556cde04aa7fcb"
     },
     {
       "path": "content/en/docs/newfeatures/_index.md",
-      "review_scope": "content updated; source delta and references checked; proposals remain proposals; vendor comparison remains dated 2026-11-05",
+      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
       "watch_paths": [
         "Config/*",
         "Makefile",
@@ -1098,11 +1106,11 @@
         "Scripts/*"
       ],
       "watch_packages": [],
-      "sha256": "96e72dafed65aa6d32c9d762ceecce01d3a92e8744e477159052b939cc72aa39"
+      "sha256": "cf44d842ce07464fd6d77e3b85a4191d3aa7dc897260953b9086b35ec4af0e97"
     },
     {
       "path": "content/en/docs/newfeatures/newfeatures.md",
-      "review_scope": "content updated; source delta and references checked; proposals remain proposals; vendor comparison remains dated 2026-11-05",
+      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
       "watch_paths": [
         "README.md",
         "RawCull.xcodeproj/*",
@@ -1129,12 +1137,14 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "9634f2c5f432e46c0a642efc67443d6a9a52b99e0ec311e19b885067701545ca"
+      "sha256": "44752fdcfff4f4e631b143c9c2607b24768c888dfbb6e0c7dc7dd9214c1a35ba"
     },
     {
       "path": "content/en/docs/newfeatures/unified-burst-evidence.md",
-      "review_scope": "content updated; source delta and references checked; proposals remain proposals; vendor comparison remains dated 2026-11-05",
+      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
       "watch_paths": [
+        "Docs/PeopleAssessmentPilot.md",
+        "Docs/narrative.md",
         "RawCull.xcodeproj/*",
         "RawCull/Intelligence/BurstAnalysis/*",
         "RawCull/Intelligence/CombinedReview/*",
@@ -1166,11 +1176,11 @@
         "photoevidencekit",
         "rawcullcore"
       ],
-      "sha256": "bac60c9c35ae6e7eb816bac45800e92adb81a6d9674a292cb4d01cd725c4d556"
+      "sha256": "b1e2648d0829829ff59f01532489dc2d204607aeeaf116193595658b1a43a452"
     },
     {
       "path": "content/en/docs/newfeatures/xmp-editor-handoff.md",
-      "review_scope": "source delta/reference check; existing content retained; proposals remain proposals; vendor comparison remains dated 2026-11-05",
+      "review_scope": "source delta and reference check; existing content retained; dated external evidence not requalified",
       "watch_paths": [
         "RawCull/*Handoff*",
         "RawCull/*XMP*",
@@ -1197,11 +1207,113 @@
         "RawCullTests/*XMP*"
       ],
       "watch_packages": [],
-      "sha256": "348b6586af2a37b317a2966471f0a8475695768a348d9b9b60c2c981a1beece9"
+      "sha256": "b695fd9d6025329983e0cdb728a734f819ce3586976b1e738d4580ccb8fd55f9"
+    },
+    {
+      "path": "content/en/docs/packages/_index.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull/Intelligence/AnimalCloseUpDetector.swift",
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+      ],
+      "watch_packages": [
+        "coreai-models",
+        "decodeencodegeneric",
+        "eventsource",
+        "parsersyncoutput",
+        "photoaikit",
+        "rawcullcore",
+        "rawparserkit",
+        "rsyncarguments",
+        "rsyncprocessstreaming",
+        "swift-asn1",
+        "swift-collections",
+        "swift-crypto",
+        "swift-huggingface",
+        "swift-jinja",
+        "swift-transformers",
+        "xgrammar",
+        "yyjson"
+      ],
+      "review_scope": "source delta and reference check; content updated; historical package audit retained",
+      "sha256": "cdbed3e43bde5e775667f36021a26ba96427078d24eb58c1c5f369d6b3c0d31e"
+    },
+    {
+      "path": "content/en/docs/packages/package-modules.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*"
+      ],
+      "watch_packages": [
+        "photoevidencekit"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "2f5ecc0aeda2fabac14a38081e4e1008a7ba89c7cfdd05b21455329e576591c2"
+    },
+    {
+      "path": "content/en/docs/packages/photoaikit.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*"
+      ],
+      "watch_packages": [
+        "photoaikit"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "721003c8037907bd14bd620952bc9847a0a1419455fd6669d7339e0e92b46f8f"
+    },
+    {
+      "path": "content/en/docs/packages/photoanalysiskit.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull/Intelligence/AnimalCloseUpDetector.swift",
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+      ],
+      "watch_packages": [
+        "photoanalysiskit"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "54679961b2b975fc0ea21822cdd734773f9ea3c7a0100ebda999019bd1fd5040"
+    },
+    {
+      "path": "content/en/docs/packages/photoevidencekit.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull/Intelligence/AnimalCloseUpDetector.swift",
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+      ],
+      "watch_packages": [
+        "photoevidencekit"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "a3b164836259f4b78a34f19817cb25127f0826b63c3ea9f8bfc61ebfd2421651"
+    },
+    {
+      "path": "content/en/docs/packages/rawcullcore.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*"
+      ],
+      "watch_packages": [
+        "rawcullcore"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "7044dbdbaf9f8b138e572825be28d0d2e23840f8462931ea103e498f2d048ddb"
+    },
+    {
+      "path": "content/en/docs/packages/rawparserkit.md",
+      "watch_paths": [
+        "RawCull.xcodeproj/*"
+      ],
+      "watch_packages": [
+        "rawparserkit"
+      ],
+      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
+      "sha256": "2bea1f947c944092f4041dca220b6a11eca03649ccd9b723924a7422aaf2f0ee"
     },
     {
       "path": "content/en/docs/performance.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "Docs/*Performance*",
         "Docs/CatalogPerformance.md",
@@ -1250,18 +1362,18 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "3380f757eccdf9014fa43dc26fe60ed4b449efc1dfb36a3e4c13802d48a9a3b5"
+      "sha256": "b580d6450566f9d882c1f06ff8726e60b88148ab9376291334596eed1fdf048e"
     },
     {
       "path": "content/en/docs/pushpull.md",
-      "review_scope": "editorial/reference check; no application-runtime contract",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "18171d549d0af26b2d021be0609af20b2b03485d60f19e51b0609630dd3c5a16"
+      "sha256": "8e837ac9bcf9461029682101d6576cf8b31db1e6cf1a79f4554f83f737443af3"
     },
     {
       "path": "content/en/docs/raw-inspection.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "RawCull/Actors/Extract*",
         "RawCull/Model/*Histogram*",
@@ -1290,11 +1402,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "f13009770e2021e1915406598b7dafbad0c0138efb5cc597aed56e67c9230d95"
+      "sha256": "97008aae5a7eab2ad3495f9ba8dae6dc3602ad9108318dc28393133b7e8c0bd2"
     },
     {
       "path": "content/en/docs/security.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/Extract*",
         "RawCull/Actors/ExtractAndSaveJPGs.swift",
@@ -1348,11 +1460,11 @@
         "rawparserkit",
         "rsyncprocessstreaming"
       ],
-      "sha256": "19bcafb92f3d9efad39e2af96f5429bbc9c8e58ada42627250c1deee39eac913"
+      "sha256": "82a4a4e7e18ff01b2051816657ac5a84c57f70eb132af6202913969131133f98"
     },
     {
       "path": "content/en/docs/sonymakernoteparser.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/ScanFiles.swift",
         "RawCull/Model/RawImageLoading.swift"
@@ -1360,11 +1472,11 @@
       "watch_packages": [
         "rawparserkit"
       ],
-      "sha256": "59cd8b047d7a202a4890b854a1852e0e85033992a0c8a2f5d3e142cf5ed607d8"
+      "sha256": "69347ccf6601921ce2c7b923a0a690cda87d575e17a351e8d8f92148fa0473b2"
     },
     {
       "path": "content/en/docs/thumbnail.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [
         "RawCull/Actors/DiscoverFiles.swift",
         "RawCull/Actors/DiskCacheManager.swift",
@@ -1401,12 +1513,15 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "d6e2a65101e891aea61ff5c7433a9dae71ea981c28d9e026327478c206c0d1c1"
+      "sha256": "a05e4ec5d3a0364fc95ef6a79e480621850e51acd95d9ae42453dde51152238c"
     },
     {
       "path": "content/en/docs/update.md",
-      "review_scope": "content updated; source delta and references checked",
-      "watch_paths": [],
+      "review_scope": "source delta and reference check; content updated",
+      "watch_paths": [
+        "Docs/PeopleAssessmentPilot.md",
+        "Docs/narrative.md"
+      ],
       "watch_packages": [
         "coreai-models",
         "eventsource",
@@ -1424,11 +1539,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "bcb07d10fb1b1e3882078804d1965dce9fdaa0ff665de203312d0bfbdcb06f20"
+      "sha256": "b033f44d68668a2eb93106b091721173cebaa9663a8249c5225965f6a267ea44"
     },
     {
       "path": "content/en/docs/viewer-architecture.md",
-      "review_scope": "content updated; source delta and references checked",
+      "review_scope": "source delta and reference check; content updated",
       "watch_paths": [
         "Docs/ViewComposition.md",
         "RawCull/Intelligence/BurstAnalysis/*",
@@ -1483,21 +1598,21 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "68c34c4975f64184817cdcdf504a3d80efa38bc159104033468c414e75716c03"
+      "sha256": "51bc1eda48e7544dc21665fc93590ea14f58a164026a6b572d1b8457beed58c7"
     },
     {
       "path": "content/en/search.md",
-      "review_scope": "editorial/reference check; no application-runtime contract",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "085faa2ed55745cbe6ad80d974fec323f690cddbe54d1364a27ea0176a327ab6"
+      "sha256": "ac932090e92fb5bcd2aba17dedeaebf18c7d60d33b6a64156f2a41a05d624a8b"
     },
     {
       "path": "content/en/site.md",
-      "review_scope": "editorial/reference check; no application-runtime contract",
+      "review_scope": "source delta and reference check; existing content retained",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "a2a8752bc543c9457dc7776bfa711468359eaa8db3f286e425ee48ba1ed5b4be"
+      "sha256": "d40c6bd22e99935d633bf3ee151d1dd70b1322a35720ad7e4ed7a36941b48a3a"
     }
   ]
 }

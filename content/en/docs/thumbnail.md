@@ -8,11 +8,11 @@ tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; existing content retained"
 +++
 
 # Thumbnails and Scan Pipeline

@@ -9,6 +9,11 @@ tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", 
 categories = ["technical details"]
 mermaid = true
 weight = 20
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; existing content retained; historical package audit retained"
 +++
 
 # How PhotoAnalysisKit Is Constructed
@@ -570,3 +575,18 @@ recorded AF point assists region placement in canonical oriented coordinates.
 Neither the presence of an AF location nor successful region placement establishes
 that the subject is sharp. Supply metadata appropriate to each API and perform
 sensor-to-oriented coordinate conversion in the host adapter.
+
+
+## November 9 Close Up Integration
+
+The development build uses the sibling `../PhotoAnalysisKit` checkout.
+`FaceEvidenceAnalyzer` runs Vision face rectangle detection on an upright
+embedded preview and can return a local luminance-gradient measurement for
+each face. RawCull owns the disposable evidence cache. It keys compatibility
+on the source revision, preview configuration and dimensions, algorithm
+version, Vision revision and OS version.
+
+RawCull runs its animal head and eye pilot directly through Vision. Animal
+tiles are visual crops. The human face detail measurement stays with the
+human tiles. See the [Close Up guide]({{< relref "closeups.md" >}}) for how
+these tiles appear beside manual comparisons.

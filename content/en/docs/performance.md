@@ -5,11 +5,11 @@ description: RAW ZoomView preview measurements, historical catalog findings, ben
 weight: 85
 lastmod: 2026-11-08
 
-reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version: "3.4.0"
-reviewed_build: 434
-reviewed_on: "2026-11-08"
-review_scope: "source delta and reference verification"
+reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version: "3.4.5"
+reviewed_build: 436
+reviewed_on: "2026-11-09"
+review_scope: "source delta and reference check; content updated"
 ---
 
 # Performance Measurement
@@ -331,7 +331,7 @@ include scheduling, waits and I/O; summed overlapping durations are not CPU time
 
 ## November 8 source review: Close-ups is a separate workload
 
-The current checkout is 3.4.0 build 434. The earlier tables remain measurements of
+The November 8 checkout was 3.4.0 build 434. The earlier tables remain measurements of
 their recorded versions and actions. Adding Close-ups does not supply new latency,
 first-paint, photographic-quality or memory-pressure measurements.
 
@@ -342,7 +342,13 @@ sidecar/cache state, pinned-reference membership, crop/viewport settings, peak
 process memory and cancellation behavior. Do not transfer the ZoomView fit-preview
 results directly to this full-size crop pipeline.
 
-The README still identifies 3.3.6 and lists the older dependency snapshot, while
-`project.pbxproj` identifies 3.4.0 build 434 and the lockfile has 19 pins. Use project
+At that review the README identified 3.3.6 and lists the older dependency snapshot, while
+`project.pbxproj` identified 3.4.0 build 434 and the lockfile had 19 pins. Use project
 settings and the lockfile as the current source baseline; this documentation
 review does not modify the app README or establish release availability.
+
+
+Build 436 adds current-frame detection on an embedded preview capped at
+1,600 pixels. Human cache hits skip the Vision face request, but still need
+the preview pixels for crops. Animal detection runs separately. This source
+review adds no latency, memory or detection-accuracy measurements.

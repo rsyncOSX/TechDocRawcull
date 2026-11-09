@@ -7,11 +7,11 @@ description = "Distinguish extension admission, macOS decoding, embedded export,
 weight = 16
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # RAW Formats and Exposure Inspection
@@ -218,3 +218,10 @@ policy and temporary EV/clipping inspection. Cards distinguish sidecar JPG,
 embedded preview and developed full-size JPEG; they are not sensor-domain RAW
 measurements or a persistent editing/export adjustment. See
 [Viewer Architecture]({{< relref "viewer-architecture.md" >}}).
+
+## Missing JPG preview in build 436
+
+The burst stage offers **Try RAW** when its embedded JPG path has no
+preview. Choosing it switches the shared source preference to developed RAW.
+The manual cards follow that preference. The automatic detection strip still
+uses the embedded preview.

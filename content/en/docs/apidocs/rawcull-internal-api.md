@@ -7,18 +7,18 @@ description = "Application-internal catalog, culling, preview, scoring, similari
 weight = 25
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # RawCull Internal Swift API
 
 Use this reference alongside the
 [application walkthrough]({{< relref "rawcullapidoc.md" >}}). These are internal
-Swift interfaces in RawCull 3.4.0, build 434, not an independently versioned SDK.
+App-internal Swift interfaces reviewed against RawCull 3.4.5, build 436.
 Observable progress and completion state remain part of asynchronous contracts.
 Source excerpts show the reviewed implementation; usage examples are illustrative
 calls inside the application target.
@@ -437,10 +437,10 @@ and publishes these with the image. Preserved-image replacement retains the
 previous values until publication; ordinary clearing and overlay reset set them
 to nil. These remain application-internal presentation data.
 
-## Close-up host adapters in build 434
+## Close Up host adapters
 
 These app-internal adapters are defined in
-[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift).
+[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/a68253b73cbad14a7b1030dba6b439e6bce7d3da/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift).
 The three `PhotoEvidence*` imports expose package modules; they are not app facade
 methods. See [package/import concepts]({{< relref "/docs/packages/package-modules.md" >}}).
 
@@ -458,3 +458,12 @@ The workspace owns comparison membership and creates a new close-up model when
 the group changes. Pin/reference state is session state; saved regions are durable
 preferences. Show image opens ZoomView with group navigation and selected source.
 These operations do not persist ratings, declare winners or launch AI review.
+
+## Detected Close Up adapters
+
+`BurstDetectedFacesView` owns loading and retry for the active frame.
+`FaceEvidenceCache` stores versioned human face evidence. `AnimalCloseUpDetector`
+maps Vision head joints into normalized top-left crop rectangles.
+`ReviewSourceRequest.embeddedPreviewMaximumDimension` lets this caller cap
+the embedded-preview decode. `compareBurstGroup(_:startingAt:)` optionally
+selects a valid member when opening a group.

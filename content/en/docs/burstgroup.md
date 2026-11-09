@@ -8,11 +8,11 @@ tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # Burst Groups
@@ -446,6 +446,9 @@ and [SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048
 
 ## Manual Close-ups in the current workspace
 
+The [Close Up guide]({{< relref "closeups.md" >}}) walks through frame
+selection, pinned references, pixel sources and the automatic detection strip.
+
 The Close-ups button opens a right-side manual comparison panel in the same
 workspace used by bursts and Single Images. Comparison membership is a separate
 URL set: plain click selects one frame, Command-click toggles, Shift-click selects
@@ -464,7 +467,11 @@ preference and respects EXIF orientation. A recorded location is not evidence of
 sharpness. Pinning, region editing and comparison membership do not write a
 rating, override a winner, rerank a burst or submit Combined Review automatically.
 
-The panel currently receives no scored-evidence projection. Existing AF/detail
-measurements and recommendations remain owned by their existing features. See
+The manual cards receive no ranking-evidence projection. A separate automatic
+strip shows current-frame face crops and preview detail where available, plus
+animal head and eye crops when Vision returns usable landmarks. Double-clicking
+a burst card thumbnail opens the workspace at that frame. Navigation follows
+the active frame for single-frame inspection and preserves explicit multi-frame
+membership. See
 [viewer ownership]({{< relref "viewer-architecture.md" >}}) and
 [remaining unified evidence work]({{< relref "newfeatures/unified-burst-evidence.md" >}}).

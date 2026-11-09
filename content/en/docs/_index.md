@@ -4,11 +4,11 @@ linkTitle: Documentation
 menu: { main: { weight: 20 } }
 lastmod: 2026-11-08
 
-reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version: "3.4.0"
-reviewed_build: 434
-reviewed_on: "2026-11-08"
-review_scope: "source delta and reference verification"
+reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version: "3.4.5"
+reviewed_build: 436
+reviewed_on: "2026-11-09"
+review_scope: "source delta and reference check; content updated"
 ---
 
 ## RawCull Developer Notes
@@ -120,18 +120,14 @@ because it shows both ownership and the complete lifetime of the operation.
 
 ## Reviewed source baseline
 
-Reviewed on **8 November 2026** against **RawCull 3.4.0, build 434**, commit
-[`a5f35b05c1e206ed4d6aa599522f5c8622b5308a`](https://github.com/rsyncOSX/RawCull/commit/a5f35b05c1e206ed4d6aa599522f5c8622b5308a)
-on `version-3.4.0`. This is the inspected checkout, not a claim about a published
-release. The [review record]({{< relref "update.md" >}}) records per-page scope,
-source-change triggers and the next incremental review command.
+Reviewed on **9 November 2026** against **RawCull 3.4.5, build 436**,
+commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da) on `version-3.4.5`. This development branch is awaiting
+stability verification and merge into `main`.
 
-The lockfile contains **19 pins**, including PhotoEvidenceKit **1.0.7** at
-`7614fd1528bb7cf2549799fb937678ea39d90228` and RawParserKit **1.3.3** at
-`26df4abc2178d5c07d08f3883d84d0648f5141d3`. See the
-[package snapshot]({{< relref "packages/_index.md" >}}) for every version and revision.
-Existing historical measurements and dated source audits retain their original
-commit identities; review metadata does not turn them into new test results.
+The lockfile contains **17 remote pins**. PhotoAnalysisKit and PhotoEvidenceKit
+resolve from sibling checkouts. See the [package snapshot]({{< relref "packages/_index.md" >}})
+and [review record]({{< relref "update.md" >}}). Historical audits and measurements
+retain their original source revisions.
 
 Read [Viewer Architecture and Keyboard Ownership]({{< relref "viewer-architecture.md" >}})
 for the October viewer refactor and
@@ -176,7 +172,7 @@ retrieval. The current image stays visible while a replacement loads. See
 [RAW status semantics]({{< relref "raw-inspection.md" >}}) and
 [the internal API]({{< relref "apidocs/rawcull-internal-api.md" >}}).
 
-## Close-ups in 3.4.0 build 434
+## Close Up in the 3.4.5 development branch
 
 The burst workspace now embeds PhotoEvidenceKit's manual Close-ups panel, including
 comparison membership, retained references, source-labeled crops, saved regions
@@ -184,3 +180,9 @@ and orientation-corrected AF assistance. The same workspace also serves Single
 Images; the current source has no separate group restriction on the panel.
 Read [Burst Groups]({{< relref "burstgroup.md" >}}) and
 [Viewer Architecture]({{< relref "viewer-architecture.md" >}}) for host ownership.
+
+Build 436 adds a detected crop strip above the manual cards. It shows human
+faces and a Vision animal head and eye pilot from the current embedded preview.
+Human face geometry and detail can be reused from the on-disk cache. The
+detected crops are inspection evidence. People-informed ranking remains planned.
+See [Close Up]({{< relref "closeups.md" >}}).

@@ -1,30 +1,30 @@
 ---
 title: Documentation Review Record
-description: November 8 source review, per-page change triggers, and the next incremental documentation baseline.
+description: November 9 branch review, per-page change triggers, and the next incremental documentation baseline.
 weight: 95
-lastmod: 2026-11-08
-reviewed_commit: "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version: "3.4.0"
-reviewed_build: 434
-reviewed_on: "2026-11-08"
-review_scope: "source delta and reference verification; runtime tests not rerun"
+lastmod: 2026-11-09
+reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version: "3.4.5"
+reviewed_build: 436
+reviewed_on: "2026-11-09"
+review_scope: "source delta and reference check; content updated"
 ---
 
 # Documentation Review Record
 
 ## Next Update Starts Here
 
-Reviewed on **8 November 2026** against RawCull **3.4.0 build 434**, commit
-[`a5f35b05c1e206ed4d6aa599522f5c8622b5308a`](https://github.com/rsyncOSX/RawCull/commit/a5f35b05c1e206ed4d6aa599522f5c8622b5308a),
-committed November 8 on `version-3.4.0`. The application working tree was clean.
-Project settings, rather than the older app README, establish this version/build.
-This identifies inspected source, not a store or downloadable release.
+Reviewed on **9 November 2026** against **RawCull 3.4.5, build 436**,
+commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da) on `version-3.4.5`. This development branch is awaiting
+stability verification and merge into `main`.
 
-The previous application review stopped at
-`f75adff751e5f636f69d4cc40141c314b47ebb21` (3.3.6 build 429, November 3).
-This pass inspected **16 subsequent commits and 15 changed source/configuration/
-test files** and checked the **36 non-Package Markdown pages**. The Packages
-section was deliberately excluded from edits and has its own earlier review.
+The lockfile contains **17 remote pins**. PhotoAnalysisKit and PhotoEvidenceKit
+resolve from sibling checkouts. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}). Historical audits and measurements
+retain their original source revisions.
+
+The previous baseline was RawCull **3.4.0 build 434** at `a5f35b05c1e206ed4d6aa599522f5c8622b5308a`.
+This incremental pass inspected 20 changed source, test, project and planning
+files, including the Close Up integration and two local package references.
 
 Run the read-only selector from the documentation repository:
 
@@ -54,8 +54,8 @@ silently requalified by an empty app diff.
 For a manual comparison:
 
 ```sh
-git -C /path/to/RawCull log --oneline a5f35b05c1e206ed4d6aa599522f5c8622b5308a..HEAD
-git -C /path/to/RawCull diff --stat a5f35b05c1e206ed4d6aa599522f5c8622b5308a..HEAD
+git -C /path/to/RawCull log --oneline a68253b73cbad14a7b1030dba6b439e6bce7d3da..HEAD
+git -C /path/to/RawCull diff --stat a68253b73cbad14a7b1030dba6b439e6bce7d3da..HEAD
 ```
 
 After reviewing the candidate pages, record the new actual commit, project
@@ -66,7 +66,20 @@ An unchanged subsystem can receive a delta-verification marker while preserving
 its content `lastmod` and historical audit links. Never advance the baseline just
 because the selector ran or the site rebuilt.
 
-## Findings And Corrections
+## November 9 Findings And Verification
+
+- Human face crops and local preview detail are implemented, with disposable
+  per-file evidence caching. Vision animal head and eye crops are a pilot.
+- The automatic strip follows the active frame and pauses during similarity
+  indexing. Manual crops retain their independent source and region controls.
+- Two package entries moved from remote pins to sibling checkout references.
+  The remaining 17 remote records match the previous snapshot.
+- The earlier Close Up implementation pass recorded a passing macOS build and
+  seven focused tests. This site-wide documentation pass checks source deltas,
+  links and review metadata. Branch-wide stability, human TestFlight and
+  representative wildlife validation are still pending.
+
+## November 8 Findings And Corrections
 
 - The shared burst workspace now embeds PhotoEvidenceKit **1.0.7**, revision
   `7614fd1528bb7cf2549799fb937678ea39d90228`; the older roadmap pin was 1.0.5.
@@ -93,9 +106,9 @@ algorithm audit is inferred from transitive updates. Exact pin states are stored
 in the machine-readable baseline and linked from the
 [package catalog]({{< relref "packages/_index.md" >}}).
 
-## Per-Page Disposition
+## November 8 Per-Page Disposition
 
-Every page below has `reviewed_commit`, `reviewed_version`, `reviewed_build`,
+At that review, every page below had `reviewed_commit`, `reviewed_version`, `reviewed_build`,
 `reviewed_on` and `review_scope` front matter. These identify this source-delta
 review separately from original publication dates and dated empirical evidence.
 The JSON map supplies the more detailed review triggers; the table records the
@@ -140,7 +153,7 @@ human-readable outcome.
 | [search.md]({{< relref "/search.md" >}}) | editorial/reference check; no application-runtime contract |
 | [site.md]({{< relref "/site.md" >}}) | editorial/reference check; no application-runtime contract |
 
-## Verification And Limits
+## November 8 Verification And Limits
 
 Static checks passed for **36 page headers and fenced-block structures**,
 **166 local `relref` destinations**, **312 unique revision-pinned source

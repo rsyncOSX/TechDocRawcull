@@ -9,6 +9,11 @@ tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated; historical package audit retained"
 +++
 
 # RawCull Packages
@@ -28,7 +33,25 @@ their explicitly dated architecture audits and add current integration notes.
 PhotoEvidenceKit has a new guide covering the resolved 1.0.7 implementation.
 Sibling checkout HEADs do not redefine the application's resolved baseline.
 
-## Resolved Dependency Snapshot
+## November 9 Close Up Development Build
+
+The unmerged `version-3.4.5` branch uses two local package references.
+Its source baseline is RawCull 3.4.5, build 436, commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da).
+The revisions identify the sibling checkouts used to verify the integration.
+
+| Package | Xcode path | Checkout revision | Close Up responsibility |
+| --- | --- | --- | --- |
+| PhotoAnalysisKit | `../PhotoAnalysisKit` | `27d422b100214dd1520f7ca11123f58a86f04e99` | Human face rectangles and preview detail |
+| PhotoEvidenceKit | `../PhotoEvidenceKit` | `35e8aca4135ac2151cbce033e4e9baefb8bafabc` | Crop rendering and manual inspection UI |
+
+The animal head and eye pilot lives in RawCull and uses Apple's Vision
+framework. It required no package release or dependency update. The
+November 8 table below is the historical remote snapshot. Build 436 retains
+the other 17 entries at their recorded revisions.
+See the [Close Up guide]({{< relref "closeups.md" >}}) for the workflow and
+the distinction between detected and manual crops.
+
+## November 8 Resolved Dependency Snapshot
 
 This table is derived from the local RawCull
 `RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`,

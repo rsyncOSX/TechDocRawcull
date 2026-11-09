@@ -7,11 +7,11 @@ description = "Trace loupe, zoom, burst, comparison and AI presentation through 
 weight = 15
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # Viewer Architecture and Keyboard Ownership
@@ -19,7 +19,7 @@ review_scope = "source delta and reference verification"
 The October 22 refactor separates screen composition, session state, transient
 analysis, and event routing. Read this guide after
 [Thumbnails and Scan Pipeline]({{< relref "thumbnail.md" >}}). It describes
-RawCull 3.4.0, build 434 at `a5f35b05c1e206ed4d6aa599522f5c8622b5308a`. The historical source-level design note is
+RawCull 3.4.5, build 436 at `a68253b73cbad14a7b1030dba6b439e6bce7d3da` on the unmerged `version-3.4.5` branch. The historical source-level design note is
 [ViewComposition.md](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/Docs/ViewComposition.md).
 
 ## Find the owner before changing a screen
@@ -285,3 +285,11 @@ their keys. This supplements the existing window-scoped local-monitor rules.
 See [BurstCloseUpTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/BurstCloseUpTests.swift) and
 [BurstWorkspaceSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/BurstWorkspaceSessionModelTests.swift) for inspected fixtures;
 no new execution result is claimed here.
+
+## Detected crop strip and stage navigation
+
+The strip is keyed by the active file URL and pauses during similarity
+indexing. The host keeps detections separate from the manual model and renderer.
+Card **Show image** still opens the zoom overlay. Double-clicking a thumbnail
+on a burst group card now opens at that frame, and successful navigation clears
+single-frame comparison membership so the manual panel follows the active file.

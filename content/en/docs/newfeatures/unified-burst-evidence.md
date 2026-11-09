@@ -9,21 +9,20 @@ tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 30
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated; dated external evidence not requalified"
 +++
 
 # Unified Burst Evidence: Current State and Next Features
 
-**Manual Close-ups is complete.** RawCull imports the tested
-[PhotoEvidenceKit](https://github.com/rsyncOSX/PhotoEvidenceKit) package from
-GitHub. The current project and lockfile pin **1.0.7**, revision
-`7614fd1528bb7cf2549799fb937678ea39d90228`. Package development and required testing
-are complete; importing the package, building the manual panel and qualifying
-its shared inspection behavior are no longer roadmap tasks.
+**Manual Close Up is implemented.** The 3.4.5 development branch resolves
+PhotoEvidenceKit locally and adds current-frame human face and animal landmark
+crops above the manual panel. This is inspection evidence. Integrating scored
+evidence into each manual card and people evidence into ranking remains planned.
+See [Close Up]({{< relref "/docs/closeups.md" >}}).
 
 The remaining opportunity is to connect RawCull's existing analysis to this
 inspection workflow. This page distinguishes that missing integration from
@@ -119,10 +118,8 @@ package.
 
 ## Implementation references
 
-RawCull source baseline: **3.4.0 build 434**, commit
-[`a5f35b05c1e206ed4d6aa599522f5c8622b5308a`](https://github.com/rsyncOSX/RawCull/commit/a5f35b05c1e206ed4d6aa599522f5c8622b5308a),
-reviewed on **8 November 2026**. Package tests were previously recorded as complete;
-this pass verifies source integration and does not rerun those tests.
+RawCull source baseline: **3.4.5 build 436**, commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da),
+reviewed on **9 November 2026** on the unmerged development branch.
 
 - `RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift`: host model,
   visibility, comparison selection, group lifecycle and zoom activation.
@@ -133,7 +130,7 @@ this pass verifies source integration and does not rerun those tests.
 - `RawCullTests/BurstCloseUpTests.swift`: AF orientation and invalid metadata,
   selection ranges, region restoration and file/sidecar revision identity.
 - `RawCull.xcodeproj/project.pbxproj` and the workspace `Package.resolved`:
-  remote PhotoEvidenceKit dependency and resolved version.
+  local PhotoEvidenceKit reference and remaining remote pins.
 
 This update records the completed package testing and inspected integration;
 it does not claim a new test run or a newly published application release.

@@ -9,11 +9,11 @@ tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces"]
 categories = ["technical details"]
 weight = 10
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated; dated external evidence not requalified"
 +++
 
 # RawCull 3.4.0: Features and Competitive Opportunities
@@ -327,3 +327,10 @@ Close-ups, remaining implementation stages and release evidence:
 
 1. [XMP import/export and editor handoff]({{< relref "xmp-editor-handoff.md" >}}).
 2. [Unified burst evidence and comparable subject crops]({{< relref "unified-burst-evidence.md" >}}).
+
+## November 9 development update
+
+The unmerged 3.4.5 branch adds detected human faces and a Vision animal
+head and eye pilot to Close Up. This is a source update to RawCull's capability
+list. The dated competitive comparison retains its November 5 evidence base.
+See the [Close Up guide]({{< relref "/docs/closeups.md" >}}).

@@ -10,11 +10,11 @@ tags = ["ai", "combined-review", "architecture", "qwen", "sam", "clip", "swift"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # Combined AI Review: A Step-by-Step Code Guide
@@ -433,3 +433,10 @@ order, prompts, repair budgets, comparison rules and storage compatibility are
 retained. `ReviewRunManifest` still owns transition rules; `ReviewArtifactStore`
 still owns persistence. `ReviewRunError` is now in its own file rather than
 inside `ReviewRunContract.swift`.
+
+## Shared preview loader and Close Up
+
+Close Up uses the shared embedded-preview loader with a 1,600-pixel cap.
+The optional cap is supplied by the Close Up caller. Combined Review keeps
+its existing request policy, and opening Close Up does not start a Combined
+Review run.

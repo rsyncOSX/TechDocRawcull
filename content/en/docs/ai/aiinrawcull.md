@@ -10,11 +10,11 @@ tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 # AI Models in RawCull
@@ -973,3 +973,10 @@ explicit workflow states, queue filter, comparison group and undo entry.
 Results/states are externally read-only; commands apply analysis, replace
 rankings, restore states and set manual winners. Grid projection keys include
 the session revision. This preserves existing ranking and override policy.
+
+## Built-in Vision inspection in Close Up
+
+RawCull runs automatic face and animal landmark inspection locally on the
+current frame's embedded preview. This path uses built-in Vision alongside
+manual Close Up and remains separate from downloaded models, Combined Review,
+and burst ranking. See [Close Up]({{< relref "/docs/closeups.md" >}}).

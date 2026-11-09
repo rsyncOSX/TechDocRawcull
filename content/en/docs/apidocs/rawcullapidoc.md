@@ -8,17 +8,17 @@ tags = ["API"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a5f35b05c1e206ed4d6aa599522f5c8622b5308a"
-reviewed_version = "3.4.0"
-reviewed_build = 434
-reviewed_on = "2026-11-08"
-review_scope = "source delta and reference verification"
+reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
+reviewed_version = "3.4.5"
+reviewed_build = 436
+reviewed_on = "2026-11-09"
+review_scope = "source delta and reference check; content updated"
 +++
 
 
 # RawCull developer documentation
 
-Last reviewed: 2026-11-08. Baseline: RawCull 3.4.0, build 434, commit `a5f35b05c1e206ed4d6aa599522f5c8622b5308a`.
+Last reviewed: 2026-11-09. Baseline: RawCull 3.4.5, build 436, commit `a68253b73cbad14a7b1030dba6b439e6bce7d3da` on the unmerged `version-3.4.5` branch.
 
 Read this guide in order for a tour from application launch to exported photographs. The walkthrough establishes the ownership and data-flow model; the API reference then explains individual operations, inputs, results and failure behavior. Source links use the immutable reviewed application commit so the described implementation remains reproducible. Code marked **source excerpt** is copied from the implementation; **usage example** means an illustrative call inside the app module, with existing application objects and selected files. Neither kind is intended to be pasted into an unrelated standalone Swift program.
 
@@ -670,3 +670,10 @@ Read [Burst Groups]({{< relref "../burstgroup.md" >}}),
 The [review record]({{< relref "../update.md" >}}) now documents a machine-readable
 baseline and read-only source-change selector. Use it before another documentation
 pass; unmatched changes require triage rather than an automatic no-review decision.
+
+## 3.4.5 development branch inspection
+
+The manual panel has a separate automatic inspection strip for human faces
+and animal landmarks. The host owns preview admission, cancellation and
+human face cache compatibility. See [Close Up]({{< relref "/docs/closeups.md" >}})
+and the [internal API]({{< relref "rawcull-internal-api.md" >}}).
