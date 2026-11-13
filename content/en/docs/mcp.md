@@ -89,6 +89,16 @@ Photo pages default to 50 entries and accept limits from 1 to 100. Use the same 
 
 The direct start call uses the request UUID as the job ID. Reuse that UUID when retrying the same start. If another catalog is open, select the authorized catalog in RawCull before using the direct start tool.
 
+### Reuse Downloads for each shoot
+
+Open Downloads in RawCull and wait for the photos to load. In **Settings → MCP**, enable **Allow MCP to start burst analysis** and **Allow analysis of future photos in this folder**, then choose **Authorize Selected Catalog**. This one-time approval covers future photos in that folder. Use **Revoke Access** in the same tab to remove it.
+
+After replacing the photos, paste this prompt:
+
+> Use `rawcull` to start a fresh burst analysis of my Downloads catalog. Use a new request ID, wait for completion, and show the first five ranked bursts with the recommended frame for each.
+
+RawCull rescans the folder even if it is already open and starts analysis without another approval prompt. A successful run refreshes the saved photo list. In TestFlight, repeat the prompt after replacing the photos and check that the second run reports the new files.
+
 ### Check or cancel an existing job
 
 > On `rawcull`, call `get_analysis_status` for the catalog ID and job ID from the previous analysis. Tell me its state, stage, and any reported progress.
