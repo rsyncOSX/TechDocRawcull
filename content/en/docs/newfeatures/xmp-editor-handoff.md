@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "P0: XMP and Editor Handoff"
 linkTitle = "P0: XMP and Editor Handoff"
 date = "2026-11-05"
-lastmod = "2026-11-05"
+lastmod = "2026-11-21"
 description = "Functional scope and implementation plan for safe XMP decision exchange and editor handoff."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 20
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained; dated external evidence not requalified"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # P0: XMP Import/Export and Editor Handoff
@@ -243,7 +243,7 @@ future editor profiles or storage changes expensive.
 Source inspection on 2026-11-05 confirms `SavedFiles`/`FileRecord` contain optional
 ratings and generated UUIDs; decode reconstructs records. Do not assume those
 UUIDs are durable exchange identities. `ExecuteCopyFiles` currently obtains its
-file list through a weak RawCullViewModel reference and reports process-level
+file list through a weak CatalogController reference and reports process-level
 outcomes. Its rsync success cannot by itself prove each RAW/sidecar pair is
 complete. Add a boundary adapter and per-entry verification before reusing it
 for qualified handoff. Do not expand that class into the XMP engine.

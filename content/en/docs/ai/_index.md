@@ -3,18 +3,18 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Artificial Intelligence in RawCull
@@ -245,7 +245,7 @@ installed-model run.
 
 `SimilarityScoringModel` retains `RawCullSemanticSearchModel` for semantic
 evidence, configuration, hydration and query execution. Its existing semantic
-API forwards to that owner. `RawCullViewModel` retains `BurstReviewSessionModel`
+API forwards to that owner. `BurstWorkflowController` retains `BurstReviewSessionModel`
 for review decisions, independently of viewport sessions. Combined Review's
 three execution extensions still share one mutable feature/run owner. Read
 [AI Runtime]({{< relref "airuntime.md" >}}) and

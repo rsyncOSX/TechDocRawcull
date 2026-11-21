@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Burst Groups
@@ -22,7 +22,7 @@ frames. It ranks each multi-frame group, presents review queues, and supports
 culling decisions such as keeping the best frame, keeping the top two, deferring
 a group, or setting a manual pick.
 
-The implementation separates application commands in `RawCullViewModel`, worker
+The implementation separates application commands in `BurstWorkflowController`, worker
 orchestration in `BurstAnalysisCoordinator`, backend-selectable similarity
 indexing behind `RawCullSimilarityFeature`, pure grouping and ranking engines,
 two levels of artifact persistence, and the review UI. Vision feature prints are
@@ -34,7 +34,7 @@ typed `SimilarityArtifact` values rather than assuming one representation.
 
 | Area                                         | Main files                                                                                                                            |
 | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Application commands and result publication  | [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift)                                                                       |
+| Application commands and result publication  | [RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift)                                                                       |
 | Worker orchestration and cache compatibility | [RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift) and coordinator extensions                                        |
 | Similarity feature and shared state          | [RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift)                                      |
 | Backend composition and adapters             | [RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift), [RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
@@ -53,7 +53,7 @@ typed `SimilarityArtifact` values rather than assuming one representation.
 
 ```mermaid
 flowchart TD
-    A["Analyze Bursts"] --> B["RawCullViewModel builds immutable request"]
+    A["Analyze Bursts"] --> B["BurstWorkflowController builds immutable request"]
     B --> C["BurstAnalysisCoordinator owns generation and task"]
     C --> H0["Hydrate valid per-file similarity artifacts"]
     H0 --> D{"Valid BurstAnalysisCache and matching artifact digest?"}
@@ -398,7 +398,7 @@ singleton groups with per-group persistence suppressed, then saves once.
 Persistence therefore uses real group signatures; −1 is not a stored domain
 group and must not become input to the ranking engine.
 
-Read [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift),
+Read [BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift),
 [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)
 and [CullingGridCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CullingGridCoordinatorTests.swift) together. The
 tests cover the combined singleton workspace and review-state behavior.
@@ -416,7 +416,7 @@ These presentation extractions do not change RawCullCore's ranking formula.
 ## Review session and membership-based persistence
 
 [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/BurstReviewSessionModel.swift) owns results,
-explicit states, queue filter, comparison group and undo entry. The view model
+explicit states, queue filter, comparison group and undo entry. `BurstWorkflowController`
 keeps its facade and coordinates ratings, navigation, persistence and admission.
 Reset clears the same session object rather than replacing it.
 
@@ -475,3 +475,11 @@ the active frame for single-frame inspection and preserves explicit multi-frame
 membership. See
 [viewer ownership]({{< relref "viewer-architecture.md" >}}) and
 [remaining unified evidence work]({{< relref "newfeatures/unified-burst-evidence.md" >}}).
+
+## People Ranking in the comparison workspace
+
+**Apply People Ranking** checks a group of at least two frames using face
+evidence. Use it with a consistent subject. It changes the comparison order
+while the candidate order matches the current group and its source frames.
+**Restore Best Frame Order** clears that order. Persisted burst recommendations
+and ratings remain independent. [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)

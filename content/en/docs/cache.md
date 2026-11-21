@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Cache System
@@ -323,3 +323,10 @@ The saved preview dimensions must also match. Cache hits reuse human face
 geometry and detail, while RawCull renders new crop pixels from the decoded
 preview. Animal landmarks are evaluated separately and remain transient.
 Manual region records are stored separately.
+
+## Unreadable similarity artifacts
+
+An artifact read error preserves the stored record. Forced re-indexing can
+replace it when a new artifact is generated successfully. See
+[PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)
+and the tests for `PerFileAnalysisArtifactStore` before changing read or refresh behavior.

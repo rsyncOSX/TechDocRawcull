@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "RawCull Developer Guide"
 date = "2026-10-15"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 
@@ -59,15 +59,15 @@ _intelligenceRuntime = State(
 )
 ```
 
-The view model owns the working catalog and coordinates user actions. The runtime retains the AI feature instances, model runtime, settings model and downloads model. Opening a sheet or changing the focused photograph should use those same instances. Otherwise, a settings screen could configure one inference service while a review screen uses another.
+The workspace root assembles the catalog, selection and workflow owners. The runtime retains the AI feature instances, model runtime, settings model and downloads model. Opening a sheet or changing the focused photograph should use those same instances. Otherwise, a settings screen could configure one inference service while a review screen uses another.
 
 Follow `RawCullApplicationState.make(...)` in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). It constructs a shared similarity model, passes it to similarity and semantic-search features, creates the view model, and binds the application context and settings consumer. Identity assertions at the assembly boundary check that these objects share the intended dependencies. This is the best entry point for understanding dependency wiring.
 
-The main window then passes feature instances to `RawCullMainView` and supplies the view model through the SwiftUI environment. Its startup tasks load culling data, apply stored scoring settings and refresh AI settings. Construction establishes ownership; those tasks initialize persisted and capability state.
+The main window then passes feature instances to `RawCullMainView` and injects workspace models and controllers through `workspaceEnvironment(_:)`. Its startup tasks load culling data, apply stored scoring settings and refresh AI settings. Construction establishes ownership; those tasks initialize persisted and capability state.
 
 ### 2. Opening a folder is a guarded transition
 
-In [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
+In [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
 
 The coordinator flushes pending decisions before allowing the replacement. After that suspension, it checks cancellation, transition generation and whether the requested source is still selected. A successful flush for folder B must not open B if the user has already selected folder C. A failed flush restores the previous source selection.
 
@@ -85,7 +85,7 @@ if didFlush {
 
 Once admitted, `beginCatalogLoad(for:)` clears selection, cancels old catalog work, resets the working arrays and obtains security-scoped access. The coordinator retains access for the load task. The URL identifies a location; the access grant keeps that location readable while work uses it. Cancelling the old catalog also invalidates the Combined Review lease and cancels hydration, burst analysis, thumbnail preload and preview-cache warming.
 
-This explains why UI code should call the view-model entry point instead of merely replacing `files`: replacing the array would skip save ordering, task cancellation and access management.
+This explains why UI code should call the catalog controller instead of merely replacing `files`: replacing the array would skip save ordering, task cancellation and access management.
 
 ### 3. Scanning builds file descriptions before loading every preview
 
@@ -114,7 +114,7 @@ This lower-level example is useful for understanding the scanner. It does not re
 
 ### 4. The working set has several distinct projections
 
-Back in `handleSourceChange(url:)`, the view model scans, sorts, assigns the discovered files, hydrates compatible similarity artifacts, constructs visible results, restores persisted decisions and scoring, and preloads thumbnails. It checks that the load is still active after asynchronous boundaries before publishing further state.
+Back in `handleSourceChange(url:)`, the catalog controller scans, sorts, assigns the discovered files, hydrates compatible similarity artifacts, constructs visible results, restores persisted decisions and scoring, and preloads thumbnails. It checks that the load is still active after asynchronous boundaries before publishing further state.
 
 Read the following names as different questions, not interchangeable collections:
 
@@ -134,10 +134,10 @@ For example, a folder may contain 200 files, filename filtering may admit 80, an
 **Usage example — inspect the scope before choosing an operation:**
 
 ```swift
-print("Discovered:", viewModel.files.count)
-print("Visible:", viewModel.filteredFiles.count)
-print("Active scope:", viewModel.activeCatalogFiles.count)
-let analysisInput = viewModel.aiAnalysisFiles(for: .gridSelection)
+print("Discovered:", catalog.files.count)
+print("Visible:", catalog.filteredFiles.count)
+print("Active scope:", catalogController.activeCatalogFiles.count)
+let analysisInput = catalogController.aiAnalysisFiles(for: .gridSelection)
 print("AI input:", analysisInput.count)
 ```
 
@@ -170,7 +170,7 @@ A nil return means no image is available to that caller, including cancellation 
 
 ### 6. Rating changes state immediately and persists it separately
 
-Follow the public action in [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), then the store in [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CullingModel.swift). The view model keeps the UI’s derived state consistent; the store updates the record identified by catalog and filename and schedules persistence.
+Follow the public action in [CullingController+Ratings.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CullingController+Ratings.swift), then the store in [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CullingModel.swift). The view model keeps the UI’s derived state consistent; the store updates the record identified by catalog and filename and schedules persistence.
 
 The store must reach `ready` before mutations are admitted. A missing store initializes an empty collection. An unreadable or damaged store produces a failed load and blocks automatic mutation, preserving the original data for recovery.
 
@@ -189,11 +189,11 @@ if revision == persistenceRevision {
 **Usage example — apply a decision and explicitly inspect durability:**
 
 ```swift
-viewModel.updateRating(for: file, rating: 3)
-if await viewModel.cullingModel.flushPersistence() {
+culling.updateRating(for: file, rating: 3)
+if await ratings.cullingModel.flushPersistence() {
     print("Current decisions saved")
 } else {
-    print(viewModel.cullingModel.persistenceError ?? "Save failed")
+    print(ratings.cullingModel.persistenceError ?? "Save failed")
 }
 ```
 
@@ -201,7 +201,7 @@ Normally the UI lets debouncing handle repeated ratings. A catalog transition or
 
 ### 7. Analysis input is resolved before inference starts
 
-[RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) centralizes selection rules. Grid input uses explicit selected IDs or falls back to the focused photograph, intersected with visible files. Tagged input resolves saved ratings of at least 2 in the active scope. `preserveAIAnalysisGridSelection()` captures the fallback selection before browsing tagged photographs changes focus.
+[CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) centralizes selection rules. Grid input uses explicit selected IDs or falls back to the focused photograph, intersected with visible files. Tagged input resolves saved ratings of at least 2 in the active scope. `preserveAIAnalysisGridSelection()` captures the fallback selection before browsing tagged photographs changes focus.
 
 The analysis features answer different questions. Sharpness scoring measures image detail; burst analysis groups and ranks related frames; semantic search ranks compatible CLIP artifacts against text; Qwen produces a validated assessment; Objects combines concept discovery, segmentation and assessment. A search score is not a star rating, and an AI recommendation does not become a saved culling decision until the relevant apply action runs.
 
@@ -209,7 +209,7 @@ The shared runtime also coordinates settings changes. `apply(configuration:)` re
 
 ### 8. Combined Review freezes a reproducible run
 
-Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages.
+Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages.
 
 `analyze(_:)` prepares admission, acquires a shared lease and captures criteria, depth, source preference and retention settings. The runtime’s `beforeStart` hook waits for Qwen, Objects and Deep Review cancellation handling. The worker then freezes source descriptions, retains catalog access, reads model identities, validates a run snapshot, saves its initial manifest and executes the work. The async method awaits that worker; returning still requires inspecting result and failure state because failures are captured internally.
 
@@ -317,7 +317,7 @@ flowchart TD
 
 `RawCullApp` constructs the live application assembly once and retains the view model and intelligence runtime in SwiftUI state. The runtime supplies stable feature instances to views. Preserve shared identity: creating independent similarity or inference services in a view can split indexing, search, model configuration, and cancellation state.
 
-`RawCullViewModel` coordinates catalog selection, filtering, navigation and workflow side effects. Its extensions divide catalog, culling, thumbnail, sharpness, similarity, AI input and burst responsibilities. Session models own focused UI interactions such as loupe, zoom, comparison and burst workspace state. `CullingModel` owns saved decisions and persistence state.
+`RawCullViewModel` assembles the workspace. `CatalogController`, `CullingController`, `FileOperationsModel` and `BurstWorkflowController` handle operations against dedicated state owners. Session models own focused UI interactions such as loupe, zoom, comparison and burst workspace state. `CullingModel` owns saved decisions and persistence state.
 
 Actors coordinate scanning, decoding, caches and export. MainActor models publish UI-facing state. `async` describes suspension; it does not by itself guarantee background execution. Retain explicit actor boundaries and the existing loading interfaces when moving expensive work.
 
@@ -326,7 +326,7 @@ Actors coordinate scanning, decoding, caches and export. MainActor models publis
 ```mermaid
 sequenceDiagram
     participant UI as Catalog selection
-    participant VM as RawCullViewModel
+    participant VM as CatalogController
     participant LC as CatalogLifecycleCoordinator
     participant Store as CullingModel
     participant Scan as ScanFiles actor
@@ -677,3 +677,10 @@ The manual panel has a separate automatic inspection strip for human faces
 and animal landmarks. The host owns preview admission, cancellation and
 human face cache compatibility. See [Close Up]({{< relref "/docs/closeups.md" >}})
 and the [internal API]({{< relref "rawcull-internal-api.md" >}}).
+
+## Metal cache console messages
+
+The source troubleshooting guide describes `MDB_MAP_FULL` messages from
+macOS Metal's per-user shader archive database. If they recur, the guide
+shows how to identify and clear RawCull's Metal cache while the app and
+tests are stopped. [RawCull troubleshooting](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/README.md)

@@ -2,16 +2,16 @@
 author = "Thomas Evensen"
 title = "Viewer Architecture and Keyboard Ownership"
 date = "2026-10-22"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "Trace loupe, zoom, burst, comparison and AI presentation through sessions, task owners, shared geometry and keyboard routing."
 weight = 15
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Viewer Architecture and Keyboard Ownership
@@ -49,7 +49,7 @@ flowchart TD
     Event["Key event"] --> Scope["Window and native-control scope"]
     Scope --> Controller["Screen keyboard controller"]
     Controller --> Session
-    Controller --> Actions["RawCullViewModel selection/rating actions"]
+    Controller --> Actions["SelectionModel and CullingController actions"]
 ```
 
 Rendering sections receive values, bindings and actions. They do not independently
@@ -60,7 +60,7 @@ and metadata sections; burst has a stage, header, filmstrip and evidence shelf.
 
 ## Trace an asynchronous zoom request
 
-1. `ZoomOverlayView.reload()` cancels `viewModel.zoomExtractionTask` and replaces
+1. `ZoomOverlayView.reload()` cancels `zoomOverlay.extractionTask` and replaces
    it with the task returned by [ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
 2. The handler chooses thumbnail, embedded JPEG or developed RAW. It keeps a
    dedicated thumbnail analysis image distinct from the display render.
@@ -227,7 +227,7 @@ avoiding a thumbnail fallback for an unavailable non-thumbnail source.
 `image` and `nativeSize`. Direct rendering sets it from the chosen scale, so the
 chrome does not infer decode quality from zoom state or bitmap/native geometry.
 `ZoomPreviewHandler` measures the awaited `renderRAW` request with `ContinuousClock`
-and publishes `zoomOverlayRAWIsReduced` and `zoomOverlayRAWRenderSeconds` alongside
+and publishes `ZoomOverlayModel.rawIsReduced` and `rawRenderSeconds` alongside
 the display pixels on the main actor, before awaiting analysis.
 
 `ZoomOverlayChrome` receives those values and the session's loading state.
@@ -293,3 +293,13 @@ indexing. The host keeps detections separate from the manual model and renderer.
 Card **Show image** still opens the zoom overlay. Double-clicking a thumbnail
 on a burst group card now opens at that frame, and successful navigation clears
 single-frame comparison membership so the manual panel follows the active file.
+
+## Workspace state and interaction lifetimes
+
+`WorkspaceNavigationModel` owns view mode and opens or closes the overlay.
+`ZoomOverlayModel` carries the launch context, request task, images and metadata.
+`LoupeViewportModel` survives mode changes. The loupe image session belongs to
+`LoupeMainImageView`. Keyboard handlers use the selected file, navigation and
+rating owners directly. `CatalogController` maintains the grid and zoom
+projections used for navigation, while `SelectionModel` stores focus and
+selection.

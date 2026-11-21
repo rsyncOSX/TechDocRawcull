@@ -3,13 +3,13 @@ title: Performance Measurement
 linkTitle: Performance
 description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-11-08
+lastmod: 2026-11-21
 
-reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version: "3.4.5"
-reviewed_build: 436
-reviewed_on: "2026-11-09"
-review_scope: "source delta and reference check; content updated"
+reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version: "3.4.9"
+reviewed_build: 462
+reviewed_on: "2026-11-21"
+review_scope: "Content and references updated"
 ---
 
 # Performance Measurement
@@ -352,3 +352,11 @@ Build 436 adds current-frame detection on an embedded preview capped at
 1,600 pixels. Human cache hits skip the Vision face request, but still need
 the preview pixels for crops. Animal detection runs separately. This source
 review adds no latency, memory or detection-accuracy measurements.
+
+## Vision scheduling validation in build 462
+
+The app source records three consecutive test-plan runs on a 10-core Mac,
+each with 955 passing tests and six skipped real-model tests. The runs followed
+the shared Vision backend and face analyzer changes and the sharpness task cap.
+Real-catalog indexing throughput and simultaneous indexing and sharpness scoring
+remain to be measured. [Vision test record](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/Docs/visionupdate.md)

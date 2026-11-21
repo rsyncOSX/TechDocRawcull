@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Detailed Sharpness Scoring
@@ -73,7 +73,7 @@ are not fixture output from a particular image.
 
 ```mermaid
 flowchart TD
-    UI["RawCull controls"] --> RVM["RawCullViewModel target files"]
+    UI["RawCull controls"] --> RVM["CatalogController target files"]
     RVM --> SM["SharpnessScoringModel<br/>preset + quality + source + size"]
     SM --> ADAPTER["RawCullPhotoAnalysisAdapter"]
     ADAPTER --> DECODE{"Host-owned decode"}
@@ -96,7 +96,7 @@ flowchart TD
 
 ### Target Files
 
-`RawCullViewModel.sharpnessScoringTargetFiles` chooses, in order:
+`CatalogController.sharpnessScoringTargetFiles` chooses, in order:
 
 1. explicitly selected files, keeping visible selected files first and appending
    selected files hidden by the current projection;
@@ -104,9 +104,8 @@ flowchart TD
 3. otherwise the active catalog set, including semantic-search scope, sorted by
    filename.
 
-Calibration and scoring use the same target array and image source. Calibration
-uses a separate maximum size of 1616 px, while scoring uses the selected effective
-size. Calibration adjusts only the visual mask threshold; it does not calibrate
+Calibration uses embedded previews capped at 1616 px. Scoring uses the
+selected source and effective size. Calibration adjusts only the visual mask threshold; it does not calibrate
 the scalar score. After a non-cancelled,
 nonempty result, RawCull merges scores and subject labels into `CullingModel`
 and reapplies catalog sorting.
@@ -130,7 +129,7 @@ so the f/8 aperture fallback can reduce Auto's subject weight to 0.55.
 | Landscape          | pre-blur at most 1.55; salient weight 0.35 with explicit override 0.35; size factor 0; silhouette 0.15; AF radius 0; do not isolate mask               |
 | Action             | pre-blur 2.0; salient weight/override 0.65; size factor 0.05; silhouette 0.40; AF radius 0.09; classify and isolate                                    |
 
-| Quality        |               Package fine-detail weight | RawCull minimum size | RawCull concurrency |
+| Quality        |               Package fine-detail weight | RawCull minimum size | Requested concurrency |
 | -------------- | ---------------------------------------: | -------------------: | ------------------: |
 | Fast           |                                        0 |                  512 |                   6 |
 | Balanced       |                            at least 0.25 |                  768 |                   4 |
@@ -138,7 +137,9 @@ so the f/8 aperture fallback can reduce Auto's subject weight to 0.55.
 
 The effective maximum pixel size is clamped between the quality minimum
 and 2048; a nonpositive setting resolves to 2048. RAW demosaic further caps
-concurrency at 2.
+concurrency at 2. Effective concurrency is also capped at half the active
+processor count, rounded down with a minimum of one. For example, Fast can
+admit five tasks on a 10-core Mac.
 
 Protected by: [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SharpnessScoringTests.swift) preset, quality, size,
 and concurrency assertions; package policy also has

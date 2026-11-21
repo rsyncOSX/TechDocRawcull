@@ -1,27 +1,16 @@
 {
   "schema_version": 1,
-  "reviewed_on": "2026-11-09",
+  "reviewed_on": "2026-11-21",
   "application": {
-    "commit": "a68253b73cbad14a7b1030dba6b439e6bce7d3da",
-    "branch": "version-3.4.5",
-    "version": "3.4.5",
-    "build": 436,
+    "commit": "a0c72d11b6dea1f409542faf90f76fba43cdb0f5",
+    "branch": "version-3.4.9",
+    "version": "3.4.9",
+    "build": 462,
     "lockfile": "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
-    "merge_status": "unmerged into main",
-    "local_packages": [
-      {
-        "identity": "photoanalysiskit",
-        "path": "../PhotoAnalysisKit",
-        "observed_revision": "27d422b100214dd1520f7ca11123f58a86f04e99"
-      },
-      {
-        "identity": "photoevidencekit",
-        "path": "../PhotoEvidenceKit",
-        "observed_revision": "35e8aca4135ac2151cbce033e4e9baefb8bafabc"
-      }
-    ]
+    "merge_status": "present on main",
+    "local_packages": []
   },
-  "previous_application_commit": "a5f35b05c1e206ed4d6aa599522f5c8622b5308a",
+  "previous_application_commit": "a68253b73cbad14a7b1030dba6b439e6bce7d3da",
   "excluded": [],
   "pins": [
     {
@@ -70,12 +59,30 @@
       }
     },
     {
+      "identity": "photoanalysiskit",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/rsyncOSX/PhotoAnalysisKit.git",
+      "state": {
+        "revision": "db156bc5ff60b9ce3aec0229c04df9b0108e9e91",
+        "version": "1.3.9"
+      }
+    },
+    {
+      "identity": "photoevidencekit",
+      "kind": "remoteSourceControl",
+      "location": "git@github.com:rsyncOSX/PhotoEvidenceKit.git",
+      "state": {
+        "revision": "e49d34adcfa2e2c43a4240c2e962dbe9defa4cad",
+        "version": "1.1.5"
+      }
+    },
+    {
       "identity": "rawcullcore",
       "kind": "remoteSourceControl",
       "location": "https://github.com/rsyncOSX/RawCullCore.git",
       "state": {
-        "revision": "d25a51e65ad32a82bf82f86fa0ec07d6e14498e9",
-        "version": "1.1.2"
+        "revision": "ea8ac2fc6611949af2b55ec433456bfe502cf886",
+        "version": "1.1.5"
       }
     },
     {
@@ -115,6 +122,15 @@
       }
     },
     {
+      "identity": "swift-atomics",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/apple/swift-atomics.git",
+      "state": {
+        "revision": "0442cb5a3f98ab802acb777929fdb446bda11a34",
+        "version": "1.3.1"
+      }
+    },
+    {
       "identity": "swift-collections",
       "kind": "remoteSourceControl",
       "location": "https://github.com/apple/swift-collections.git",
@@ -148,6 +164,42 @@
       "state": {
         "revision": "a091d6ae559ee97e904a0f3c2890b21949d0306f",
         "version": "3.0.0"
+      }
+    },
+    {
+      "identity": "swift-log",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/apple/swift-log.git",
+      "state": {
+        "revision": "e3da04078777e6a1b72ce19981fbd6539b0847d8",
+        "version": "1.17.0"
+      }
+    },
+    {
+      "identity": "swift-nio",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/apple/swift-nio.git",
+      "state": {
+        "revision": "2f58d8ef84438d6517fc78bcea2f8527e3c72936",
+        "version": "2.105.0"
+      }
+    },
+    {
+      "identity": "swift-sdk",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/modelcontextprotocol/swift-sdk.git",
+      "state": {
+        "revision": "a0ae212ebf6eab5f754c3129608bc5557637e605",
+        "version": "0.12.1"
+      }
+    },
+    {
+      "identity": "swift-system",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/apple/swift-system.git",
+      "state": {
+        "revision": "869129b7bf4ecc57b97d0193ad29690ca2134750",
+        "version": "1.8.1"
       }
     },
     {
@@ -195,9 +247,11 @@
     },
     {
       "path": "content/en/docs/_index.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Config/*",
+        "Docs/refactoring-order-plan.md",
+        "Docs/viewmodel-decomposition-plan.md",
         "Makefile",
         "README.md",
         "RawCull.xcodeproj/*",
@@ -206,6 +260,7 @@
         "RawCull/Main/*",
         "RawCull/Main/RawCullApp.swift",
         "RawCull/Main/RawCullMainView.swift",
+        "RawCull/Model/ViewModels/*",
         "RawCull/Model/ViewModels/BurstReviewSessionModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel.swift",
         "RawCullTests/README*",
@@ -229,11 +284,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "6ec818e947d83276e4c657892cfea147be2ecca743c2f485e87ad7a8acc22ed5"
+      "sha256": "3496c987a466d98bc872fe7c690f3f2491078f36a986fa135cdf3958975c40f7"
     },
     {
       "path": "content/en/docs/ai/_index.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull.xcodeproj/*",
         "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
@@ -263,17 +318,26 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "c460023ad0b29bf61b960567c3c011f768957ed057ae1edf232a248813bf3883"
+      "sha256": "5d2ec56d676c474c532e139ce707029665af055ef3427809fad79a9d1dd77350"
     },
     {
       "path": "content/en/docs/ai/aicombined.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Intelligence/CombinedReview/*",
         "RawCull/Intelligence/CombinedReview/CombinedReviewComparisonExecution.swift",
         "RawCull/Intelligence/CombinedReview/CombinedReviewExecution.swift",
         "RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift",
         "RawCull/Intelligence/CombinedReview/CombinedReviewWorkExecution.swift",
+        "RawCull/Intelligence/CombinedReview/Evidence/ReviewSynthesisGrounding.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/CombinedReviewComparisonExecution.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/CombinedReviewExecution.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/CombinedReviewWorkExecution.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/ReviewRunError.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/ReviewRunManifest.swift",
+        "RawCull/Intelligence/CombinedReview/Imaging/ReviewImageSource.swift",
+        "RawCull/Intelligence/CombinedReview/Imaging/ReviewMaskRegistration.swift",
         "RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift",
         "RawCull/Intelligence/CombinedReview/ReviewImageSource.swift",
         "RawCull/Intelligence/CombinedReview/ReviewMaskRegistration.swift",
@@ -281,10 +345,12 @@
         "RawCull/Intelligence/CombinedReview/ReviewRunError.swift",
         "RawCull/Intelligence/CombinedReview/ReviewRunManifest.swift",
         "RawCull/Intelligence/CombinedReview/ReviewSynthesisGrounding.swift",
+        "RawCull/Intelligence/CombinedReview/Storage/ReviewArtifactStore.swift",
         "RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift",
         "RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift",
         "RawCull/Intelligence/Presentation/CombinedReviewPresentation.swift",
         "RawCull/Intelligence/Resource*",
+        "RawCull/Intelligence/SubjectMasks/*",
         "RawCull/Views/AIAnalysis/CombinedReviewLayouts.swift",
         "RawCull/Views/AIAnalysis/CombinedReviewView.swift",
         "RawCull/Views/CombinedReview/*",
@@ -307,17 +373,19 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "c642376f36d759a637b806f158b5c5d1ad469bc1d147147b9ff8ffa89fba06fc"
+      "sha256": "0b2d60ba4aadd06833eaac610d270d3f16729e663d90cf4eb821d36f2bb7ab85"
     },
     {
       "path": "content/en/docs/ai/aidiagnostics.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Makefile",
         "RawCull/Intelligence/*",
         "RawCull/Intelligence/CombinedReview/CombinedReviewWorkExecution.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/CombinedReviewWorkExecution.swift",
         "RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift",
         "RawCull/Intelligence/CombinedReview/ReviewDiagnostics.swift",
+        "RawCull/Intelligence/CombinedReview/Storage/ReviewArtifactStore.swift",
         "RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift",
         "RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift",
         "RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisResponseDecoder.swift",
@@ -325,6 +393,7 @@
         "RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift",
         "RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift",
         "RawCull/Intelligence/Similarity/SimilarityScoringModel.swift",
+        "RawCull/Intelligence/SubjectMasks/SubjectMaskFocusScorer.swift",
         "RawCull/Model/Handlers/Analysis*",
         "RawCull/Views/AIAnalysis/*",
         "RawCull/Views/AIAnalysis/CombinedReviewView.swift",
@@ -362,11 +431,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "d084bc0fcea24f1a9184174ce0536638acf6cdaf04832ed16e6084c07b636966"
+      "sha256": "7e75144531f5799ef6952e29320c697e823c65d4ac31535999b8545a987fbc78"
     },
     {
       "path": "content/en/docs/ai/aiinrawcull.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Docs/sam3qwen.md",
         "ModelAssets/*",
@@ -402,6 +471,7 @@
         "RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift",
         "RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift",
         "RawCull/Intelligence/Similarity/SimilarityScoringModel.swift",
+        "RawCull/Intelligence/SubjectMasks/SubjectMaskFocusScorer.swift",
         "RawCull/Main/RawCullApp.swift",
         "RawCull/Model/Handlers/Analysis*",
         "RawCull/Model/ViewModels/BurstReviewSessionModel.swift",
@@ -431,12 +501,13 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "89427990d9df5e7c2f2ffd602e99a20a65fbb5d11b0022ba9f24013044c4a70a"
+      "sha256": "9ae8523a2a4af7e6b5295273497168d04daf092850abfbc600b1d108c0455ca2"
     },
     {
       "path": "content/en/docs/ai/airuntime.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
+        "Docs/visionupdate.md",
         "RawCull/Intelligence/*",
         "RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift",
         "RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift",
@@ -457,6 +528,8 @@
         "RawCull/Model/Handlers/Analysis*",
         "RawCull/Model/RawCullApplicationState.swift",
         "RawCull/Model/ViewModels/BurstReviewSessionModel.swift",
+        "RawCull/Model/ViewModels/BurstWorkflowController*",
+        "RawCull/Model/ViewModels/CatalogController*",
         "RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift",
         "RawCull/Views/AIAnalysis/*",
         "RawCull/Views/AIAnalysis/CombinedReviewView.swift",
@@ -483,11 +556,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "1e165dca1d280b4111475edb9b87a82c297cd0b010aa3366502130a24a90f116"
+      "sha256": "2683b9b05ff7c0dee7ab9e3ed0a39942bc4535247d4d36ceb42c1edd29567d8b"
     },
     {
       "path": "content/en/docs/ai/rawcullai.md",
-      "review_scope": "source delta and reference check; existing content retained; dated external evidence not requalified",
+      "review_scope": "Existing content retained after delta and reference checks; historical recipe or vendor evidence retained",
       "watch_paths": [
         "Docs/newmodels.md",
         "ModelAssets/*",
@@ -509,11 +582,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "c8d2c6d750b70f65ec12e67abd3f97ec4fc24e1f484a9a84b33143da2f2f1b25"
+      "sha256": "2de14182b624108f8228fbcd8ab6ec8f5f7bf9dad3f5b5740f6d29778a98fb50"
     },
     {
       "path": "content/en/docs/apidocs/_index.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [
         "Config/*",
         "Makefile",
@@ -537,11 +610,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "9c888b6df311c1100a66e7946dc8ee273e7f879952c57539d414b1f1e1732573"
+      "sha256": "27ea22c69b62bde861a514c38598ecc92bb17d7ffcd91116b26d5aa3a0e94374"
     },
     {
       "path": "content/en/docs/apidocs/rawcull-internal-api.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull.xcodeproj/*",
         "RawCull/*",
@@ -550,6 +623,7 @@
         "RawCull/Actors/ScanFiles.swift",
         "RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift",
         "RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift",
         "RawCull/Intelligence/CombinedReview/ReviewRunContract.swift",
         "RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadService.swift",
         "RawCull/Intelligence/ModelManagement/RawCullAIModelDownloadsModel.swift",
@@ -558,8 +632,15 @@
         "RawCull/Intelligence/Similarity/RawCullSimilarityFeature.swift",
         "RawCull/Model/JSON/WriteSavedFilesJSON.swift",
         "RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift",
+        "RawCull/Model/ViewModels/*",
         "RawCull/Model/ViewModels/BurstReviewSessionModel.swift",
+        "RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift",
+        "RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift",
+        "RawCull/Model/ViewModels/CatalogController+Loading.swift",
+        "RawCull/Model/ViewModels/CatalogController+Sharpness.swift",
+        "RawCull/Model/ViewModels/CullingController+Ratings.swift",
         "RawCull/Model/ViewModels/CullingModel.swift",
+        "RawCull/Model/ViewModels/FileOperationsModel.swift",
         "RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift",
         "RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift",
@@ -599,12 +680,13 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "3634389ba1ae9accfeb5a46b4741627835f9370eb16dc989ffbf428f9934c430"
+      "sha256": "a21c493596ebba9b92bfccf1a276be8c5e861bd1d4312cbecab152568653cc12"
     },
     {
       "path": "content/en/docs/apidocs/rawcullapidoc.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
+        "Docs/contributing.md",
         "Makefile",
         "ModelAssets/README.md",
         "README.md",
@@ -615,12 +697,17 @@
         "RawCull/Actors/RequestThumbnail.swift",
         "RawCull/Actors/ScanFiles.swift",
         "RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift",
+        "RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift",
         "RawCull/Intelligence/CombinedReview/ReviewRunContract.swift",
         "RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift",
         "RawCull/Main/RawCullApp.swift",
         "RawCull/Main/RawCullFileItem.swift",
         "RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift",
+        "RawCull/Model/ViewModels/*",
+        "RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift",
+        "RawCull/Model/ViewModels/CatalogController+Loading.swift",
         "RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift",
+        "RawCull/Model/ViewModels/CullingController+Ratings.swift",
         "RawCull/Model/ViewModels/CullingModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift",
@@ -648,11 +735,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "5258ec148e88433e59cc352984afa07dd555e7dabd7c44f12317c2b3a689794f"
+      "sha256": "f70ea66ccdc2213ad0b030a095f2c3aa0772447ab90c79f517087e9314ccb80a"
     },
     {
       "path": "content/en/docs/burstgroup.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Intelligence/BurstAnalysis/*",
         "RawCull/Intelligence/BurstAnalysis/BurstAnalysisCacheRepository.swift",
@@ -675,6 +762,7 @@
         "RawCull/Model/ViewModels/*Burst*",
         "RawCull/Model/ViewModels/*SessionModel.swift",
         "RawCull/Model/ViewModels/BurstReviewSessionModel.swift",
+        "RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift",
         "RawCull/Model/ViewModels/CullingGridProjection.swift",
         "RawCull/Model/ViewModels/CullingModel.swift",
         "RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift",
@@ -708,11 +796,11 @@
         "photoevidencekit",
         "rawcullcore"
       ],
-      "sha256": "831a39b335d1e96f0b9f7634620d118b8fdef758cb1985c043f356c953f97a19"
+      "sha256": "8a3efaa48edf35419b0a221763129c424cdcd4b86831c60ce63d42cc1683fa47"
     },
     {
       "path": "content/en/docs/cache-accounting.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [
         "RawCull/Actors/SharedMemoryCache.swift",
         "RawCull/Model/Cache/TrackedThumbnailCache.swift",
@@ -720,11 +808,11 @@
         "RawCullTests/CacheAccountingConcurrencyTests.swift"
       ],
       "watch_packages": [],
-      "sha256": "9d266c59e7c5853184de0d76b41e2e7e89205fc1dac5d61ecb116e59a4ee002a"
+      "sha256": "352a6f23c32c76126f0a3f0da08af56769785aea96c8e7a2aa9b3641ffa9b36c"
     },
     {
       "path": "content/en/docs/cache.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/*Thumbnail*",
@@ -771,33 +859,37 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "fc57f19e6c452d16d94f69df54ebec10c74acabaae345048e877c52a606b1bc7"
+      "sha256": "c4eae9a4164198181d08f0a989342cc3858333d8f4c269ce393e8d1d06c61ddb"
     },
     {
       "path": "content/en/docs/closeups.md",
       "watch_paths": [
+        "Docs/visionupdate.md",
         "RawCull.xcodeproj/*",
-        "RawCull/Views/ComparisonGridView/Burst*",
         "RawCull/Intelligence/AnimalCloseUpDetector.swift",
-        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift"
       ],
       "watch_packages": [
         "photoanalysiskit",
         "photoevidencekit"
       ],
-      "review_scope": "source delta and reference check; content updated",
-      "sha256": "0ad5ca67d6ce712eef55b6ff235d71fa7ebdcf22b4c387a4e5147c8c06efb7b1"
+      "review_scope": "Content and references updated",
+      "sha256": "d388108064f72b7a14d9e914df3fde0a85bd869a6cc5240820e3096d7a46d114"
     },
     {
       "path": "content/en/docs/concurrency.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
+        "Docs/visionupdate.md",
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/*Thumbnail*",
         "RawCull/Actors/Extract*",
         "RawCull/Actors/Save*",
         "RawCull/Actors/ScanAndCreateThumbnails.swift",
         "RawCull/Actors/ScanFiles.swift",
+        "RawCull/Extensions/extension+Task+Detached.swift",
         "RawCull/Intelligence/*",
         "RawCull/Main/RawCullApp.swift",
         "RawCull/Model/*Access*",
@@ -814,6 +906,7 @@
         "RawCull/Model/Handlers/CatalogProgressCoalescer.swift",
         "RawCull/Model/Handlers/RAWPreviewRenderer.swift",
         "RawCull/Model/ParametersRsync/*",
+        "RawCull/Model/ViewModels/*",
         "RawCull/Model/ViewModels/*Catalog*",
         "RawCull/Model/ViewModels/*Focus*",
         "RawCull/Model/ViewModels/*Scoring*",
@@ -869,11 +962,11 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "80566bc231bbe5a5036affe4dd667df0a2087b419717ee25d56c246e78cd3487"
+      "sha256": "c9eec56d8da4ff27767eb18ae1ea325a1a9ed41a55be9ed81c01297e5099958d"
     },
     {
       "path": "content/en/docs/detailsfocusmask.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Model/Handlers/*Analysis*",
         "RawCull/Model/Handlers/*Focus*",
@@ -893,12 +986,13 @@
       "watch_packages": [
         "photoanalysiskit"
       ],
-      "sha256": "1654ace6bcb6a3c4845a519b0719aeab2deb3c449a9377da7012103b992c968e"
+      "sha256": "94b8467742a1fd42bdce2ee2e926f0634021ccd7b0f2f77fc737c7582095ea8a"
     },
     {
       "path": "content/en/docs/detailsharpnessscoring.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
+        "Docs/visionupdate.md",
         "RawCull/Model/Handlers/*Analysis*",
         "RawCull/Model/Handlers/*Focus*",
         "RawCull/Model/ViewModels/*Focus*",
@@ -919,11 +1013,11 @@
         "photoanalysiskit",
         "rawparserkit"
       ],
-      "sha256": "95fd7d1b8a24eb21136e1ca211336a6bc91aab665b0ccfa7a03ca6b18f35087d"
+      "sha256": "fb833e97a94f252278c09a0229c2dd122fafac87573dbb9cd98f0a854d9de16d"
     },
     {
       "path": "content/en/docs/filereadandwrite.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Actors/*Disk*",
         "RawCull/Actors/Extract*",
@@ -942,7 +1036,11 @@
         "RawCull/Model/ParametersRsync/RemoteDataNumbers.swift",
         "RawCull/Model/Settings/*",
         "RawCull/Model/ViewModels/*Catalog*",
+        "RawCull/Model/ViewModels/CatalogController+Sharpness.swift",
+        "RawCull/Model/ViewModels/CullingController+Ratings.swift",
         "RawCull/Model/ViewModels/CullingModel.swift",
+        "RawCull/Model/ViewModels/FileOperationsModel.swift",
+        "RawCull/Model/ViewModels/RatingsModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Culling.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift",
         "RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift",
@@ -964,11 +1062,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "d5823ee278af3757b064a759ba9e7347c00f76c9098379f251703a9f9f05149f"
+      "sha256": "663948f94862a9e09abbac43e8ad6fb52a2a5e2cbc448c4ea49aca0b65c551b5"
     },
     {
       "path": "content/en/docs/focusmask.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Model/FullSizePreviewLoader.swift",
         "RawCull/Model/Handlers/*Analysis*",
@@ -979,6 +1077,8 @@
         "RawCull/Model/ViewModels/*Scoring*",
         "RawCull/Model/ViewModels/*SessionModel.swift",
         "RawCull/Model/ViewModels/*Sharpness*",
+        "RawCull/Model/ViewModels/CatalogController+Sharpness.swift",
+        "RawCull/Model/ViewModels/FocusandSharpness/FocusMaskTypes.swift",
         "RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift",
         "RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift",
@@ -1000,11 +1100,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "af7bfc189632cf162912c26acb99d668de018e277f74e16ab638c373f38a4276"
+      "sha256": "a27e005dfe6d9c248358470e42503fce1e5c50bceaeaad45b7a425a6710a8650"
     },
     {
       "path": "content/en/docs/heavy.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Actors/*",
         "RawCull/Actors/*Cache*",
@@ -1018,6 +1118,7 @@
         "RawCull/Actors/ScanAndCreateThumbnails.swift",
         "RawCull/Actors/ScanAndExtractJPGs.swift",
         "RawCull/Actors/ScanFiles.swift",
+        "RawCull/Extensions/extension+Task+Detached.swift",
         "RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift",
         "RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift",
         "RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift",
@@ -1057,11 +1158,41 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "89130700297ff3f116ca6cedb9df136cd01e2e3d98dc914f39bc5e54970fa03c"
+      "sha256": "daeae7ce25d892136bd8cb6582f810152ceacd159e2b1f4886797beeb1eb0b0d"
+    },
+    {
+      "path": "content/en/docs/mcp.md",
+      "watch_paths": [
+        "*.entitlements",
+        "Docs/aiandmcp.md",
+        "Docs/mcpserver.md",
+        "Docs/prompts.md",
+        "RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift",
+        "RawCull/Main/MCP*",
+        "RawCull/Main/MCPAnalysisController+Analysis.swift",
+        "RawCull/Main/MCPAnalysisController+FollowUp.swift",
+        "RawCull/Main/MCPAnalysisController+Setup.swift",
+        "RawCull/Main/MCPAnalysisController.swift",
+        "RawCull/Views/Settings/MCP*",
+        "RawCull/Views/Settings/MCPSettingsTab.swift",
+        "RawCullTests/*MCP*",
+        "Scripts/TestMCPRelease.sh",
+        "Tools/RawCullMCP/*",
+        "Tools/RawCullMCP/Sources/RawCullMCP/AnalysisJobStore.swift",
+        "Tools/RawCullMCP/Sources/RawCullMCP/AnalysisTools.swift",
+        "Tools/RawCullMCP/Sources/RawCullMCP/CatalogGrantStore.swift",
+        "Tools/RawCullMCP/Sources/RawCullMCP/RawCullMCPMain.swift",
+        "Tools/RawCullMCP/Sources/RawCullMCP/ToolHandlers.swift"
+      ],
+      "watch_packages": [
+        "swift-sdk"
+      ],
+      "review_scope": "Content and references updated",
+      "sha256": "a8403963df87d9bdc29ba3076b44c01af76c232b26cde80e82928ed1428db0b9"
     },
     {
       "path": "content/en/docs/memorypressure.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [
         "RawCull/Actors/*Cache*",
         "RawCull/Actors/SharedMemoryCache.swift",
@@ -1084,11 +1215,11 @@
       "watch_packages": [
         "photoevidencekit"
       ],
-      "sha256": "9d7cff759e992e5c7b78a2b2174179bc63c42c49c947431352556cde04aa7fcb"
+      "sha256": "ff4c6d329893eac111641df282bbe2c55f2914e8e42404306186603b367b97ca"
     },
     {
       "path": "content/en/docs/newfeatures/_index.md",
-      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Config/*",
         "Makefile",
@@ -1106,11 +1237,11 @@
         "Scripts/*"
       ],
       "watch_packages": [],
-      "sha256": "cf44d842ce07464fd6d77e3b85a4191d3aa7dc897260953b9086b35ec4af0e97"
+      "sha256": "aab5575ab5a1ef1a88d0505a8774a1762ed12ff0b833cb38da0ede820017a668"
     },
     {
       "path": "content/en/docs/newfeatures/newfeatures.md",
-      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
+      "review_scope": "Existing content retained after delta and reference checks; historical recipe or vendor evidence retained",
       "watch_paths": [
         "README.md",
         "RawCull.xcodeproj/*",
@@ -1137,11 +1268,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "44752fdcfff4f4e631b143c9c2607b24768c888dfbb6e0c7dc7dd9214c1a35ba"
+      "sha256": "bddeea38582fddb5829056e803fbdea3ee97779cb62d834fcdf83d671489d255"
     },
     {
       "path": "content/en/docs/newfeatures/unified-burst-evidence.md",
-      "review_scope": "source delta and reference check; content updated; dated external evidence not requalified",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Docs/PeopleAssessmentPilot.md",
         "Docs/narrative.md",
@@ -1176,11 +1307,11 @@
         "photoevidencekit",
         "rawcullcore"
       ],
-      "sha256": "b1e2648d0829829ff59f01532489dc2d204607aeeaf116193595658b1a43a452"
+      "sha256": "06c71376c4bac53f3bdb477794725e3e3fbb2dfaddd97f092bce378be14189eb"
     },
     {
       "path": "content/en/docs/newfeatures/xmp-editor-handoff.md",
-      "review_scope": "source delta and reference check; existing content retained; dated external evidence not requalified",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/*Handoff*",
         "RawCull/*XMP*",
@@ -1207,15 +1338,17 @@
         "RawCullTests/*XMP*"
       ],
       "watch_packages": [],
-      "sha256": "b695fd9d6025329983e0cdb728a734f819ce3586976b1e738d4580ccb8fd55f9"
+      "sha256": "b3905e2269038b51022b71da14f6d59134c322f1fda6aaa045c59a6ad6db026b"
     },
     {
       "path": "content/en/docs/packages/_index.md",
       "watch_paths": [
         "RawCull.xcodeproj/*",
-        "RawCull/Views/ComparisonGridView/Burst*",
+        "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
         "RawCull/Intelligence/AnimalCloseUpDetector.swift",
-        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift",
+        "RawCull/Views/ComparisonGridView/Burst*",
+        "Tools/RawCullMCP/Package.resolved"
       ],
       "watch_packages": [
         "coreai-models",
@@ -1236,8 +1369,8 @@
         "xgrammar",
         "yyjson"
       ],
-      "review_scope": "source delta and reference check; content updated; historical package audit retained",
-      "sha256": "cdbed3e43bde5e775667f36021a26ba96427078d24eb58c1c5f369d6b3c0d31e"
+      "review_scope": "Content and references updated",
+      "sha256": "289263c0f2a5d2fc5a2524b652fa1f0f90235cdfbd94c3807f7c9e4d3c45f82b"
     },
     {
       "path": "content/en/docs/packages/package-modules.md",
@@ -1247,8 +1380,8 @@
       "watch_packages": [
         "photoevidencekit"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "2f5ecc0aeda2fabac14a38081e4e1008a7ba89c7cfdd05b21455329e576591c2"
+      "review_scope": "Existing content retained after delta and reference checks",
+      "sha256": "801dcee846f95d0cc229c6dfe2de401172a4c2d39efa06dda52926e2af2c4bfa"
     },
     {
       "path": "content/en/docs/packages/photoaikit.md",
@@ -1258,47 +1391,48 @@
       "watch_packages": [
         "photoaikit"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "721003c8037907bd14bd620952bc9847a0a1419455fd6669d7339e0e92b46f8f"
+      "review_scope": "Existing content retained after delta and reference checks; historical package audit retained",
+      "sha256": "cd9fce3b1f65f5205b1f56d521d760a3153677681a0f07bc94ed1368d2a4ec2e"
     },
     {
       "path": "content/en/docs/packages/photoanalysiskit.md",
       "watch_paths": [
         "RawCull.xcodeproj/*",
-        "RawCull/Views/ComparisonGridView/Burst*",
         "RawCull/Intelligence/AnimalCloseUpDetector.swift",
-        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift",
+        "RawCull/Views/ComparisonGridView/Burst*"
       ],
       "watch_packages": [
         "photoanalysiskit"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "54679961b2b975fc0ea21822cdd734773f9ea3c7a0100ebda999019bd1fd5040"
+      "review_scope": "Content and references updated; historical package audit retained",
+      "sha256": "4d23d440817fa4b290ab108008e968fa761097d8a4bedaabc66dbbef132f20e6"
     },
     {
       "path": "content/en/docs/packages/photoevidencekit.md",
       "watch_paths": [
         "RawCull.xcodeproj/*",
-        "RawCull/Views/ComparisonGridView/Burst*",
         "RawCull/Intelligence/AnimalCloseUpDetector.swift",
-        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift"
+        "RawCull/Intelligence/Persistence/FaceEvidenceCache.swift",
+        "RawCull/Views/ComparisonGridView/Burst*"
       ],
       "watch_packages": [
         "photoevidencekit"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "a3b164836259f4b78a34f19817cb25127f0826b63c3ea9f8bfc61ebfd2421651"
+      "review_scope": "Content and references updated; historical package audit retained",
+      "sha256": "540e551dd19c3c06caeadb570e6c3115e2c76b5e5a45439dd641ba6afe553752"
     },
     {
       "path": "content/en/docs/packages/rawcullcore.md",
       "watch_paths": [
-        "RawCull.xcodeproj/*"
+        "RawCull.xcodeproj/*",
+        "RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift"
       ],
       "watch_packages": [
         "rawcullcore"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "7044dbdbaf9f8b138e572825be28d0d2e23840f8462931ea103e498f2d048ddb"
+      "review_scope": "Content and references updated; historical package audit retained",
+      "sha256": "7591197a646f235d381950eb8d06bde12f69d59c6de9a5de50212d957491f4cc"
     },
     {
       "path": "content/en/docs/packages/rawparserkit.md",
@@ -1308,12 +1442,12 @@
       "watch_packages": [
         "rawparserkit"
       ],
-      "review_scope": "source delta and reference check; existing content retained; historical package audit retained",
-      "sha256": "2bea1f947c944092f4041dca220b6a11eca03649ccd9b723924a7422aaf2f0ee"
+      "review_scope": "Existing content retained after delta and reference checks; historical package audit retained",
+      "sha256": "de3bf6c9bf916ee5145ed08891db9a269fa94ac6647cc237b103b974e997fc4a"
     },
     {
       "path": "content/en/docs/performance.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Docs/*Performance*",
         "Docs/CatalogPerformance.md",
@@ -1325,6 +1459,7 @@
         "Docs/RAW9PreviewPerformance.md",
         "Docs/RAW9PreviewPerformanceResults.json",
         "Docs/performancefixes.md",
+        "Docs/visionupdate.md",
         "Makefile",
         "RawCull.xcodeproj/*",
         "RawCull/Actors/*Cache*",
@@ -1346,6 +1481,7 @@
         "RawCull/Views/Settings/CacheSettingsTab.swift",
         "RawCull/Views/ThumbnailComponents/*",
         "RawCull/Views/ZoomViews/*",
+        "RawCullPerformanceTests/*",
         "RawCullTests/*Cache*",
         "RawCullTests/*Catalog*",
         "RawCullTests/*Memory*",
@@ -1362,18 +1498,18 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "b580d6450566f9d882c1f06ff8726e60b88148ab9376291334596eed1fdf048e"
+      "sha256": "7f0f9b173acf503e59cebf4efa166005a00bedecdcc76ed58a1ac4a0714c7c65"
     },
     {
       "path": "content/en/docs/pushpull.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "8e837ac9bcf9461029682101d6576cf8b31db1e6cf1a79f4554f83f737443af3"
+      "sha256": "5cf2aeb02a5651d26fa30a3e51cd0be0a2a1ca3b23a29e9fe7c673b32d6807af"
     },
     {
       "path": "content/en/docs/raw-inspection.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [
         "RawCull/Actors/Extract*",
         "RawCull/Model/*Histogram*",
@@ -1402,11 +1538,11 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "97008aae5a7eab2ad3495f9ba8dae6dc3602ad9108318dc28393133b7e8c0bd2"
+      "sha256": "4aa0ad17d0122d7ef9dccf7408ecea80a61f4e670c2490b9b53e57b59ac1883f"
     },
     {
       "path": "content/en/docs/security.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Actors/Extract*",
         "RawCull/Actors/ExtractAndSaveJPGs.swift",
@@ -1430,8 +1566,12 @@
         "RawCull/Model/RawImageLoading.swift",
         "RawCull/Model/ViewModels/*Catalog*",
         "RawCull/Model/ViewModels/*SessionModel.swift",
+        "RawCull/Model/ViewModels/Catalog*",
+        "RawCull/Model/ViewModels/CatalogController+Loading.swift",
+        "RawCull/Model/ViewModels/CatalogController+Similarity.swift",
         "RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift",
         "RawCull/Model/ViewModels/CullingModel.swift",
+        "RawCull/Model/ViewModels/FileOperationsModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Similarity.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift",
@@ -1460,11 +1600,11 @@
         "rawparserkit",
         "rsyncprocessstreaming"
       ],
-      "sha256": "82a4a4e7e18ff01b2051816657ac5a84c57f70eb132af6202913969131133f98"
+      "sha256": "d31eef5537674fe15388662aaaa24007d492797b716ffe7cd0c08299f2279ee3"
     },
     {
       "path": "content/en/docs/sonymakernoteparser.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Existing content retained after delta and reference checks",
       "watch_paths": [
         "RawCull/Actors/ScanFiles.swift",
         "RawCull/Model/RawImageLoading.swift"
@@ -1472,11 +1612,11 @@
       "watch_packages": [
         "rawparserkit"
       ],
-      "sha256": "69347ccf6601921ce2c7b923a0a690cda87d575e17a351e8d8f92148fa0473b2"
+      "sha256": "60763ebd83ec34161c691d165a11a79bcfcf64945ce800e0f9d00173fd459d03"
     },
     {
       "path": "content/en/docs/thumbnail.md",
-      "review_scope": "source delta and reference check; existing content retained",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "RawCull/Actors/DiscoverFiles.swift",
         "RawCull/Actors/DiskCacheManager.swift",
@@ -1496,6 +1636,9 @@
         "RawCull/Model/Handlers/ZoomPreviewHandler.swift",
         "RawCull/Model/RawImageLoading.swift",
         "RawCull/Model/RawImageLoadingConcurrency.swift",
+        "RawCull/Model/ViewModels/Catalog*",
+        "RawCull/Model/ViewModels/CatalogController+Loading.swift",
+        "RawCull/Model/ViewModels/FileOperationsModel.swift",
         "RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift",
         "RawCull/Views/ThumbnailComponents/ThumbnailImageView.swift",
         "RawCullTests/DiskCacheAndScanAdmissionTests.swift",
@@ -1513,14 +1656,21 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "a05e4ec5d3a0364fc95ef6a79e480621850e51acd95d9ae42453dde51152238c"
+      "sha256": "82736e4d620367e05029b85946ec02ad64e37b4fd2b35c45251bf51b54014d5d"
     },
     {
       "path": "content/en/docs/update.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
+        "*.entitlements",
+        ".gitignore",
+        ".swiftlint.yml",
+        "Docs/*",
         "Docs/PeopleAssessmentPilot.md",
-        "Docs/narrative.md"
+        "Docs/narrative.md",
+        "RawCullPerformanceTests/*",
+        "TestManifests/*",
+        "Tools/RawCullMCP/*"
       ],
       "watch_packages": [
         "coreai-models",
@@ -1539,14 +1689,15 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "b033f44d68668a2eb93106b091721173cebaa9663a8249c5225965f6a267ea44"
+      "sha256": "a7c8e6f7c60e85d76e2c246b39065b046553592b5f01ca5c1325d7e32dcdff34"
     },
     {
       "path": "content/en/docs/viewer-architecture.md",
-      "review_scope": "source delta and reference check; content updated",
+      "review_scope": "Content and references updated",
       "watch_paths": [
         "Docs/ViewComposition.md",
         "RawCull/Intelligence/BurstAnalysis/*",
+        "RawCull/Main/RawCullApp.swift",
         "RawCull/Model/*Review*",
         "RawCull/Model/FullSizePreviewLoader.swift",
         "RawCull/Model/Handlers/*Preview*",
@@ -1556,6 +1707,7 @@
         "RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift",
         "RawCull/Model/Handlers/ZoomPreviewHandler.swift",
         "RawCull/Model/ImageReviewGeometry.swift",
+        "RawCull/Model/ViewModels/*",
         "RawCull/Model/ViewModels/*Burst*",
         "RawCull/Model/ViewModels/*Presentation*",
         "RawCull/Model/ViewModels/*SessionModel.swift",
@@ -1598,7 +1750,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "51bc1eda48e7544dc21665fc93590ea14f58a164026a6b572d1b8457beed58c7"
+      "sha256": "8363d187016a5edf4d15936716f4b53fd2e9f28d4dfd762c580bbd013cefc4cd"
     },
     {
       "path": "content/en/search.md",

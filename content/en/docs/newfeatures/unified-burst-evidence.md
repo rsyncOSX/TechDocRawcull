@@ -3,25 +3,26 @@ author = "Thomas Evensen"
 title = "P0: Unified Burst Evidence"
 linkTitle = "P0: Unified Burst Evidence"
 date = "2026-11-05"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "Implemented Close-ups, remaining evidence integration, and possible next features for RawCull burst review."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 30
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated; dated external evidence not requalified"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Unified Burst Evidence: Current State and Next Features
 
-**Manual Close Up is implemented.** The 3.4.5 development branch resolves
-PhotoEvidenceKit locally and adds current-frame human face and animal landmark
-crops above the manual panel. This is inspection evidence. Integrating scored
-evidence into each manual card and people evidence into ranking remains planned.
+**Manual Close Up is implemented.** Build 462 uses PhotoEvidenceKit for the
+manual cards and PhotoAnalysisKit for current-frame face and animal evidence.
+The burst workspace can temporarily order frames by comparable face evidence
+using **Apply People Ranking**. Persisted People rankings and scored evidence
+in each manual card remain proposed.
 See [Close Up]({{< relref "/docs/closeups.md" >}}).
 
 The remaining opportunity is to connect RawCull's existing analysis to this

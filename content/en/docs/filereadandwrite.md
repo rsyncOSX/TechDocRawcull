@@ -3,13 +3,13 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-11-08
+lastmod: 2026-11-21
 
-reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version: "3.4.5"
-reviewed_build: 436
-reviewed_on: "2026-11-09"
-review_scope: "source delta and reference check; existing content retained"
+reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version: "3.4.9"
+reviewed_build: 462
+reviewed_on: "2026-11-21"
+review_scope: "Content and references updated"
 ---
 
 # File Read and Write Reference
@@ -21,7 +21,7 @@ changing sandbox access, cache locations, persistence, or export behavior.
 
 | File/folder                                        | Access                                   | Owner                                                                |
 | -------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------- |
-| User-selected catalog folder                       | Read                                     | `RawCullViewModel`, `ScanFiles`, `DiscoverFiles`, parser package     |
+| User-selected catalog folder                       | Read                                     | `CatalogController`, `ScanFiles`, `DiscoverFiles`, parser package     |
 | RAW files (dedicated and generic registered extensions)                 | Read                                     | scan, thumbnails, focus parsing, zoom, export, diagnostics           |
 | `focuspoints.json` beside catalog                  | Read optional                            | `ScanFiles` fallback                                                 |
 | App Support `savedfiles.json` and backups          | Read/write/move                          | `CullingModel`, `ReadSavedFilesJSON`, `WriteSavedFilesJSON`          |
@@ -39,7 +39,7 @@ changing sandbox access, cache locations, persistence, or export behavior.
 ## Catalog Reads
 
 The active catalog comes from the sidebar folder selection.
-`RawCullViewModel.startCatalogLoad(for:)` starts security-scoped access and then
+`CatalogController.startCatalogLoad(for:)` starts security-scoped access and then
 runs the scan.
 
 Catalog reads include:
@@ -112,7 +112,7 @@ passes JPEG `Data` to `SaveJPGImage`; non-Sendable image objects do not cross
 the save boundary. `SaveJPGImage` creates files without overwriting. If a name
 already exists, it retries with ` (1)`, ` (2)`, and so on; the filesystem
 enforces exclusivity for case-insensitive and simultaneous-export collisions.
-`RawCullViewModel.startSelectedJPGExtraction` starts destination security-scoped
+`FileOperationsModel.startSelectedJPGExtraction` starts destination security-scoped
 access before constructing the actor and stops it on the main actor after the
 awaited result returns.
 
@@ -133,7 +133,7 @@ Main files:
 | [RemoteDataNumbers.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/RemoteDataNumbers.swift)      | Summarizes copied file counts and sizes         |
 
 `ExecuteCopyFiles.startcopyfiles` first derives the selected filenames from the
-current `RawCullViewModel`. It then creates an operation-unique file under
+current `CatalogController`. It then creates an operation-unique file under
 `Application Support/RawCull/CopyLists/`. Each UTF-8 filename is terminated by
 NUL, and rsync receives `--from0` plus `--files-from=<path>`. This preserves
 spaces and newlines without converting the list into command-line arguments.
@@ -162,7 +162,7 @@ active catalog URL and resolves `destBookmark` with `.withSecurityScope` for the
 operation-lifetime destination scope. Failure asks the user to reopen the
 catalog or reselect the destination rather than attempting a plain-path fallback.
 
-The catalog browsing flow is different: `RawCullViewModel` owns one active
+The catalog browsing flow is different: `CatalogLifecycleCoordinator` owns one active
 security-scoped catalog URL and stops it during catalog transition or successful
 application termination. Do not transfer that ownership implicitly to a child
 actor.
@@ -234,14 +234,14 @@ recovery, `restoreCullingPresentation()` rebuilds rating lookups, valid scores,
 filters and selection. Archive/reset also refreshes the UI when the subsequent
 write fails, because the in-memory store has already changed. Failed saves remain
 dirty. Rating edits refresh `dateTagged`, including edits of existing records.
-See [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/CullingModel.swift), [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift) and
+See [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/CullingModel.swift), [CullingController+Ratings.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CullingController+Ratings.swift) and
 [RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewPersistenceTests.swift).
 
 `loadPersistedScoringandSaliency()` builds a filename lookup once, validates
 signature/size/modification date, and publishes score dictionaries in a batch.
 It keeps the first legacy duplicate and accepts AF scores only with a valid AF
 point and a finite positive score. This avoids repeated normalization after each
-restored item. See [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift).
+restored item. See [CatalogController+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Sharpness.swift).
 
 Settings failures are represented separately by `SettingsPersistenceFailure`
 with `.load` or `.save`. `SettingsView` exposes the failure and retry/dismiss
@@ -293,7 +293,7 @@ membership signatures, omits `.none`, filters missing file references and
 restores compatible decisions onto current group IDs. Groups without a valid
 signature cannot restore state. The stored schema is unchanged.
 
-`BurstReviewSessionModel` owns live decisions; the view model and coordinator
+`BurstReviewSessionModel` owns live decisions; the burst workflow and coordinator
 retain persistence orchestration. Thumbnail preload now also owns its saves
 through completion: each worker awaits saving before returning its slot. The
 interactive save path is unchanged.

@@ -7,11 +7,11 @@ weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained; dated external evidence not requalified"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Existing content retained after delta and reference checks; historical recipe or vendor evidence retained"
 +++
 
 # Download and prepare the three AI model packs

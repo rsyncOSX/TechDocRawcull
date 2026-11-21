@@ -3,18 +3,18 @@ author = "Thomas Evensen"
 title = "The RawCull AI Runtime"
 linkTitle = "AI Runtime"
 date = "2026-09-03"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 description = "How RawCull owns and refreshes local CLIP, SAM 3, Qwen, Vision, Deep Review, and Objects runtimes."
 weight = 59
 tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "objects"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # The RawCull AI Runtime
@@ -129,11 +129,10 @@ single mutation entry point is `apply(configuration:)`.
 
 ### `RawCullViewModel`
 
-The main view model owns product and catalog policy, not model runtimes. It
-answers questions such as which files are selected, what the current catalog
-identity is, what burst ranks and sharpness scores exist, and whether an AI
-operation conflicts with other work. Narrow protocols expose only the pieces
-the AI features need.
+The workspace root supplies stable feature objects and assembles their host
+controllers. Similarity and semantic search use `CatalogController` for
+catalog context. Deep Review uses `BurstWorkflowController` for burst context
+and applies a user-confirmed recommendation through the culling workflow.
 
 ## Construction: From App Launch to a Live Graph
 
@@ -201,7 +200,7 @@ No CLIP, SAM 3, or Qwen model engine is loaded in this initializer.
 10. Create `RawCullViewModel` with those exact feature/controller instances.
 11. Create `RawCullIntelligenceRuntime` and bind the similarity feature's weak
     application context.
-12. Bind semantic search to the view model and settings to the runtime.
+12. Bind semantic search to `CatalogController` and settings to the runtime.
 
 The final settings binding immediately publishes the first configuration. This
 happens only after every receiver exists.
@@ -922,8 +921,7 @@ download tasks, validation, removal and managed-location refresh. The row
 invokes these actions; it does not own provider installation. Removal remains
 limited to the managed asset pack and does not delete manually installed models.
 
-Settings receives the existing `RawCullViewModel` for Saved Files cleanup.
-That presentation change does not move culling persistence into the AI runtime.
+Settings uses the workspace culling and catalog controllers for Saved Files and cache actions.
 See [Viewer Architecture]({{< relref "../viewer-architecture.md" >}}) and
 [File Read and Write]({{< relref "../filereadandwrite.md" >}}) for those owners.
 
@@ -941,7 +939,7 @@ ones. Provider replacement cancels search, advances hydration generation and
 clears evidence, rejecting older completion. Grid revisions combine image and
 semantic changes. Classification leaves visible query results alone.
 
-The main view model separately retains
+The burst workflow separately retains
 [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/BurstReviewSessionModel.swift) for decisions
 and explicit mutation commands; the coordinator retains worker/cache orchestration.
 Neither extraction changes the pinned AI model or photographic-quality contract.

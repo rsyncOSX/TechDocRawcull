@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Detailed Focus Mask Computation
@@ -449,3 +449,11 @@ rechecks them after analysis. `AnalysisImageCanvas` shares one aspect-fit
 rectangle for photograph, mask and AF overlay without changing their coordinate
 conventions. Follow [Viewer Architecture]({{< relref "viewer-architecture.md" >}})
 for the current task owners; the small raster view is not an analysis engine.
+
+## Calibration compatibility at build 462
+
+The host calibrates on embedded previews at a fixed scale. Analysis screens
+can rescale the preview before computing the overlay. Deep Review separately
+keys subject masks by render identity, regenerates masks that fail geometry
+checks and invalidates prior results after a segmentation-model replacement.
+See [Focus Mask and Sharpness]({{< relref "/docs/focusmask.md" >}}) for host calibration ownership.

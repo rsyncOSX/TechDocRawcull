@@ -2,16 +2,16 @@
 author = "Thomas Evensen"
 title = "Security-Scoped URLs"
 date = "2026-02-05"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 tags = ["security", "sandbox", "bookmarks"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Security-Scoped URLs
@@ -25,14 +25,14 @@ RawCull is a sandboxed macOS app. Any access outside the app container must come
 
 | Area | Files |
 |---|---|
-| Active catalog scope | [RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel.swift), [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullApp.swift) |
+| Active catalog scope | [RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel.swift), [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullApp.swift) |
 | Catalog scan scope | [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift) |
-| CLIP indexing | [RawCullViewModel+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
-| Semantic search | [RawCullViewModel+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) |
+| CLIP indexing | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
+| Semantic search | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) |
 | Similarity artifact cache | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift) |
 | Copy-folder bookmarks | [Views/CopyFiles/OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CopyFiles/OpencatalogView.swift), [SourceAndDestinationSection.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CopyFiles/SourceAndDestinationSection.swift) |
 | rsync runtime scope | [Model/ParametersRsync/ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift) |
-| Selected JPG export | [ExtractJPGsSheetView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/RawCullSidebarMainView/ExtractJPGsSheetView.swift), [RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/SaveJPGImage.swift) |
+| Selected JPG export | [ExtractJPGsSheetView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/RawCullSidebarMainView/ExtractJPGsSheetView.swift), [FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/FileOperationsModel.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/SaveJPGImage.swift) |
 | App termination | [Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullApp.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/CullingModel.swift) |
 
 ## API Basics
@@ -55,14 +55,13 @@ Every successful `startAccessing...` must eventually be paired with `stopAccessi
 
 ## Active Catalog Scope
 
-The view model owns catalog policy; `CatalogLifecycleCoordinator` owns the
-transition/load tasks and session grant. `RawCullViewModel` forwards its public
-access methods to that coordinator.
+`CatalogController` coordinates catalog loading. `CatalogLifecycleCoordinator`
+owns transition and load tasks and the active catalog grant.
 
 ```mermaid
 sequenceDiagram
     participant UI as Sidebar picker
-    participant VM as RawCullViewModel
+    participant VM as CatalogController
     participant Work as Scan/thumbnail/export work
     UI->>VM: startCatalogLoad(source)
     VM->>VM: cancelCatalogLoad()
@@ -97,7 +96,7 @@ defer {
 }
 ```
 
-This is a local defensive scope for the scan actor. It stops only when its own start succeeded. The broader catalog scope remains owned by `RawCullViewModel` so later preload, diagnostics, export, zoom, and AI work can still access files while the catalog is active.
+This is a local defensive scope for the scan actor. It stops only when its own start succeeded. The broader catalog scope remains owned by `CatalogLifecycleCoordinator` so later preload, diagnostics, export, zoom, and AI work can still access files while the catalog is active.
 
 ## Scope Ownership Matrix
 
@@ -107,9 +106,9 @@ The owner is the component that records a successful start and is therefore resp
 |---|---|---|---|---|
 | Active catalog | `CatalogLifecycleCoordinator` and retained `RawCullCatalogGrant` | `startSecurityScopedAccess(for:)` before catalog work | Final grant release after session and retained workers finish | A failed start is not recorded. Switching first flushes culling persistence; a failed flush retains the old catalog and scope. |
 | Directory scan | `ScanFiles.scanFiles` | Local `startAccessingSecurityScopedResource()` | `defer`, but only when the local start returned `true` | `defer` covers success, thrown filesystem errors, cancellation, and early return. The view model's broader scope is not stopped. |
-| Selected JPG export | `RawCullViewModel.startSelectedJPGExtraction` | Start the chosen destination immediately before creating `ExtractAndSaveJPGs` | On return from `extractAndSavejpgs()`, before publishing completion or failure UI | Failed destination start aborts without a stop. Per-file failures are collected; the operation-level stop still runs after the actor returns. Source reads retain catalog grants for the operation lifetime. |
+| Selected JPG export | `FileOperationsModel.startSelectedJPGExtraction` | Start the chosen destination immediately before creating `ExtractAndSaveJPGs` | On return from `extractAndSavejpgs()`, before publishing completion or failure UI | Failed destination start aborts without a stop. Per-file failures are collected; the operation-level stop still runs after the actor returns. Source reads retain catalog grants for the operation lifetime. |
 | rsync copy | `ExecuteCopyFiles` | Start the selected catalog URL, then resolve and start `destBookmark` | Idempotent `cleanup()` after normal completion, close/cancel, startup failure, launch failure, or deinit | There is no direct-path fallback. If destination setup fails, cleanup stops the already-started source. `didCleanUp` prevents duplicate stops and include-file removal. |
-| AI indexing | Active catalog (`RawCullViewModel`) | No per-file start; indexing borrows the selected directory scope | No per-file stop | Index cancellation stops AI work. Catalog cancellation/change releases the session grant; workers release their retained grants when they exit. |
+| AI indexing | Active catalog (`CatalogLifecycleCoordinator`) | No per-file start; indexing borrows the selected directory scope | No per-file stop | Index cancellation stops AI work. Catalog cancellation/change releases the session grant; workers release their retained grants when they exit. |
 | Semantic query | None for ranking; active catalog remains open for follow-on actions | No start; ranking reads hydrated in-memory artifacts | No stop | Query cancellation discards query work. Any subsequent preview/export uses the appropriate catalog or export scope. |
 
 ## CLIP Indexing and Semantic Search
@@ -131,13 +130,13 @@ flowchart LR
 
 ### CLIP indexing requires the catalog scope
 
-`RawCullViewModel.indexSimilarity()` first hydrates reusable artifacts and then asks `SimilarityScoringModel.indexFiles(_:)` to generate any missing or stale artifacts. Each `FileItem` becomes an `AIImageSource` containing the file URL.
+`RawCullSimilarityFeature.indexCurrentCatalog(forceRefresh:)` first hydrates reusable artifacts and then asks `SimilarityScoringModel.indexFiles(_:)` to generate any missing or stale artifacts. Each `FileItem` becomes an `AIImageSource` containing the file URL.
 
 For an artifact that must be generated, `RawCullSimilarityImageDecoder` reads the source URL. It first asks `RawParserKitImageLoader` for a thumbnail with a maximum dimension of 512 pixels and then tries ImageIO as a fallback. Because these URLs point into the user-selected catalog, decoding depends on the catalog directory's security-scoped access still being active.
 
 RawCull does not start a new OS security scope for every image. The adapters
 retain the existing directory grant through `RawCullCatalogAccess`, and batches
-retain it across later files as well. Access was already started for the selected directory by `RawCullViewModel`, and that scope covers its files. The view model deliberately keeps the directory scope open after the initial scan so indexing, thumbnail generation, previews, exports, and other catalog operations can read the same URLs.
+retain it across later files as well. Access was already started for the selected directory by `CatalogLifecycleCoordinator`, and that scope covers its files. The lifecycle coordinator keeps the directory scope open after the initial scan so indexing, thumbnail generation, previews, exports, and other catalog operations can read the same URLs.
 
 The decoded image is passed to the selected local similarity backend. When the selected backend is CLIP, PhotoAIKit creates a normalized image embedding. Semantic-search coverage can only be populated when the active similarity backend produces artifacts compatible with the selected CLIP semantic-search backend. If Vision similarity is selected, the UI asks the user to enable **Use selected CLIP model for similarity** before building missing semantic-search artifacts.
 
@@ -169,7 +168,7 @@ The catalog scope nevertheless remains active during semantic search. Ranked fil
 ```mermaid
 sequenceDiagram
     participant User
-    participant VM as RawCullViewModel
+    participant VM as CatalogController
     participant Index as CLIP indexing
     participant Cache as App-owned artifact cache
     participant Search as Semantic search
@@ -229,7 +228,7 @@ The include list is written under `Application Support/RawCull/CopyLists`, not t
 
 ## Selected JPG Export Destination
 
-The export sheet can use an existing catalog or a folder returned by its **Choose...** file importer. `extractJPGDestination` remembers that choice for the lifetime of the `RawCullViewModel`; it is not a persistent rsync-style bookmark.
+The export sheet can use an existing catalog or a folder returned by its **Choose...** file importer. `extractJPGDestination` remembers that choice for the lifetime of `FileOperationsModel`; it is not a persistent rsync-style bookmark.
 
 Pressing **Extract** starts a separate security scope for the destination immediately before `ExtractAndSaveJPGs` begins. The scope remains active for the entire batch, including detached atomic writes performed by `SaveJPGImage`, and is stopped when `extractAndSavejpgs()` returns. The active source catalog scope remains a different ownership unit and covers RAW/JPEG reads. If source and destination happen to be the same URL, each successful start still belongs to its own operation and must receive its own stop.
 
@@ -283,7 +282,7 @@ a session by itself. `retainAccess(for:)` deduplicates covering roots and uses
 path components, avoiding a string-prefix match such as `/Photos` covering
 `/PhotosOther`. Retaining an existing grant does not call the OS start API again.
 
-[RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift) retains source access separately from the
+[FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/FileOperationsModel.swift) retains source access separately from the
 operation-owned destination scope. [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/EmbeddedJPGExportLoader.swift) and
 [FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/FullSizePreviewLoader.swift) retain access at the read boundary as well. Tests
 in [CatalogLifecycleCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CatalogLifecycleCoordinatorTests.swift) verify that worker lifetime, rather

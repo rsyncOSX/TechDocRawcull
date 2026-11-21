@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Synchronous Code"
 date = "2026-05-19"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 tags = ["concurrency", "imageio", "blocking"]
 categories = ["technical details"]
 mermaid = true
 weight = 85
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Synchronous Code
@@ -239,3 +239,12 @@ Owned bounded crop/overview buffers limit retained results, not the temporary
 cost of full-size decoding. The main burst stage uses a separate loader and cache.
 Read [Concurrency]({{< relref "concurrency.md" >}}) for the task chain and
 [Viewer Architecture]({{< relref "viewer-architecture.md" >}}) for session lifetime.
+
+## Cancellation for image workers
+
+The helper named `detachedCancellable` runs its closure as a child task in a
+task group. Cancellation propagates to the child, including when the caller
+is already cancelled. The helper runs the closure off the caller's actor.
+Synchronous decoding or rendering that has entered a system call still
+depends on the next cancellation checkpoint.
+[extension+Task+Detached.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Extensions/extension+Task+Detached.swift)

@@ -2,16 +2,16 @@
 author = "Thomas Evensen"
 title = "RawCull Internal Swift API"
 date = "2026-10-22"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "Application-internal catalog, culling, preview, scoring, similarity, AI, persistence and copy method contracts."
 weight = 25
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # RawCull Internal Swift API
@@ -27,11 +27,11 @@ calls inside the application target.
 
 ### Calling conventions
 
-Examples below run inside the app module. Names such as `viewModel`, `runtime`, `feature`, `file`, `groupFiles`, `source`, and `destinationURL` represent existing, correctly configured instances or selected values. They are context snippets, not standalone programs. Use MainActor context for UI-facing models and `await` for actor calls. Void-returning actions often communicate success or failure through observable state, so completion alone is not proof of success.
+Examples below run inside the app module. Names such as `catalogController`, `culling`, `ratings`, `burstWorkflow`, `runtime`, `feature`, `file`, `groupFiles`, `source`, and `destinationURL` represent existing, correctly configured instances or selected values. They are context snippets, not standalone programs. Use MainActor context for UI-facing models and `await` for actor calls. Void-returning actions often communicate success or failure through observable state, so completion alone is not proof of success.
 
 ### 1. Catalog loading and sorting
 
-Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ScanFiles.swift).
+Source: [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ScanFiles.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -45,7 +45,7 @@ Source: [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blo
 
 ```swift
 // App UI entry point; this schedules the lifecycle transition.
-viewModel.startCatalogLoad(for: source)
+catalogController.startCatalogLoad(for: source)
 
 // Lower-level scan for an isolated integration path.
 let scanner = ScanFiles()
@@ -65,7 +65,7 @@ Helper functions: `beginCatalogLoad`, `isActiveCatalogLoad`, `resetCatalogWorkin
 
 ### 2. Culling decisions and persistence
 
-Source: [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Culling.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CullingModel.swift).
+Source: [CullingController+Ratings.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CullingController+Ratings.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CullingModel.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -77,17 +77,17 @@ Source: [RawCullViewModel+Culling.swift](https://github.com/rsyncOSX/RawCull/blo
 | `extractRatedfilenames(_:) -> [String]` | Minimum rating | Returns qualifying names from `filteredFiles`. |
 | `ensureLoaded() async -> Bool` | None, on `CullingModel` | Loads the store if necessary; false indicates loading did not succeed. |
 | `flushPersistence() async -> Bool` | None, on `CullingModel` | Immediately persists pending changes; true also covers an already clean store. |
-| `retryCullingPersistence() async -> Bool` | None, on view model | Retries loading or saving and restores presentation after successful load recovery. |
-| `archiveCullingStoreAndReset() async -> Bool` | None, on view model | Archives a damaged store before resetting; subsequent save can still fail. This is a recovery action, not normal loading. |
+| `retryCullingPersistence() async -> Bool` | None, on `CullingController` | Retries loading or saving and restores presentation after successful load recovery. |
+| `archiveCullingStoreAndReset() async -> Bool` | None, on `CullingController` | Archives a damaged store before resetting; subsequent save can still fail. This is a recovery action, not normal loading. |
 | `clearCurrentCatalogCullingState()` / `clearAllCullingState()` | Current catalog / all stored catalogs | Clears saved culling state at the indicated scope; expose through the app's explicit user action. |
 
 Rating conventions: `-1` means rejected; `.keepers` filters explicit `0`; star filters use `2...5`. A nil stored rating is distinct from explicit zero, even though `getRating` displays both as zero. Do not invent a one-star convention.
 
 ```swift
-viewModel.updateRating(for: file, rating: 3)
-let persisted = await viewModel.cullingModel.flushPersistence()
+culling.updateRating(for: file, rating: 3)
+let persisted = await ratings.cullingModel.flushPersistence()
 if !persisted {
-    print(viewModel.cullingModel.persistenceError ?? "Save failed")
+    print(ratings.cullingModel.persistenceError ?? "Save failed")
 }
 ```
 
@@ -97,19 +97,19 @@ Helper functions: `rebuildRatingCache`, `refreshCullingDerivedState`, and `sched
 
 ### 3. Preview loading, zoom and JPEG export
 
-Source: [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/RequestThumbnail.swift), [RawCullViewModel+Thumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Thumbnails.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ExtractAndSaveJPGs.swift).
+Source: [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/RequestThumbnail.swift), [FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/FileOperationsModel.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ExtractAndSaveJPGs.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
 | `RequestThumbnail.requestThumbnail(for:targetSize:purpose:) async -> CGImage?` | Source URL, pixel size, `ThumbnailCacheKey.Purpose` | Resolves cached/generated thumbnail; coalesces matching requests. Nil means no image was produced. |
-| `selectFile(_:)` | File | Changes the focused file through the view model. |
-| `closeZoomOverlay()` / `resetZoom()` | None | Closes the overlay / resets zoom state. Session models hold detailed interaction state. |
+| `SelectionModel.select(_:)` | File | Changes the focused file and reconciles the selected IDs. |
+| `WorkspaceNavigationModel.closeZoomOverlay()` | None | Closes the overlay. Session models hold detailed interaction state. |
 | `presentExtractJPGsSheet()` | Current selection | Prepares the export sheet. |
 | `startSelectedJPGExtraction(destination:exportMode:)` | Destination `ARWSourceCatalog`, `ExtractJPGExportMode` | Starts selected-file export and publishes completion/failure presentation. |
 | `ExtractAndSaveJPGs.extractAndSavejpgs() async -> JPGExportResult` | Files, destination and mode supplied at initialization | Returns successful count plus per-file failures. Empty input returns zero successes and no failures. |
 | `cancelExtractJPGSTask()` | None, on exporter | Requests cancellation. Result counts can describe partial work. |
 | `ScanAndExtractJPGs.extractCatalogJPGs() async -> Int` | Source URLs configured on the actor | Warms the full-size preview cache. The count is processed files, including cache hits and unsuccessful decode attempts—not successful exported files. |
-| `abort()` | Current view-model tasks | Stops workflow work managed by the view model; inspect its implementation when adding a new task type. |
+| `abort()` | Current catalog workflow | `CatalogController` cancels catalog loading and JPG work through their owners. |
 
 ```swift
 let exporter = ExtractAndSaveJPGs(
@@ -130,7 +130,7 @@ Helper functions: `SaveJPGImage.outputURL`, JPEG encoding, timing estimates, pro
 
 ### 4. Sharpness and focus analysis
 
-Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
+Source: [CatalogController+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Sharpness.swift), [SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift).
 
 `calibrateAndScoreCurrentCatalog() async` calibrates and scores `sharpnessScoringTargetFiles`, re-sorts, and persists compatible scoring metadata after a non-cancelled run. Despite its name, the target may be a selection or filtered scope:
 
@@ -141,11 +141,11 @@ Source: [RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/b
 `handleSharpnessSortingChange(isEnabled:) async` applies current sorting and selects the first visible file when sharpness sorting is enabled. Read `sharpnessModel.scores`, `afPointScores` and `saliencyInfo` for results; these are measurements, not guaranteed judgments of photographic quality.
 
 ```swift
-await viewModel.calibrateAndScoreCurrentCatalog()
-let score: Float? = viewModel.sharpnessModel.scores[file.id]
+await catalogController.calibrateAndScoreCurrentCatalog()
+let score: Float? = sharpnessModel.scores[file.id]
 ```
 
-`getFocusPoints() -> [FocusPoint]?` supplies selected-image focus information when available. Missing camera metadata is a supported absence; overlays must not invent focus points.
+`CatalogWorkspace.focusPoints(forFileWithID:) -> [FocusPoint]?` supplies selected-image focus information when available. Missing camera metadata is a supported absence; overlays must not invent focus points.
 
 Helper functions: calibration adapters, persisted-score hydration, mask rendering and numeric scoring routines support these workflows. Preserve scoring signatures when reusing saved measurements.
 
@@ -178,7 +178,7 @@ Helper functions: generation checks, application binding, identity probes, backe
 
 ### 6. Burst grouping and decisions
 
-Source: [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift), [BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
+Source: [BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift), [BurstAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift).
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -193,9 +193,9 @@ Source: [RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCu
 | `advanceToNextBurstGroup(after:) -> Bool` | Current group ID | Attempts navigation; false means no next activation was made. |
 
 ```swift
-viewModel.compareBurstGroup(groupFiles)
+burstWorkflow.compareBurstGroup(groupFiles)
 // Invoke after the user chooses to apply the group decision.
-viewModel.keepBestInGroup(from: groupFiles)
+burstWorkflow.keepBestInGroup(from: groupFiles)
 ```
 
 These actions update culling decisions; rejection is a rating, not deletion of source RAW files. Empty or ineligible groups can be no-ops. Inspect ranking confidence and cautions before presenting automatic recommendations as certain.
@@ -204,7 +204,7 @@ Helper functions: group signatures, cache snapshots, ranking assembly, undo capt
 
 ### 7. AI analysis input and feature actions
 
-Source: [RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
+Source: [CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
 
 `aiAnalysisFiles(for:) -> [FileItem]` resolves `.gridSelection` or `.taggedImages`. Grid selection uses `selectedFileIDs`, falling back to the focused ID, and admits only visible filtered files. Tagged input uses persisted ratings of at least 2 within the active scope. `preserveAIAnalysisGridSelection()` freezes the fallback batch before browsing tagged images changes focus.
 
@@ -218,7 +218,7 @@ Source: [RawCullViewModel+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/
 | `cancel()` / `cancelAndWait() async` | None, on Deep Review, Qwen or Objects controller/feature | Requests cancellation / waits for cancellation handling to drain. Use the waiting form when ordering shutdown or replacement matters. |
 
 ```swift
-let files = viewModel.aiAnalysisFiles(for: .gridSelection)
+let files = catalogController.aiAnalysisFiles(for: .gridSelection)
 runtime.qwenAnalysisFeature.prompt =
     "Evaluate composition, exposure, subject visibility, and obstructions."
 await runtime.qwenAnalysisFeature.analyze(files)
@@ -231,7 +231,7 @@ Helper functions: response decoders, validation feedback, mask outlines, object 
 
 ### 8. Combined Review
 
-Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), and execution/backend files in the same directory.
+Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift), and execution/backend files in the same directory.
 
 | Function | Request | Response and effects |
 |---|---|---|
@@ -315,15 +315,15 @@ When following an async function, track three things: the state captured before 
 
 `handleSortOrderChange()` is a compact example. It captures the sort generation, catalog identity, selected source, sort order and text. After sorting, it verifies that those inputs still describe the current request.
 
-**Source excerpt — publication guard in [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift):**
+**Source excerpt — publication guard in [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift):**
 
 ```swift
-let sorted = await sortFiles(files, order, text)
-guard !Task.isCancelled, sortGeneration == generation,
+let sorted = await self.catalog.sortFiles(self.catalog.files, order, text)
+guard !Task.isCancelled, self.catalog.sortGeneration == generation,
       currentSimilarityCatalogSnapshot.identity == catalog,
-      selectedSource == source, sortOrder == order, searchText == text else { return }
-catalogDisplayCandidates = sorted
-filteredFiles = applyFilters(to: sorted)
+      self.catalog.selectedSource == source, self.catalog.sortOrder == order, self.catalog.searchText == text else { return }
+self.catalog.catalogDisplayCandidates = sorted
+self.catalog.filteredFiles = applyFilters(to: sorted)
 ```
 
 Cancellation asks work to stop; the identity and generation checks decide whether its answer still belongs to the current application state. Both are needed because an awaited dependency can complete after cancellation or after the user changes the request. The function’s deferred cleanup also checks the generation before clearing `isSorting`, so an older sort cannot hide a newer sort’s progress.
@@ -348,11 +348,11 @@ For example, this excerpt from the first selection test starts with three visibl
 **Source excerpt — selection behavior, with `first`, `second`, `third` and `state` prepared earlier in the test:**
 
 ```swift
-state.viewModel.filteredFiles = [first, second, third]
-state.viewModel.selectedFileIDs = [third.id, first.id]
+state.viewModel.catalog.filteredFiles = [first, second, third]
+state.viewModel.selection.selectedFileIDs = [third.id, first.id]
 
 #expect(
-    state.viewModel.aiAnalysisFiles(for: .gridSelection).map(\.id)
+    state.viewModel.catalogController.aiAnalysisFiles(for: .gridSelection).map(\.id)
         == [first.id, third.id],
 )
 ```
@@ -369,7 +369,7 @@ For further test setup, read [TestIsolationHelpers.swift](https://github.com/rsy
 | `LoupeFocusPresentationModel` | `request(url:source:delay:operation:)`, `cancel()`, `reset()` | Generation-gated image/loading state; reset also clears cached identity |
 | `SubjectOutlinePresentationModel` | `load(operation:)`, `reset()` | Obsolete async completion cannot replace current outline |
 | `WriteSavedFilesJSON` | `diskUsage() async -> Int` | Current primary plus backup byte sizes via writer actor |
-| `RawCullViewModel` | `burstGroupReviewState(groupID:)` | For ID −1, common explicit singleton state or `.none` |
+| `BurstWorkflowController` | `burstGroupReviewState(groupID:)` | For ID −1, common explicit singleton state or `.none` |
 
 Read [ZoomSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/ZoomSessionModel.swift),
 [LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift),
@@ -381,7 +381,7 @@ defines the render and display-evidence contracts.
 
 ## Dedicated review and semantic owners
 
-The view model exposes read-only result/state dictionaries from
+`BurstWorkflowController` exposes read-only result/state dictionaries from
 [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/BurstReviewSessionModel.swift). Use commands:
 
 | Owner | Command | Contract |
@@ -430,8 +430,8 @@ and signpost semantics, historical comparison restrictions and incomplete UI val
 The direct renderer sets it to `scale < 1`; native/JPEG results keep the default.
 Callers injecting `renderRAW` should set it explicitly for reduced fixture images.
 
-`RawCullViewModel.zoomOverlayRAWIsReduced: Bool?` and
-`zoomOverlayRAWRenderSeconds: Double?` describe the displayed RAW result.
+`ZoomOverlayModel.rawIsReduced: Bool?` and
+`rawRenderSeconds: Double?` describe the displayed RAW result.
 `handleOverlay` measures the awaited renderer/loader call, including cache hits,
 and publishes these with the image. Preserved-image replacement retains the
 previous values until publication; ordinary clearing and overlay reset set them

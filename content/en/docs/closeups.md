@@ -3,11 +3,12 @@ title = "Close Up"
 linkTitle = "Close Up"
 description = "Compare detail across frames using manual regions, pinned references, recorded autofocus points and detected crops."
 weight = 42
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
+lastmod = "2026-11-21"
 +++
 
 Close Up is the inspection panel in the burst and Single Images workspace.
@@ -45,7 +46,7 @@ their source revisions, so revisiting a frame can restore its region.
 
 - **Fit region** fits each chosen area inside its card. Use it to compare
   framing, expression or the placement of detail.
-- **Source pixels** uses the rendered source's pixel scale as the baseline.
+- **Source pixels** uses one source pixel per physical display pixel at 1×, including on Retina displays.
   Check the source label and dimensions under the crop when judging fine
   detail across frames.
 - **JPG** uses the preview path. The source label identifies which preview
@@ -83,7 +84,7 @@ manual comparison use separate regions.
 | Animal head | A crop around usable head landmarks | Check head framing and visible detail. |
 | Animal eye | A tighter crop around each usable eye landmark | Inspect the visible eye and use a manual RAW crop when more source detail is needed. |
 
-RawCull uses Vision's animal body pose request for the pilot. A head crop
+RawCull calls PhotoAnalysisKit's animal body pose adapter. A head crop
 needs enough landmarks to establish a crop size. Eyes below the confidence
 threshold are omitted, so a profile may show a single eye, and a head may
 appear without eye tiles. Apple documents cat and dog support. Coverage

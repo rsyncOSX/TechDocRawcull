@@ -3,18 +3,18 @@ author = "Thomas Evensen"
 title = "Combined AI Review: A Step-by-Step Code Guide"
 linkTitle = "Combined AI Review"
 date = "2026-10-10"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 description = "Trace 1–8-image Combined Review through source admission, registered masks, criterion observations, evidence-row reports, comparison, and saved-run compatibility."
 weight = 60
 tags = ["ai", "combined-review", "architecture", "qwen", "sam", "clip", "swift"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Combined AI Review: A Step-by-Step Code Guide
@@ -104,16 +104,16 @@ against the model's available capabilities.
 | [Composition/RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) | Creates stable feature and live-backend factory |
 | [Composition/CombinedReviewLiveBackend.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift) | Admits and uses concrete Qwen/SAM/CLIP model services |
 | [CombinedReview/CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) | Observable controls, admission, task lifecycle, restore/resume |
-| [CombinedReview/CombinedReviewExecution.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewExecution.swift) | Preparation, planning, inspection and report synthesis |
-| [CombinedReview/CombinedReviewWorkExecution.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewWorkExecution.swift) | Work execution, repair, diagnostics, dependencies, retention and provenance |
-| [CombinedReview/CombinedReviewComparisonExecution.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewComparisonExecution.swift) | Comparison prompts, evidence-reference validation and selection/pair comparison |
-| [CombinedReview/ReviewRunError.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunError.swift) | Shared typed run errors |
-| [CombinedReview/ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift) | Typed IDs, frozen snapshot and compatibility versions |
-| [CombinedReview/ReviewRunManifest.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunManifest.swift) | Persisted work states and evidence history |
-| [CombinedReview/ReviewImageSource.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewImageSource.swift) | Source availability, bounded loading and declared render |
-| [CombinedReview/ReviewMaskRegistration.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewMaskRegistration.swift) | Registers decoded mask foreground against source raster |
-| [CombinedReview/ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewSynthesisGrounding.swift) | Accepted observation and claim ownership rules |
-| [CombinedReview/ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift) | Artifact persistence and retained inputs |
+| [CombinedReview/CombinedReviewExecution.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/CombinedReviewExecution.swift) | Preparation, planning, inspection and report synthesis |
+| [CombinedReview/CombinedReviewWorkExecution.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/CombinedReviewWorkExecution.swift) | Work execution, repair, diagnostics, dependencies, retention and provenance |
+| [CombinedReview/CombinedReviewComparisonExecution.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/CombinedReviewComparisonExecution.swift) | Comparison prompts, evidence-reference validation and selection/pair comparison |
+| [CombinedReview/ReviewRunError.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunError.swift) | Shared typed run errors |
+| [CombinedReview/ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift) | Typed IDs, frozen snapshot and compatibility versions |
+| [CombinedReview/ReviewRunManifest.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunManifest.swift) | Persisted work states and evidence history |
+| [CombinedReview/ReviewImageSource.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Imaging/ReviewImageSource.swift) | Source availability, bounded loading and declared render |
+| [CombinedReview/ReviewMaskRegistration.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Imaging/ReviewMaskRegistration.swift) | Registers decoded mask foreground against source raster |
+| [CombinedReview/ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Evidence/ReviewSynthesisGrounding.swift) | Accepted observation and claim ownership rules |
+| [CombinedReview/ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Storage/ReviewArtifactStore.swift) | Artifact persistence and retained inputs |
 
 Presentation lives in [RawCull/Views/AIAnalysis/CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/AIAnalysis/CombinedReviewView.swift) and the
 inspection/evidence views beside it. These links use the inspected immutable application commit.
@@ -313,7 +313,7 @@ inspectable; Resume additionally requires compatible files, models, source,
 stage versions and contracts. Rerun creates a new run using current controls.
 Changing a picker does not mutate the frozen preference in an older run.
 
-Current compatibility values on October 22 (defined by [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift)):
+Current compatibility values on October 22 (defined by [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift)):
 
 | Contract | Version |
 | --- | --- |
@@ -388,8 +388,8 @@ The current scorer semantics are `subject-detail-v2`.
 The pipeline and measurement version changes reject incompatible resume work.
 They do not require every unchanged stage to use `combined-v22`: crop observation
 remains v21, overview v10 and segmentation/identity v6. Read
-[ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewRunContract.swift), [ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewSynthesisGrounding.swift),
-[ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift) and [RawCullTests/ReviewRunContractTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewRunContractTests.swift)
+[ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift), [ReviewSynthesisGrounding.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Evidence/ReviewSynthesisGrounding.swift),
+[ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Storage/ReviewArtifactStore.swift) and [RawCullTests/ReviewRunContractTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewRunContractTests.swift)
 together when changing persisted evidence.
 
 ## Photo-first and Evidence workspace presentation
@@ -440,3 +440,11 @@ Close Up uses the shared embedded-preview loader with a 1,600-pixel cap.
 The optional cap is supplied by the Close Up caller. Combined Review keeps
 its existing request policy, and opening Close Up does not start a Combined
 Review run.
+
+## Current source layout
+
+Start with [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift).
+`Execution/` houses run admission, manifests and execution. `Evidence/` houses
+evidence and synthesis payloads. `Imaging/` houses preview and mask geometry,
+and `Storage/` houses saved artifacts and the lease. Deep Review and Combined
+Review share the mask primitives in `RawCull/Intelligence/SubjectMasks/`.

@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Thumbnails and Scan Pipeline
@@ -32,7 +32,7 @@ is a different source when its size or modification date changes.
 
 | Area                             | Main files                                                                                                                                                                                          |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Catalog lifecycle                | [RawCullViewModel+Catalog.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Catalog.swift), [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullMainView.swift)                                                                                                                                           |
+| Catalog lifecycle                | [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullMainView.swift)                                                                                                                                           |
 | App/package loading boundary     | [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift), [RawParserKit/Sources/RawParserKit/RawImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawImageLoader.swift)                                                                                                             |
 | File discovery and metadata scan | [Actors/DiscoverFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/DiscoverFiles.swift), [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift)                                                                                                                                              |
 | Catalog thumbnail preload        | [Actors/ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndCreateThumbnails.swift), [Model/Handlers/CreateFileHandlers.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/CreateFileHandlers.swift)                                                                                                                   |
@@ -66,7 +66,7 @@ flowchart TD
 
 ## Catalog Load Ownership
 
-`RawCullViewModel.startCatalogLoad(for:)` delegates the transition to
+`CatalogController.startCatalogLoad(for:)` delegates the transition to
 `CatalogLifecycleCoordinator`. It flushes the previous culling store before
 replacing the catalog. A failed flush restores the previous selection. Once
 admitted, `beginCatalogLoad(for:)` cancels old work, resets catalog state, starts

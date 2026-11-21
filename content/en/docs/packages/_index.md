@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated; historical package audit retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # RawCull Packages
@@ -33,9 +33,43 @@ their explicitly dated architecture audits and add current integration notes.
 PhotoEvidenceKit has a new guide covering the resolved 1.0.7 implementation.
 Sibling checkout HEADs do not redefine the application's resolved baseline.
 
+## Build 462 Resolved Dependencies
+
+The [Xcode workspace lockfile](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) contains
+24 remote pins. PhotoAnalysisKit and PhotoEvidenceKit resolve remotely
+again. The standalone MCP Swift package has its own
+[lockfile](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/Tools/RawCullMCP/Package.resolved).
+
+| Identity | Version | Revision |
+| --- | --- | --- |
+| `coreai-models` | `1.0.0` | `5de95c6cd29e5e390fb36d87e13b2396668f7974` |
+| `decodeencodegeneric` | `1.0.0` | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
+| `eventsource` | `1.6.0` | `bb4b61273b5a976bb571859c17f903ebc3439df1` |
+| `parsersyncoutput` | `1.0.0` | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
+| `photoaikit` | `1.0.0` | `4b85056e6c2603b5e382987710ca2f16f4c5c155` |
+| `photoanalysiskit` | `1.3.9` | `db156bc5ff60b9ce3aec0229c04df9b0108e9e91` |
+| `photoevidencekit` | `1.1.5` | `e49d34adcfa2e2c43a4240c2e962dbe9defa4cad` |
+| `rawcullcore` | `1.1.5` | `ea8ac2fc6611949af2b55ec433456bfe502cf886` |
+| `rawparserkit` | `1.3.3` | `26df4abc2178d5c07d08f3883d84d0648f5141d3` |
+| `rsyncarguments` | `1.0.0` | `0ff6518136c208dfbecc1a918f045048ca79853d` |
+| `rsyncprocessstreaming` | `1.0.0` | `dd86f012b352888fd146e0b6e103740dc237f740` |
+| `swift-asn1` | `1.7.4` | `917b472dbe53ba699cbb0495f9a95a084bc6364d` |
+| `swift-atomics` | `1.3.1` | `0442cb5a3f98ab802acb777929fdb446bda11a34` |
+| `swift-collections` | `1.7.5` | `f96b909e1a9e469620bc5037c1e24e00153f376f` |
+| `swift-crypto` | `4.5.2` | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
+| `swift-huggingface` | `1.0.0` | `c30143a4616f3fa994ee3ab3e3464f752845c07c` |
+| `swift-jinja` | `3.0.0` | `a091d6ae559ee97e904a0f3c2890b21949d0306f` |
+| `swift-log` | `1.17.0` | `e3da04078777e6a1b72ce19981fbd6539b0847d8` |
+| `swift-nio` | `2.105.0` | `2f58d8ef84438d6517fc78bcea2f8527e3c72936` |
+| `swift-sdk` | `0.12.1` | `a0ae212ebf6eab5f754c3129608bc5557637e605` |
+| `swift-system` | `1.8.1` | `869129b7bf4ecc57b97d0193ad29690ca2134750` |
+| `swift-transformers` | `1.4.0` | `402a8a1105f52038b0949d9596981fc9e32bed17` |
+| `xgrammar` | `0.2.2` | `4d145cc13d878c751ebeed36af1c013074be76bc` |
+| `yyjson` | `0.13.0` | `6447536015f3d600f3d65323b10976103b337ca7` |
+
 ## November 9 Close Up Development Build
 
-The unmerged `version-3.4.5` branch uses two local package references.
+At the November 9 review, the `version-3.4.5` branch used two local package references.
 Its source baseline is RawCull 3.4.5, build 436, commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da).
 The revisions identify the sibling checkouts used to verify the integration.
 

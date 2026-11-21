@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 30
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained; historical package audit retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated; historical package audit retained"
 +++
 
 # How RawCullCore Is Constructed
@@ -470,7 +470,7 @@ Use these constraints when adding a rule:
 | Ranking and confidence                           | [Sources/RawCullCore/BurstRankingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/BurstRankingEngine.swift)                                                         |
 | Histogram                                        | [Sources/RawCullCore/HistogramCalculator.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Sources/RawCullCore/HistogramCalculator.swift)                                                        |
 | Behavior tests                                   | `Tests/RawCullCoreTests/`                                                                              |
-| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+BurstGrouping.swift) |
+| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift) |
 
 Return to the package overview in [RawCull Packages](/docs/packages/), or
 continue with the file-decoding layer in
@@ -535,3 +535,10 @@ new recommendation only for the current host request and preserve separately
 owned photographer decisions. Refresh a pinned close-up's source revision through
 `updateReference` so manual inspection can stay current without modifying the
 ranking input or host selection.
+
+## Resolved app revision
+
+Build 462 pins RawCullCore **1.1.5**
+at `ea8ac2fc6611949af2b55ec433456bfe502cf886`. The app's burst workflow invokes the
+package algorithms through app-side adapters. Earlier examples and results
+retain their original audit revision.

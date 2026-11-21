@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 20
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained; historical package audit retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated; historical package audit retained"
 +++
 
 # How PhotoAnalysisKit Is Constructed
@@ -577,16 +577,24 @@ that the subject is sharp. Supply metadata appropriate to each API and perform
 sensor-to-oriented coordinate conversion in the host adapter.
 
 
-## November 9 Close Up Integration
+## Close Up Integration
 
-The development build uses the sibling `../PhotoAnalysisKit` checkout.
+Build 462 uses PhotoAnalysisKit 1.3.9.
 `FaceEvidenceAnalyzer` runs Vision face rectangle detection on an upright
 embedded preview and can return a local luminance-gradient measurement for
 each face. RawCull owns the disposable evidence cache. It keys compatibility
 on the source revision, preview configuration and dimensions, algorithm
 version, Vision revision and OS version.
 
-RawCull runs its animal head and eye pilot directly through Vision. Animal
+RawCull calls the package’s `AnimalCloseUpDetector` for animal head and eye crops. Animal
 tiles are visual crops. The human face detail measurement stays with the
 human tiles. See the [Close Up guide]({{< relref "closeups.md" >}}) for how
 these tiles appear beside manual comparisons.
+
+## Changes at 1.3.9
+
+The package can reuse supplied focus evidence without repeating Vision.
+Scoring uses the configured capture fallbacks when metadata is missing, includes
+those fallbacks in scalar cache identity, and uses the global score when subject
+evidence is unavailable. Calibration records its decode size alongside the
+mask cutoff. Historical metric tables above describe their pinned audits.

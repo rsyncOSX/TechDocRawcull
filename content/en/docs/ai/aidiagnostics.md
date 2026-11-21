@@ -1,15 +1,15 @@
 +++
 title = "AI Diagnostics and Validation"
 date = "2026-10-16"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 weight = 70
 description = "Trace AI failures and retained evidence from structured validation to opt-in model qualification."
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # AI Diagnostics and Validation
@@ -25,10 +25,10 @@ CLIP is not a calibrated measure of sharpness.
 | Workflow | Entry points | Inspect |
 | --- | --- | --- |
 | Similarity/semantic | [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) | Active backend, valid artifact coverage, descriptor/source mismatch and per-file failures |
-| Deep Review | [DeepAIReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift), [SubjectMaskFocusScorer.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Admitted candidates, mask foreground, relative detail values and recommendation limits |
+| Deep Review | [DeepAIReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift), [SubjectMaskFocusScorer.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/SubjectMasks/SubjectMaskFocusScorer.swift) | Admitted candidates, mask foreground, relative detail values and recommendation limits |
 | Standalone Qwen | [RawCullQwenAnalysisFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Qwen/RawCullQwenAnalysisFeature.swift) | First response, bounded repair, cancellation and model generation |
 | Objects | [RawCullObjectAnalysisFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/ObjectAnalysis/RawCullObjectAnalysisFeature.swift), [ObjectAnalysisResponseDecoder.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/ObjectAnalysis/ObjectAnalysisResponseDecoder.swift) | Concept ownership, numbered board/crop mapping, missing IDs, paired evidence and focus abstention |
-| Combined | [CombinedReviewWorkExecution.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/CombinedReviewWorkExecution.swift), [ReviewDiagnostics.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewDiagnostics.swift) | Stage dependencies, validation code, source/region identity, admitted evidence and incomplete coverage |
+| Combined | [CombinedReviewWorkExecution.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/CombinedReviewWorkExecution.swift), [ReviewDiagnostics.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewDiagnostics.swift) | Stage dependencies, validation code, source/region identity, admitted evidence and incomplete coverage |
 
 For Objects, a no-match segmentation result is different from an invalid board
 response. Retry Failed is a later operation and may reuse segmentation only if
@@ -38,7 +38,7 @@ focus claims may be removed while preserving the other supported object findings
 
 ## Combined Review stores a typed technical record
 
-[ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/CombinedReview/ReviewArtifactStore.swift) defaults to
+[ReviewArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Storage/ReviewArtifactStore.swift) defaults to
 `Application Support/RawCull/AnalysisArtifacts/CombinedReview`. Its run manifests
 record work states, compatibility identities and artifact keys. Stage artifacts,
 retained input PNGs and opt-in rejected responses are distinct storage categories.

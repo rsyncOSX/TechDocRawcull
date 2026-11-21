@@ -3,18 +3,18 @@ author = "Thomas Evensen"
 title = "AI Models in RawCull"
 linkTitle = "AI Models in RawCull"
 date = "2026-09-20"
-lastmod = "2026-10-31"
+lastmod = "2026-11-21"
 description = "Code-level guide to local CLIP, Vision, SAM 3, Qwen, Deep Review, and numbered Objects analysis in RawCull."
 weight = 58
 tags = ["ai", "clip", "sam3", "qwen", "objects", "architecture", "core-ai"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # AI Models in RawCull
@@ -84,7 +84,7 @@ model per folder. Start with this catalog when tracing the code.
 | --- | --- |
 | [`DeepAIReviewController.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewController.swift) | Converts the current RawCull selection, burst evidence, sharpness evidence, subject label, and AF point into a review request. |
 | [`DeepAIReviewFeature.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift) | Owns review state and implements the complete decode → prompt → mask → score → recommendation pipeline. |
-| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
+| [`SubjectMaskFocusScorer.swift`](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/SubjectMasks/SubjectMaskFocusScorer.swift) | Computes subject-only broad, local, and fine detail evidence from an image and SAM mask. |
 | [`DeepAIReviewMaskOutlineRenderer.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) | Turns a persisted filled mask into a display outline. |
 
 ### Objects: Qwen discovery, SAM 3 instances, Qwen review
@@ -141,7 +141,7 @@ and Qwen licences do not require an extra acceptance action.
 
 ## How AI Modules Are Instantiated
 
-The application has two stable roots: `RawCullViewModel` for general app state
+The application has two stable roots: `RawCullViewModel` for workspace composition
 and `RawCullIntelligenceRuntime` for AI-facing state. They are created once in
 [`RawCullApp.init()`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullApp.swift)
 and retained in SwiftUI `@State`.
@@ -421,7 +421,7 @@ model for Deep Review; CLIP enriches prompt selection when available.
 
 ### 1. Building the request
 
-`DeepAIReviewController.start(for:)` asks `RawCullViewModel` for a stable group
+`DeepAIReviewController.start(for:)` asks `BurstWorkflowController` for a stable group
 context. `deepAIReviewContext(for:)` captures:
 
 - a `BurstGroupSignature` tied to the current catalog and exact member files;

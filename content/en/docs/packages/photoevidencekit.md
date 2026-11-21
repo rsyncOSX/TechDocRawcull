@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "How PhotoEvidenceKit Is Constructed"
 linkTitle = "PhotoEvidenceKit Architecture"
 date = "2026-11-08"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 description = "PhotoEvidenceKit contracts, close-up geometry, bounded rendering, retained references, region persistence, AF assistance, and RawCull integration."
 tags = ["close-ups", "image-inspection", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 50
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained; historical package audit retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated; historical package audit retained"
 +++
 
 # How PhotoEvidenceKit Is Constructed
@@ -293,6 +293,13 @@ rapid selection changes, source/settings changes during decoding, persistence
 failures and peak memory during full-resolution loads. The package tests establish
 contract behavior; they do not measure a host decoder's cold/warm latency or memory
 budget.
+
+## Changes at 1.1.5
+
+Source-pixel zoom 1 now maps a source pixel to one physical display pixel
+at the active display scale. Detected-face crops are redrawn into bounded,
+owned buffers. The earlier geometry walkthrough describes the original
+1.0.7 implementation.
 
 ## Source Map
 

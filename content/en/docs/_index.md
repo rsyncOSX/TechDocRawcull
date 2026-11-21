@@ -2,13 +2,13 @@
 title: RawCull Tech Documentation
 linkTitle: Documentation
 menu: { main: { weight: 20 } }
-lastmod: 2026-11-08
+lastmod: 2026-11-21
 
-reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version: "3.4.5"
-reviewed_build: 436
-reviewed_on: "2026-11-09"
-review_scope: "source delta and reference check; content updated"
+reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version: "3.4.9"
+reviewed_build: 462
+reviewed_on: "2026-11-21"
+review_scope: "Content and references updated"
 ---
 
 ## RawCull Developer Notes
@@ -53,7 +53,7 @@ user-selected folders, export, or copying.
 | -------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | App composition            | [RawCull/Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullApp.swift)                                           | Uses `RawCullApplicationState.live()` to assemble stable models/features, inject environment state, and define windows and commands |
 | Main presentation          | [RawCull/Main/RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullMainView.swift)                                      | Switches between loupe, grid, similarity, rated, and comparison modes and owns top-level sheets and overlays                  |
-| App orchestration          | [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel.swift) plus feature extensions | Coordinates catalog, selection, navigation, progress and feature actions; dedicated models own review and semantic state                         |
+| App orchestration          | [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel.swift) | Assembles catalog, culling, burst, presentation and AI owners for environment injection                         |
 | Background ownership       | `RawCull/Actors/`                                                         | Serializes scans, thumbnail requests, caches, persistence, extraction, and contention gates                                   |
 | App services and adapters  | `RawCull/Model/`                                                          | Connects the UI model to RAW parsing, sharpness analysis, AI providers, persistence, diagnostics, and rsync                   |
 | Reusable domain logic      | `RawCullCore` package                                                     | Value models and pure algorithms such as burst grouping and ranking                                                           |
@@ -67,13 +67,15 @@ user-selected folders, export, or copying.
 ```mermaid
 flowchart TD
     App["RawCullApp: composition root"] --> Main["RawCullMainView: presentation router"]
-    Main --> VM["RawCullViewModel: @MainActor orchestration"]
-    VM --> Feature["Feature models: culling, sharpness, similarity, Deep Review, settings"]
-    VM --> Actors["Actors: scan, thumbnail, cache, persistence, export"]
+    App --> VM["RawCullViewModel: workspace composition"]
+    VM --> Owners["Observable state and workflow controllers"]
+    Main --> Owners
+    Owners --> Feature["Feature models: culling, sharpness, similarity, Deep Review, settings"]
+    Owners --> Actors["Actors: scan, thumbnail, cache, persistence, export"]
     Feature --> Analysis["PhotoAnalysisKit"]
     Feature --> AI["PhotoAIKit services and typed artifacts"]
     Actors --> Parser["RawParserKit"]
-    VM --> Core["RawCullCore pure models and algorithms"]
+    Owners --> Core["RawCullCore pure models and algorithms"]
     Actors --> Storage["Application Support, Caches, selected folders"]
 ```
 
@@ -92,12 +94,32 @@ The boundaries are based on ownership:
 - Security-scoped access remains alive at the app or operation boundary for as
   long as user-selected files are used.
 
+## Workspace owners in 3.4.9
+
+[RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/RawCullViewModel.swift) wires the long-lived workspace objects together.
+`workspaceEnvironment(_:)` supplies those objects to SwiftUI. Views read the
+state and operations they use through the environment or explicit inputs.
+
+| Owner | State or actions |
+| --- | --- |
+| `CatalogWorkspace` | Open source, scanned and filtered files, scan progress, focus-point lookup |
+| `CatalogController` | Catalog loading, sorting and filtering, grid and zoom projections, sharpness and AI input |
+| `CatalogLifecycleCoordinator` | Catalog transitions, load tasks and security grant |
+| `SelectionModel` and `RatingsModel` | Focus, selection and comparison IDs, plus culling store and rating revision |
+| `CullingController` | Rating changes, selection advance and culling-store recovery |
+| `BurstWorkflowController` | Analysis coordination, review queue, keep-best, undo and Deep Review context |
+| `WorkspaceNavigationModel`, `ZoomOverlayModel` and `LoupeViewportModel` | View mode, overlay lifecycle and result metadata, and persistent loupe pan/zoom |
+| `WorkspacePresentationModel` and `FileOperationsModel` | Window chrome, sheets and banners, plus JPG work and progress |
+
+See [Internal Swift API]({{< relref "/docs/apidocs/rawcull-internal-api.md" >}}) for call sites and
+[Viewer Architecture]({{< relref "/docs/viewer-architecture.md" >}}) for presentation lifetimes.
+
 ## Follow One Feature Through The Code
 
 When investigating a behavior, read it in this direction:
 
 1. Find the SwiftUI control or lifecycle trigger.
-2. Find the `RawCullViewModel` or feature-model method it calls.
+2. Find the environment model or controller that handles the action.
 3. Identify which actor, adapter, or package owns the expensive or mutable work.
 4. Follow the value returned to main-actor state.
 5. Read the tests named after the actor, model, or feature before changing the
@@ -120,14 +142,12 @@ because it shows both ownership and the complete lifetime of the operation.
 
 ## Reviewed source baseline
 
-Reviewed on **9 November 2026** against **RawCull 3.4.5, build 436**,
-commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da) on `version-3.4.5`. This development branch is awaiting
-stability verification and merge into `main`.
-
-The lockfile contains **17 remote pins**. PhotoAnalysisKit and PhotoEvidenceKit
-resolve from sibling checkouts. See the [package snapshot]({{< relref "packages/_index.md" >}})
-and [review record]({{< relref "update.md" >}}). Historical audits and measurements
-retain their original source revisions.
+Reviewed on **21 November 2026** against **RawCull 3.4.9 build 462**,
+commit [a0c72d11](https://github.com/rsyncOSX/RawCull/commit/a0c72d11b6dea1f409542faf90f76fba43cdb0f5). The commit
+is present on both `version-3.4.9` and `main`. The Xcode workspace resolves
+24 remote pins. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}) and
+[review record]({{< relref "/docs/update.md" >}}). Historical audits and measurements retain
+their original source revisions.
 
 Read [Viewer Architecture and Keyboard Ownership]({{< relref "viewer-architecture.md" >}})
 for the October viewer refactor and
@@ -139,7 +159,7 @@ provides the application tour; its detailed method reference is now separate.
 
 ## State ownership and historical catalog performance
 
-`RawCullViewModel` retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
+`BurstWorkflowController` retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
 for review decisions, independently of viewport/image sessions.
 `SimilarityScoringModel` retains [RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift)
 for semantic evidence, provider configuration and queries, while keeping its

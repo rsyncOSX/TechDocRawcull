@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; existing content retained"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Focus Mask And Sharpness
@@ -42,7 +42,7 @@ persistence.
 
 ```mermaid
 flowchart TD
-    CONTROLS["SharpnessControlsView<br/>start, cancel, photo type"] --> VM["@MainActor RawCullViewModel<br/>target files and persistence"]
+    CONTROLS["SharpnessControlsView<br/>start, cancel, photo type"] --> VM["@MainActor CatalogController<br/>target files and persistence"]
     SHEET["ScoringParametersSheetView<br/>quality, source, size, config"] --> MODEL["@MainActor SharpnessScoringModel<br/>request, generation, progress, results"]
     SETTINGS["FocusSettingsTab and FocusMaskControlsView"] --> FM["@MainActor FocusMaskModel<br/>presentation bridge"]
     VM --> MODEL
@@ -167,7 +167,7 @@ IDs, the scoring signature, and the concurrency limit.
 - Cancellation makes the package return nil and partial results are discarded.
 - Final score, saliency, and breakdown dictionaries are replaced only if the
   task is not cancelled and the generation still matches.
-- A successful run enables sharpness sorting, then `RawCullViewModel` merges the
+- A successful run enables sharpness sorting, then `CatalogController` merges the
   results into `CullingModel`.
 
 This is latest-wins state management. Cancelling work alone is insufficient;
@@ -223,7 +223,7 @@ stage classification.
 
 1. **RawCull/Views/GridView/SharpnessControlsView.swift** and
    **ScoringParametersSheetView.swift** — user entry and settings.
-2. **RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift** — target scope,
+2. **RawCull/Model/ViewModels/CatalogController+Sharpness.swift** — target scope,
    persistence handoff, and sort.
 3. **RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift** —
    request identity, generation, bounds, progress, and publication.
@@ -258,7 +258,7 @@ for overlay rendering.
 
 ## Restoring scores without repeated normalization
 
-[RawCullViewModel+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/RawCullViewModel+Sharpness.swift) restores persisted scores by building one
+[CatalogController+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Sharpness.swift) restores persisted scores by building one
 filename index and validating the scoring signature, source byte size and
 modification date (within 0.001 seconds). It collects the valid values before
 publishing dictionaries, so normalization runs once per restoration. AF-center
@@ -300,3 +300,11 @@ Group changes preserve that preference while resetting the inspection session.
 This does not call `PhotoAnalyzer`, rerank candidates or replace AF-center scores.
 Moving a manual region is not a request to recompute the focus mask or score.
 See [viewer ownership]({{< relref "viewer-architecture.md" >}}).
+
+## Calibration source and display scale
+
+The visual mask cutoff is calibrated on embedded previews at a 1616-pixel
+target even when scalar scoring uses RAW demosaic. The overlay analysis
+can rescale its input to match that calibration scale. A late burst
+calibration result is applied only while its run is still active.
+[FocusMaskTypes.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskTypes.swift)

@@ -2,18 +2,18 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-21"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
 weight = 35
 slug = "concurrency-revised"
 
-reviewed_commit = "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version = "3.4.5"
-reviewed_build = 436
-reviewed_on = "2026-11-09"
-review_scope = "source delta and reference check; content updated"
+reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_version = "3.4.9"
+reviewed_build = 462
+reviewed_on = "2026-11-21"
+review_scope = "Content and references updated"
 +++
 
 # Concurrency
@@ -42,23 +42,23 @@ independent callbacks on the view model.
 model to SwiftUI scenes, sheets, alerts, commands, and child views. It does not
 own catalog decoding, thumbnail admission, analysis, or persistence work.
 
-`RawCullViewModel` is `@Observable @MainActor`. It owns the current catalog,
-selection, application operation lifetimes, result application, culling policy,
-and active catalog security scope. `BurstAnalysisCoordinator` owns the burst
-worker task, generation, progress, cache preparation, compute orchestration, and
-cache save. `RawCullSimilarityFeature`, `RawCullSemanticSearchFeature`, and
-`DeepAIReviewController` are the view-facing AI boundaries. Background actors
-own mutable file, cache, provider, and persistence state.
+`RawCullViewModel` assembles main-actor state and controllers. `CatalogController`
+coordinates loads and publication using `CatalogWorkspace` and
+`CatalogLifecycleCoordinator`. `FileOperationsModel` owns export and cache
+warming. `BurstWorkflowController` owns application burst actions and uses
+`BurstAnalysisCoordinator` for the worker task, generation, progress, cache
+preparation and save. Background actors own mutable storage and provider state.
 
 ```mermaid
 flowchart LR
     APP["RawCullApp<br/>stable @State roots"] --> STATE["RawCullApplicationState<br/>object-graph assembly"]
-    STATE --> VM["@MainActor RawCullViewModel<br/>catalog and application policy"]
+    STATE --> VM["@MainActor RawCullViewModel<br/>workspace composition"]
     STATE --> RT["@MainActor RawCullIntelligenceRuntime<br/>AI lifetime and configuration"]
     RT --> AIS["RawCullAISettingsModel"]
     RT --> FEATURES["Focused similarity, semantic, and Deep Review surfaces"]
     VM --> VIEW["RawCullMainView and SwiftUI presentation"]
-    VM --> BURST["BurstAnalysisCoordinator"]
+    VM --> WORKFLOW["BurstWorkflowController"]
+    WORKFLOW --> BURST["BurstAnalysisCoordinator"]
     FEATURES --> ACTORS["Background actors and package services"]
     BURST --> ACTORS
     ACTORS --> VALUES["Sendable results"]
@@ -72,7 +72,7 @@ flowchart LR
 flowchart TB
     subgraph CATALOG["Catalog load"]
         C1["SwiftUI selection<br/>MainActor"] --> C2["flushPersistence<br/>CullingModel"]
-        C2 --> C3["start catalog security scope<br/>RawCullViewModel"]
+        C2 --> C3["start catalog security scope<br/>CatalogLifecycleCoordinator"]
         C3 --> C4["CatalogLifecycleCoordinator.loadTask + retained grant"]
         C4 -->|"await actor"| C5["ScanFiles actor"]
         C5 -->|"bounded task group"| C6["metadata and focus-point reads"]
@@ -89,7 +89,7 @@ flowchart TB
     end
 
     subgraph BURST["Burst indexing"]
-        B1["RawCullViewModel builds immutable request"] --> B2["BurstAnalysisCoordinator generation + task"]
+        B1["BurstWorkflowController builds immutable request"] --> B2["BurstAnalysisCoordinator generation + task"]
         B2 --> B3["cache prepare / bounded scoring and indexing"]
         B3 --> B4["provider and artifact-store actors"]
         B4 --> B5["grouping and ranking"]
@@ -137,7 +137,7 @@ expensive work.
 
 | Owner                                                       | State and lifetime owned                                                                                                     |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `RawCullViewModel`                                          | Active catalog, selection, security scope, catalog/preload/export tasks, result application, culling and presentation policy |
+| `RawCullViewModel`                                          | Assembles catalog, selection, ratings, navigation and workflow owners |
 | `CullingModel`                                              | In-memory culling records, debounced save task, persistence revision and errors                                              |
 | `SharpnessScoringModel`                                     | Scoring request/generation, options, progress, scores and breakdowns                                                         |
 | `SimilarityScoringModel` | Image artifacts, indexing/ranking/grouping generations and forwarding semantic API |
@@ -300,7 +300,7 @@ or use a continuation without a cancellation path.
 | Operation           | Owner                            | Start                                                               | Stop / failure cleanup                                                                                                         |
 | ------------------- | -------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Active catalog      | `CatalogLifecycleCoordinator` / retained grants | Before `CatalogLifecycleCoordinator.loadTask`, after the previous catalog is flushed     | Session release on cancellation, empty/failed load, replacement or termination; actual stop after final worker grant release                                        |
-| Selected JPG export | `RawCullViewModel+Thumbnails`    | Before constructing `ExtractAndSaveJPGs`                            | Main-actor completion path after success, failure, or cancellation                                                             |
+| Selected JPG export | `FileOperationsModel`    | Before constructing `ExtractAndSaveJPGs`                            | Main-actor completion path after success, failure, or cancellation                                                             |
 | Rsync copy          | `ExecuteCopyFiles`               | Active catalog URL for source; `destBookmark` for destination       | One idempotent `cleanup()` on startup failure, completion, close, or deinit; it also removes the operation's include-list file |
 | App termination     | `AppDelegate` and `CullingModel` | No new scope; uses the active catalog scope                         | Flush first; release scope only on successful flush                                                                            |
 
@@ -457,3 +457,12 @@ obsolete loads when the current URL changes. The loader retains catalog access
 and checks cancellation and source revision before saving or returning results.
 Manual card metadata loads off the main actor and is published after a
 cancellation check.
+
+## Vision work admission in build 462
+
+The Vision similarity indexer shares one feature-print backend and keeps up
+to four decodes in flight. `BurstDetectedFaceLoader` shares a face analyzer.
+Face and animal work share a two-operation limiter. Sharpness scoring caps
+its quality/source limit at `max(1, activeProcessorCount / 2)`. See
+[the Vision implementation and test record](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/Docs/visionupdate.md) for
+the completed app changes and the proposed cross-package queue.
