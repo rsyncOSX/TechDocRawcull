@@ -474,7 +474,7 @@ a burst card thumbnail opens the workspace at that frame. Navigation follows
 the active frame for single-frame inspection and preserves explicit multi-frame
 membership. See
 [viewer ownership]({{< relref "viewer-architecture.md" >}}) and
-[remaining unified evidence work]({{< relref "newfeatures/unified-burst-evidence.md" >}}).
+[remaining unified evidence work]({{< relref "/docs/newfeatures/newfeatures.md#scope-for-item-3-unified-burst-evidence" >}}).
 
 ## People Ranking in the comparison workspace
 

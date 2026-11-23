@@ -39,11 +39,9 @@ revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/dc048db4
 | [The RawCull AI Runtime](/docs/ai/airuntime/) | How are providers and long-lived features assembled? | You are tracing startup, refresh, or service replacement |
 | [AI Models in RawCull](/docs/ai/aiinrawcull/) | How do CLIP, Vision, SAM 3, Qwen, and Objects work in the app? | You are tracing an analysis from input to result |
 | [Download AI models](/docs/ai/rawcullai/) | How are the three release packs rebuilt? | You are preparing source weights, conversions, or archives |
-| [Combined AI Review](/docs/ai/aicombined/) | How do source, masks, observations, report selection, and comparison connect? | You need the multi-stage workflow and saved-run contracts |
-| [AI Diagnostics and Validation](/docs/ai/aidiagnostics/) | Why can inference finish but an analysis fail? | You are inspecting real responses or designing regression tests |
+| [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review) (formerly Combined Review) | How do the Focus check, Describe and Full presets connect source, masks, observations and the report? | You need the multi-stage workflow and saved-run contracts |
 | [Concurrency](/docs/concurrency-revised/) | How do actors, observation, cancellation, and typed evidence fit together? | You are learning the Swift implementation |
 | [Model licence and provenance preparation](/docs/ai/rawcullai/#8-stage-licences-notices-and-build-provenance) | What evidence is required before a model can ship? | You are reviewing licences, provenance, or release readiness |
-| [AI Diagnostics and Validation]({{< relref "aidiagnostics.md" >}}) | How are inference and response contracts checked? | You are preparing an installed-model evaluation |
 
 PhotoAIKit and RawCull use these AI backends:
 
@@ -83,7 +81,7 @@ are described in [AI Models in RawCull]({{< relref "aiinrawcull.md" >}}).
 The older publishing/test reports are no longer in the current application tree.
 Dated photographic observations in these guides remain historical and do not
 establish current release readiness. This review did not rerun installed models.
-Use [AI Diagnostics]({{< relref "aidiagnostics.md" >}}) for present test entry points.
+Use the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`) for present test entry points.
 
 ## The Central Design Idea
 
@@ -227,10 +225,10 @@ selection, and storage lifecycle.
    Separate embeddings, masks, generated observations, and deterministic metrics.
 2. Follow composition and provider replacement in [AI Runtime](/docs/ai/airuntime/).
 3. Read [Concurrency](/docs/concurrency-revised/) with the source open.
-4. Trace [Combined Review](/docs/ai/aicombined/) from a frozen run snapshot to
+4. Trace [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review) from a frozen run snapshot to
    independently scoped observations and grounded report selections.
-5. Work through [AI Diagnostics and Validation](/docs/ai/aidiagnostics/),
-   including the six-ARW runs, bounded retries, and the negated-focus regression.
+5. Run the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`),
+   which cover bounded retries and the negated-focus regression.
 6. Study model preparation and provenance separately from inference accuracy.
 
 The October 13 tab probes exercise SAM Deep Review, a separate CLIP embedding
@@ -249,4 +247,4 @@ API forwards to that owner. `BurstWorkflowController` retains `BurstReviewSessio
 for review decisions, independently of viewport sessions. Combined Review's
 three execution extensions still share one mutable feature/run owner. Read
 [AI Runtime]({{< relref "airuntime.md" >}}) and
-[Combined Review]({{< relref "aicombined.md" >}}) for the boundaries.
+the [AI features decision](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/Docs/ai-features-decision.md) for the boundaries.

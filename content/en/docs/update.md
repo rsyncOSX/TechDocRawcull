@@ -84,8 +84,6 @@ because the selector ran or the site rebuilt.
 | --- | --- |
 | [_index.md]({{< relref "/docs/_index.md" >}}) | Content and references updated |
 | [ai/_index.md]({{< relref "/docs/ai/_index.md" >}}) | Content and references updated |
-| [ai/aicombined.md]({{< relref "/docs/ai/aicombined.md" >}}) | Content and references updated |
-| [ai/aidiagnostics.md]({{< relref "/docs/ai/aidiagnostics.md" >}}) | Content and references updated |
 | [ai/aiinrawcull.md]({{< relref "/docs/ai/aiinrawcull.md" >}}) | Content and references updated |
 | [ai/airuntime.md]({{< relref "/docs/ai/airuntime.md" >}}) | Content and references updated |
 | [ai/rawcullai.md]({{< relref "/docs/ai/rawcullai.md" >}}) | Existing content retained after delta and reference checks; historical recipe or vendor evidence retained |
@@ -105,9 +103,7 @@ because the selector ran or the site rebuilt.
 | [mcp.md]({{< relref "/docs/mcp.md" >}}) | Content and references updated |
 | [memorypressure.md]({{< relref "/docs/memorypressure.md" >}}) | Existing content retained after delta and reference checks |
 | [newfeatures/_index.md]({{< relref "/docs/newfeatures/_index.md" >}}) | Content and references updated |
-| [newfeatures/newfeatures.md]({{< relref "/docs/newfeatures/newfeatures.md" >}}) | Existing content retained after delta and reference checks; historical recipe or vendor evidence retained |
-| [newfeatures/unified-burst-evidence.md]({{< relref "/docs/newfeatures/unified-burst-evidence.md" >}}) | Content and references updated |
-| [newfeatures/xmp-editor-handoff.md]({{< relref "/docs/newfeatures/xmp-editor-handoff.md" >}}) | Content and references updated |
+| [newfeatures/newfeatures.md]({{< relref "/docs/newfeatures/newfeatures.md" >}}) | Rewritten for 3.4.9 build 466 on 2026-11-23; 3.5.0 priorities added; vendor evidence from 5 November retained |
 | [packages/_index.md]({{< relref "/docs/packages/_index.md" >}}) | Content and references updated |
 | [packages/package-modules.md]({{< relref "/docs/packages/package-modules.md" >}}) | Existing content retained after delta and reference checks |
 | [packages/photoaikit.md]({{< relref "/docs/packages/photoaikit.md" >}}) | Existing content retained after delta and reference checks; historical package audit retained |

@@ -40,10 +40,9 @@ This guide was checked against the RawCull 3.3.6 (build 428) checkout on
 `5de95c6cd29e5e390fb36d87e13b2396668f7974`. Implementation links use the reviewed immutable app commit. [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) identifies the dependency
 revision used by a particular build.
 
-For a chronological debugging workbook and the limits of the recent six-ARW
-checks, see [AI Diagnostics and Validation](/docs/ai/aidiagnostics/).
+For current test entry points, see the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`).
 For Swift ownership and cancellation, see [Concurrency](/docs/concurrency-revised/).
-Combined Review has a separate [code guide](/docs/ai/aicombined/).
+Combined Review is now [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review); see the [AI features decision](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/Docs/ai-features-decision.md) for the migration.
 
 ## Source Catalog: `RawCull/Intelligence`
 
@@ -928,8 +927,7 @@ malformed board. See [RawCullTests/ObjectAnalysisBoundaryTests.swift](https://gi
 Combined Review now opens as its own main view, with Photo-first and Evidence
 workspace modes; it is not another AI Analysis tab. Its pipeline is
 `combined-v22`, with measurement v7. Camera AF overlap is recorded as positional
-evidence, not a generated focus verdict. Follow [Combined Review]({{< relref
-"/docs/ai/aicombined.md" >}}) for current stage compatibility and UI behavior.
+evidence, not a generated focus verdict. In 3.4.9 this view is [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review), with Focus check, Describe and Full presets.
 
 ## Presentation and typed sanitation in 3.3.5
 
@@ -956,7 +954,7 @@ one universal resolution for every workflow. See
 
 The older `Docs/sam3qwen.md` report is no longer in the current app tree.
 Dated observations above remain historical; use
-[AI Diagnostics]({{< relref "aidiagnostics.md" >}}) for current source/test
+the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`) for current source/test
 entry points. This review did not perform a new installed-model evaluation.
 
 ## Semantic state and review mutation boundaries

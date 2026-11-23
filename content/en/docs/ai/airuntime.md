@@ -844,7 +844,7 @@ generation, catalog, and backend identities still match.
 alongside the existing analysis features. A backend factory takes the currently
 installed Qwen and optional SAM/CLIP services and admits model snapshots for a
 run. The feature owns its source loader, artifact store, run manifest, per-image
-results and selection report. See [Combined Review](/docs/ai/aicombined/).
+results and selection report. In 3.4.9 this feature backs [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review).
 
 Two coordination mechanisms protect different scopes:
 

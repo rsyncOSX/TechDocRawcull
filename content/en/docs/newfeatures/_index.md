@@ -3,51 +3,31 @@ author = "Thomas Evensen"
 title = "New Features"
 linkTitle = "New Features"
 date = "2026-11-05"
-lastmod = "2026-11-21"
-description = "Implemented Close-ups and remaining P0 plans for RawCull development."
+lastmod = "2026-11-23"
+description = "RawCull 3.4.9 features, competition and the prioritized 3.5.0 plan."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 55
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "e287946087ccba47e29cc9fffdbc513d2b65e79c"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
 review_scope = "Content and references updated"
 +++
 
 # New Features
 
-These documents track implemented work and proposed development after the
-RawCull 3.4.0 build 434 baseline. Manual **Close-ups is implemented in RawCull** as of
-7 November 2026; the broader unified-evidence workflow and XMP handoff remain
-planned. Implementation status does not establish store-release availability.
+This section tracks what RawCull 3.4.9 build 466 provides and what should come
+next. Implementation status in the source does not establish store-release
+availability.
 
-Read them in this order:
+[Features, competition and the 3.5.0 plan]({{< relref "newfeatures.md" >}})
+covers the current capabilities, a dated comparison with other culling
+applications and the prioritized list for version 3.5.0, including the scope of
+XMP exchange and unified burst evidence. Those two scopes replace the earlier
+separate P0 plan pages.
 
-1. [Features and competitive opportunities]({{< relref "newfeatures.md" >}}):
-   the existing overview, competitive context and priority table.
-2. [P0: XMP and editor handoff]({{< relref "xmp-editor-handoff.md" >}}):
-   preserve review decisions across applications without losing metadata.
-3. [P0: Unified burst evidence]({{< relref "unified-burst-evidence.md" >}}):
-   completed manual Close-ups integration and the remaining work to unify evidence.
-
-The overview identifies the current application baseline while preserving its dated
-competitor research. The detailed plans distinguish
-existing integration points from proposed contracts and behavior. Before coding,
-recheck those integration points against the chosen application revision. Record
-resolved decisions and validation results in the relevant plan as work proceeds.
-
-## 3.4.5 development branch status
-
-The [Close Up guide]({{< relref "/docs/closeups.md" >}}) covers the automatic
-inspection strip. Human face TestFlight validation and representative wildlife
-validation remain open. People-informed ranking remains proposed.
-
-## Status at build 462
-
-Close Up supports manual comparisons and preview-based face and animal
-tiles. The MCP helper offers catalog setup, burst analysis and optional local
-photo assessments from a completed shared burst job. See
-[Close Up]({{< relref "/docs/closeups.md" >}}) and [RawCull MCP]({{< relref "/docs/mcp.md" >}}). The XMP handoff and
-unified scored evidence pages continue to describe proposed work.
+For implemented behavior, see [Close Up]({{< relref "/docs/closeups.md" >}}),
+[Burst Groups]({{< relref "/docs/burstgroup.md" >}}) and
+[RawCull MCP]({{< relref "/docs/mcp.md" >}}).

@@ -708,8 +708,7 @@ No source weight download or model conversion is part of this runner.
 Retain `evidence.inputs.json`, `models.txt`, `diagnostic.json`, request PNGs,
 response text, `evidence.log` and the `.xcresult` bundle as separate evidence
 from packaging. Request images show supplied CGImages, not the final tensors.
-See [AI Diagnostics and Validation](/docs/ai/aidiagnostics/) for reproducibility,
-privacy, interpretation and regression tests. Running this probe is separate
+Keep these files private: request images and responses can contain photo content. Running this probe is separate
 from testing Apple-hosted installation in a signed release build.
 
 ## Relationship to the current application
@@ -720,6 +719,6 @@ application review did not rebuild or publish model packs. Do not substitute a
 new source revision into the commands merely because the app version changed.
 Current download/installation UI ownership is described in
 [AI Runtime]({{< relref "airuntime.md" >}}), and evaluation entry points in
-[AI Diagnostics]({{< relref "aidiagnostics.md" >}}). Earlier links to
+the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`). Earlier links to
 `RawCull/Docs/newmodels.md` open historical commits because that report has been
 removed from the current application tree.
