@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Suggest non-package documentation reviews. Never updates the review baseline."""
+"""List documentation review candidates for a RawCull source and package delta."""
 import argparse
 import fnmatch
 import hashlib
@@ -71,7 +71,7 @@ def main():
             print("  " + path)
     if pin_changes:
         print("\nPackage pins changed: " + ", ".join(sorted(pin_changes)))
-        print("Package guides are excluded here; review them separately at their resolved revisions.")
+        print("Check affected package guides against the exact revisions in the target lockfile.")
     print(f"\n{len(candidates)} candidate pages; {len(unmatched)} unmapped source paths.")
     print("This is a conservative source-change selector, not semantic verification. It never advances the baseline.")
     print("Dated vendor research and model recipes still require explicit external requalification when reused.")

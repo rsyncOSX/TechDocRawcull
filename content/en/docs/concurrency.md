@@ -2,18 +2,18 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
 weight = 35
 slug = "concurrency-revised"
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Replaced the temporary processor cap with the implemented Vision gate, cancellation semantics and quality limits."
 +++
 
 # Concurrency
@@ -33,7 +33,7 @@ invariant.
 `RawCullApp` retains the two roots returned by `RawCullApplicationState.live()`:
 one `RawCullViewModel` and one `RawCullIntelligenceRuntime`. The application
 state assembles one integration, one shared similarity model, focused similarity
-and semantic-search features, a Deep Review controller,
+and semantic-search features, the Review feature,
 settings/model-management models, and the main view model. Settings publishes a
 complete revisioned configuration to the runtime rather than invoking
 independent callbacks on the view model.
@@ -55,7 +55,7 @@ flowchart LR
     STATE --> VM["@MainActor RawCullViewModel<br/>workspace composition"]
     STATE --> RT["@MainActor RawCullIntelligenceRuntime<br/>AI lifetime and configuration"]
     RT --> AIS["RawCullAISettingsModel"]
-    RT --> FEATURES["Focused similarity, semantic, and Deep Review surfaces"]
+    RT --> FEATURES["Focused similarity, semantic, and Review surfaces"]
     VM --> VIEW["RawCullMainView and SwiftUI presentation"]
     VM --> WORKFLOW["BurstWorkflowController"]
     WORKFLOW --> BURST["BurstAnalysisCoordinator"]
@@ -145,7 +145,7 @@ expensive work.
 | `BurstReviewSessionModel` | Review results, explicit states, queue filter, comparison group, undo entry and review revision |
 | `RawCullSimilarityFeature` / `RawCullSemanticSearchFeature` | Focused operation surfaces, application bindings, and projections over the one shared scoring model                          |
 | `BurstAnalysisCoordinator`                                  | Burst worker task, generation, progress, cache preparation, missing compute, grouping, ranking, and cache save               |
-| `DeepAIReviewController` / `DeepAIReviewFeature`            | App-facing request adaptation plus review generation, progress, recommendation, and cancellation                             |
+| `CombinedReviewFeature` | Run admission and cancellation, manifest, saved history and presentation of evidence |
 | `RawCullIntelligenceRuntime`                                | Stable AI feature lifetimes and last accepted configuration revision/identity                                                |
 | `RawCullAISettingsModel`                                    | Capability-refresh generation, preferences, and complete configuration publication                                           |
 
@@ -216,7 +216,7 @@ leaves inherited actor isolation. That does not make `Task { ... }` structured:
 its owner must still retain/await it and arrange cancellation. Task-group
 children, by contrast, remain scoped to their group. Examples
 include RawCull's RAW demosaic helper, sorting and ranking helpers, diagnostics,
-and PhotoAnalysisKit's Core Image/Vision worker. The pinned PhotoAnalysisKit
+and PhotoAnalysisKit's Core Image/Vision worker. The audited PhotoAnalysisKit
 1.3.1 implementation uses an explicit concurrent child and a cancellation
 handler; it does not use a detached task for the focus engine.
 
@@ -241,7 +241,7 @@ Thumbnail concurrency has three separate layers:
 
 1. `ThumbnailPreloadGate` blocks only grid misses whose parent directory is the
    catalog currently being preloaded. Other catalogs, preview requests, AI
-   workflows, semantic search, and Deep Review bypass the gate.
+   workflows, semantic search, and Review bypass the gate.
 2. `ThumbnailLoader` admits at most six active loads. A released slot is
    transferred directly to the next waiter; cancellation removes and resumes a
    queued continuation exactly once.
@@ -273,7 +273,7 @@ identity checks.
 | Sharpness scoring                          | `ScoringRequest`, scoring-generation UUID, and cancellation |
 | Similarity hydrate/index/rank/search/group | Per-workflow generation plus catalog/query snapshots        |
 | Burst analysis                             | Burst generation plus catalog URL                           |
-| Deep Review                                | Integer generation plus cancellation                        |
+| Review | Shared lease, frozen source and model snapshots, cancellation and compatibility checks |
 | Raw diagnostics                            | Generation UUID plus cancellation                           |
 | Thumbnail single flight                    | Exact cache key plus producer-generation UUID               |
 
@@ -366,8 +366,7 @@ identity around awaited computation. SwiftUI task IDs remain on their screen
 owners; extracting a rendering section must not start a duplicate worker.
 
 `BurstWorkspaceImageCoordinator` retains only a three-frame source-keyed
-working set. `AnalysisPreviewPreparation` shares decode/focus preparation while
-callers retain their requested resolution and publication identity.
+working set.
 `ReviewKeyMonitor` owns registration/removal only; screen scope and keyboard
 controllers decide whether an event is accepted and what it does.
 
@@ -458,11 +457,8 @@ and checks cancellation and source revision before saving or returning results.
 Manual card metadata loads off the main actor and is published after a
 cancellation check.
 
-## Vision work admission in build 462
+## Vision request scheduling
 
-The Vision similarity indexer shares one feature-print backend and keeps up
-to four decodes in flight. `BurstDetectedFaceLoader` shares a face analyzer.
-Face and animal work share a two-operation limiter. Sharpness scoring caps
-its quality/source limit at `max(1, activeProcessorCount / 2)`. See
-[the Vision implementation and test record](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/Docs/visionupdate.md) for
-the completed app changes and the proposed cross-package queue.
+PhotoAnalysisKit schedules saliency, classification, face and animal detection, and feature-print requests on `VisionRequestGate.shared`. RawCull injects `RawCullVisionWorkSerializer` into PhotoAIKit’s Vision similarity backend, so feature prints from similarity indexing use the same queue. The indexer can keep up to four decodes in flight while Vision executes one request body at a time. This leaves the cooperative thread pool available to other tasks.
+
+A waiting caller suspends. Cancelling before its turn skips the body. Once a request has started, it finishes on the serial queue and returns its result or error. Construct the non-Sendable Vision request and handler inside that body and return Sendable data. Sharpness still bounds concurrent images by quality and source, allowing six Fast, four Balanced or three High Precision preview jobs and at most two RAW demosaics. [VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [RawCullVisionSimilarityService](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) · [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)

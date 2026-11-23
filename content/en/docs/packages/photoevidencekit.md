@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "How PhotoEvidenceKit Is Constructed"
 linkTitle = "PhotoEvidenceKit Architecture"
 date = "2026-11-08"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 description = "PhotoEvidenceKit contracts, close-up geometry, bounded rendering, retained references, region persistence, AF assistance, and RawCull integration."
 tags = ["close-ups", "image-inspection", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 50
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated; historical package audit retained"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Verified the HTTPS repository change at the same 1.1.5 revision."
 +++
 
 # How PhotoEvidenceKit Is Constructed
@@ -323,3 +323,5 @@ Continue with [RawParserKit]({{< relref "rawparserkit.md" >}}) for decoding,
 [PhotoAnalysisKit]({{< relref "photoanalysiskit.md" >}}) for measurements,
 [RawCullCore]({{< relref "rawcullcore.md" >}}) for recommendations, and
 [PhotoAIKit]({{< relref "photoaikit.md" >}}) for optional inference workflows.
+
+Build 466 resolves PhotoEvidenceKit 1.1.5 at `e49d34adcfa2e2c43a4240c2e962dbe9defa4cad` over HTTPS. This is the same source revision as build 462. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved)

@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Updated the Review consumer name and checked grid/preload admission against the source delta."
 +++
 
 # Thumbnails and Scan Pipeline
@@ -244,7 +244,7 @@ blocking a file before it is eligible. This avoids waiting for an entire large
 catalog when the requested file is already ready.
 This prevents the visible grid from launching a duplicate cold decode while
 preload is already producing the same catalog. Only grid misses in that catalog
-wait; AI indexing, semantic search, Deep Review, model downloads, non-grid
+wait; AI indexing, semantic search, Review, model downloads, non-grid
 requests, and other catalogs are independent of this gate. Cancellation removes
 and resumes the gate waiter safely.
 

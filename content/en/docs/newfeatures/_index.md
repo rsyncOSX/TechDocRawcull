@@ -9,11 +9,11 @@ tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 55
 
-reviewed_commit = "e287946087ccba47e29cc9fffdbc513d2b65e79c"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
 reviewed_build = 466
 reviewed_on = "2026-11-23"
-review_scope = "Content and references updated"
+review_scope = "Checked the roadmap destination and its distinction between implemented features and proposals."
 +++
 
 # New Features

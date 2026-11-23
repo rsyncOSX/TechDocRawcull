@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Synchronous Code"
 date = "2026-05-19"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 tags = ["concurrency", "imageio", "blocking"]
 categories = ["technical details"]
 mermaid = true
 weight = 85
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Replaced retired Deep Review paths with the scoring, Review source and outline renderers that reuse Core Image contexts."
 +++
 
 # Synchronous Code
@@ -30,7 +30,7 @@ Most RawCull code uses async/await, actors, and task groups. Some framework and 
 | Thumbnail and preview callers | [RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/RequestThumbnail.swift), [ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndCreateThumbnails.swift), [ScanAndExtractJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndExtractJPGs.swift), [FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/FullSizePreviewLoader.swift), [ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomPreviewHandler.swift), [ComparisonImageLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/ComparisonImageLoader.swift) |
 | Export and JPEG encoding | [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/SaveJPGImage.swift), [DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/DiskCacheManager.swift), [FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/FullSizeJPGDiskCache.swift) |
 | Filesystem and persistence | [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift), [DiscoverFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/DiscoverFiles.swift), [PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift), [SettingsViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/SettingsViewModel.swift), [ReadSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/JSON/ReadSavedFilesJSON.swift), [WriteSavedFilesJSON.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/JSON/WriteSavedFilesJSON.swift) |
-| Image analysis | [RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift), [DeepAIReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewFeature.swift), [DeepAIReviewMaskOutlineRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift) |
+| Image analysis | [RawCullPhotoAnalysisAdapter](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift) · [ReviewImageSource](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Imaging/ReviewImageSource.swift) · [SubjectMaskOutlineRenderer](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/SubjectMasks/SubjectMaskOutlineRenderer.swift) |
 | External process | [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift), `RsyncProcessStreaming.RsyncProcess` |
 
 ## Why Blocking Work Matters
@@ -116,7 +116,7 @@ The exact QoS is set in the package extractor or caller. When adding a new path,
 
 ## Image Analysis
 
-Sharpness scoring is adapted through `RawCullPhotoAnalysisAdapter`. Embedded-preview or demosaiced-RAW preparation runs away from the main actor, and the pipeline checks cancellation between decode, Vision, and scoring phases. Deep AI Review likewise marks decode/inference helpers `@concurrent`; any synchronous `CIRAWFilter`/`CIContext` portion must stay concurrency-limited because `@concurrent` alone does not turn rendering into a suspending operation.
+Sharpness scoring uses `RawCullPhotoAnalysisAdapter`. Scoring renders, Review source renders and subject-outline renders each reuse a static Core Image context. Creating a context initializes expensive rendering resources. Reusing it reduces repeated setup while preserving each renderer’s options. Decode and synchronous render work still need bounded admission. [RawCullPhotoAnalysisAdapter](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift) · [ReviewImageSource](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Imaging/ReviewImageSource.swift) · [SubjectMaskOutlineRenderer](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/SubjectMasks/SubjectMaskOutlineRenderer.swift)
 
 The scoring image can come from:
 

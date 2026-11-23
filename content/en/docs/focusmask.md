@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Identified the current package pin and removed the deleted AI preview helper from the viewer map."
 +++
 
 # Focus Mask And Sharpness
@@ -32,8 +32,8 @@ Mask presentation does not change scalar analysis. A weak or unfocused image is
 allowed to produce an empty overlay; the renderer does not lower its threshold
 merely to manufacture visible evidence.
 
-RawCull pins **PhotoAnalysisKit 1.3.1**, revision
-**2a1466e04d821fa2628d6985296643e0d0c7e465**. The package owns sharpness,
+The formula walkthrough uses **PhotoAnalysisKit 1.3.1**, revision
+**2a1466e04d821fa2628d6985296643e0d0c7e465**. Build 466 resolves 1.4.1, which shares the focus engine’s Core Image context and includes the Vision request gate. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}). The package owns sharpness,
 saliency, calibration, focus evidence, and mask algorithms. RawCull owns UI
 settings, file decoding/source selection, workflow lifetime, normalization, and
 persistence.
@@ -273,7 +273,6 @@ Loupe mask task/generation state now lives in
 [LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift); zoom mask
 coordination lives in
 [ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift).
-`AnalysisPreviewPreparation` shares the AI preview/focus preparation path.
 The PhotoAnalysisKit pin and scalar algorithm are unchanged by these view
 extractions. A mask may remain visible during a same-photo source transition,
 while new-file/config transitions reset presentation. See

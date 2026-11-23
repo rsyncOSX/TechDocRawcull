@@ -3,12 +3,12 @@ title = "Close Up"
 linkTitle = "Close Up"
 description = "Compare detail across frames using manual regions, pinned references, recorded autofocus points and detected crops."
 weight = 42
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
-lastmod = "2026-11-21"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Checked manual crop and AF behavior and documented scheduling of automatic face and animal detection."
+lastmod = "2026-11-23"
 +++
 
 Close Up is the inspection panel in the burst and Single Images workspace.
@@ -96,6 +96,8 @@ Animal tiles are for visual inspection. The human tile's detail value
 measures local luminance gradients and is separate from ratings and burst
 ranking. If the strip reports that detection is unavailable, use **Retry**.
 A manual card with a render failure offers **Retry image**.
+
+The automatic strip awaits PhotoAnalysisKit’s face and animal requests. Those requests use the same serial Vision queue as sharpness and feature-print indexing. RawCull also bounds work in the detected-evidence loader. A manual crop uses PhotoEvidenceKit’s renderer and can be inspected independently of detection. [BurstDetectedFacesView](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift)
 
 ## Example workflow for a wildlife burst
 

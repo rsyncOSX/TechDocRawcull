@@ -3,22 +3,22 @@ author = "Thomas Evensen"
 title = "How RawCullCore Is Constructed"
 linkTitle = "RawCullCore Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 description = "A detailed guide to RawCullCore's package-safe models, capture-time and EV-aware burst grouping, ranking evidence, confidence rules, histograms, concurrency, and tests."
 tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 30
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated; historical package audit retained"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Confirmed the app pin and distinguished it from the original domain-model walkthrough."
 +++
 
 # How RawCullCore Is Constructed
 
-> **Revision audited:** RawCull resolves RawCullCore `1.1.2` at
+> **Revision audited:** The original walkthrough used RawCullCore `1.1.2` at
 > `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9`.
 
 RawCullCore is the small domain layer at the center of RawCull. It does not
@@ -538,7 +538,7 @@ ranking input or host selection.
 
 ## Resolved app revision
 
-Build 462 pins RawCullCore **1.1.5**
+Build 466 pins RawCullCore **1.1.5**
 at `ea8ac2fc6611949af2b55ec433456bfe502cf886`. The app's burst workflow invokes the
 package algorithms through app-side adapters. Earlier examples and results
 retain their original audit revision.

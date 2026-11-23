@@ -2,13 +2,13 @@
 title: RawCull Tech Documentation
 linkTitle: Documentation
 menu: { main: { weight: 20 } }
-lastmod: 2026-11-21
+lastmod: 2026-11-23
 
-reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version: "3.4.9"
-reviewed_build: 462
-reviewed_on: "2026-11-21"
-review_scope: "Content and references updated"
+reviewed_build: 466
+reviewed_on: "2026-11-23"
+review_scope: "Updated the application map, Review entry point, smoke count and source baseline."
 ---
 
 ## RawCull Developer Notes
@@ -40,7 +40,7 @@ Read these pages in this order when learning the project:
    into persisted culling data.
 6. [Burst Groups](burstgroup/) combines sharpness, similarity artifacts,
    grouping, ranking, and the burst-review UI.
-7. [Artificial Intelligence](ai/) and [RawCull Packages](packages/) explain the
+7. [Artificial Intelligence](ai/) covers Review presets, model requirements and saved evidence. [RawCull Packages](packages/) explains the
    reusable package boundaries behind the app.
 
 Use [File Read and Write](filereadandwrite/) and
@@ -52,7 +52,7 @@ user-selected folders, export, or copying.
 | Area                       | Primary source                                                            | Responsibility                                                                                                                |
 | -------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | App composition            | [RawCull/Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullApp.swift)                                           | Uses `RawCullApplicationState.live()` to assemble stable models/features, inject environment state, and define windows and commands |
-| Main presentation          | [RawCull/Main/RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullMainView.swift)                                      | Switches between loupe, grid, similarity, rated, and comparison modes and owns top-level sheets and overlays                  |
+| Main presentation          | [RawCull/Main/RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullMainView.swift)                                      | Switches between loupe, grid, similarity, rated, comparison, and Review modes and owns top-level sheets and overlays                  |
 | App orchestration          | [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/RawCullViewModel.swift) | Assembles catalog, culling, burst, presentation and AI owners for environment injection                         |
 | Background ownership       | `RawCull/Actors/`                                                         | Serializes scans, thumbnail requests, caches, persistence, extraction, and contention gates                                   |
 | App services and adapters  | `RawCull/Model/`                                                          | Connects the UI model to RAW parsing, sharpness analysis, AI providers, persistence, diagnostics, and rsync                   |
@@ -70,7 +70,7 @@ flowchart TD
     App --> VM["RawCullViewModel: workspace composition"]
     VM --> Owners["Observable state and workflow controllers"]
     Main --> Owners
-    Owners --> Feature["Feature models: culling, sharpness, similarity, Deep Review, settings"]
+    Owners --> Feature["Feature models: culling, sharpness, similarity, Review, settings"]
     Owners --> Actors["Actors: scan, thumbnail, cache, persistence, export"]
     Feature --> Analysis["PhotoAnalysisKit"]
     Feature --> AI["PhotoAIKit services and typed artifacts"]
@@ -96,7 +96,7 @@ The boundaries are based on ownership:
 
 ## Workspace owners in 3.4.9
 
-[RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/RawCullViewModel.swift) wires the long-lived workspace objects together.
+[RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/RawCullViewModel.swift) wires the long-lived workspace objects together.
 `workspaceEnvironment(_:)` supplies those objects to SwiftUI. Views read the
 state and operations they use through the environment or explicit inputs.
 
@@ -107,7 +107,7 @@ state and operations they use through the environment or explicit inputs.
 | `CatalogLifecycleCoordinator` | Catalog transitions, load tasks and security grant |
 | `SelectionModel` and `RatingsModel` | Focus, selection and comparison IDs, plus culling store and rating revision |
 | `CullingController` | Rating changes, selection advance and culling-store recovery |
-| `BurstWorkflowController` | Analysis coordination, review queue, keep-best, undo and Deep Review context |
+| `BurstWorkflowController` | Analysis coordination, review queue, keep-best, undo and review state |
 | `WorkspaceNavigationModel`, `ZoomOverlayModel` and `LoupeViewportModel` | View mode, overlay lifecycle and result metadata, and persistent loupe pan/zoom |
 | `WorkspacePresentationModel` and `FileOperationsModel` | Window chrome, sheets and banners, plus JPG work and progress |
 
@@ -142,8 +142,8 @@ because it shows both ownership and the complete lifetime of the operation.
 
 ## Reviewed source baseline
 
-Reviewed on **21 November 2026** against **RawCull 3.4.9 build 462**,
-commit [a0c72d11](https://github.com/rsyncOSX/RawCull/commit/a0c72d11b6dea1f409542faf90f76fba43cdb0f5). The commit
+Reviewed on **23 November 2026** against **RawCull 3.4.9 build 466**,
+commit [0513a30e](https://github.com/rsyncOSX/RawCull/commit/0513a30e4567b4b5e3093e10791d49c86ecfe7e6). The commit
 is present on both `version-3.4.9` and `main`. The Xcode workspace resolves
 24 remote pins. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}) and
 [review record]({{< relref "/docs/update.md" >}}). Historical audits and measurements retain
@@ -172,8 +172,7 @@ each file's grid gate before the save. See
 October 25 catalog reference, coalesced progress, cache-state limits and deferred
 validation. The phase 3–6 encoder, grid and source-load candidates were deferred; reduced
 sampled main-thread work does not establish faster loading or smoother frames.
-The smoke inventory expects 401 unique identifiers; that enumeration is not a
-claim that every test was rerun during this documentation pass.
+The build 466 smoke manifest expects 384 unique test identifiers. [Test targets](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Makefile)
 
 ## ZoomView preview update in build 428
 
@@ -204,5 +203,5 @@ Read [Burst Groups]({{< relref "burstgroup.md" >}}) and
 Build 436 adds a detected crop strip above the manual cards. It shows human
 faces and a Vision animal head and eye pilot from the current embedded preview.
 Human face geometry and detail can be reused from the on-disk cache. The
-detected crops are inspection evidence. People-informed ranking remains planned.
+detected crops are inspection evidence. Build 466 also offers People Ranking as a temporary comparison order.
 See [Close Up]({{< relref "closeups.md" >}}).

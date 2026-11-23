@@ -3,11 +3,11 @@ title: About
 linkTitle: About
 menu: {main: {weight: 10}}
 
-reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version: "3.4.5"
-reviewed_build: 436
-reviewed_on: "2026-11-09"
-review_scope: "source delta and reference check; existing content retained"
+reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
+reviewed_version: "3.4.9"
+reviewed_build: 466
+reviewed_on: "2026-11-23"
+review_scope: "Corrected the description of App Store distribution."
 ---
 
 {{% blocks/cover title="About" height="auto" %}}
@@ -47,7 +47,7 @@ Most of my career was spent in IT management rather than hands-on development. W
 
 Build & distribution
 
-RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. Release builds are digitally signed and notarized by Apple. The technical guides explain the application architecture, source boundaries and persistence behavior.
+RawCull is built with **Swift** and **SwiftUI**, using modern macOS APIs. RawCull’s release workflow uploads the App Store configuration to TestFlight and submits the tested build through App Store Connect. The technical guides explain the application architecture, source boundaries and persistence behavior.
 
 {.text-center}
 

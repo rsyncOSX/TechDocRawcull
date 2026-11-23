@@ -7,11 +7,11 @@ weight = 21
 tags = ["cache", "concurrency", "evictions", "swift"]
 categories = ["technical details"]
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Existing content retained after delta and reference checks"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Retained the owned-eviction-delegate walkthrough. The cache bookkeeping implementation has no relevant delta."
 +++
 
 # Synchronizing Cache Storage and Accounting

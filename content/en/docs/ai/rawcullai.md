@@ -2,23 +2,23 @@
 author = "Thomas Evensen"
 title = "RawCull AI models"
 date = "2026-09-26"
-lastmod = "2026-10-31"
+lastmod = "2026-11-23"
 weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Existing content retained after delta and reference checks; historical recipe or vendor evidence retained"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Corrected the app pin and replaced the retired diagnostic runner. The dated exporter and model recipe remains historical."
 +++
 
 # Download and prepare the three AI model packs
 
 > **Recipe scope (16 October 2026):** Preserve the dated source/exporter pins
 > below when reproducing the original packs. The current RawCull lockfile uses
-> PhotoAIKit 1.0.0 (`4b85056e6c2603b5e382987710ca2f16f4c5c155`) and coreai-models
+> PhotoAIKit 3.1.0 (`26647c62d9933968d92bd00b162290cdd7c78fee`) and coreai-models
 > 1.0.0 (`5de95c6cd29e5e390fb36d87e13b2396668f7974`). An older recipe pin is
 > not the current app dependency. Compare exporter options and model provenance
 > before building new candidates. This documentation review did not run model
@@ -675,7 +675,7 @@ for a release: repository `main` branches and tool versions can change.
 ## October 13: verify an installed candidate before interpreting success
 
 The conversion workbook above preserves its September build procedure. The
-current application snapshot is the `version-3.3.0` working tree with PhotoAIKit
+October application snapshot was the `version-3.3.0` working tree with PhotoAIKit
 `7f9adfcd69661c6bae4a640c16a4056dfc7393df` and Core AI models
 `1953c4f90ba0214c1abc7bebcb9be5107e329a46`. Recheck exporter command-line options
 at the revisions actually used for a new conversion; application dependency
@@ -693,23 +693,7 @@ A successful archive or model load does not imply the later gates passed.
 The app's catalog hash describes a specific release archive, not every future
 conversion of the same upstream weights.
 
-The local diagnostic runner uses the existing release layout by default:
-
-```sh
-python3 Scripts/RunAIAnalysis.py --directory /Users/thomas/tmp --limit 6
-```
-
-Run from the RawCull repository, with already installed `SAM3`, `CLIP-DataComp`,
-and `Qwen/qwen3_vl_2b` directories under `~/ModelAssets/Release/Models`.
-`--models` selects a different root. Preflight confirms directories and RAW
-selection; real provider validation and inference happen in the test process.
-No source weight download or model conversion is part of this runner.
-
-Retain `evidence.inputs.json`, `models.txt`, `diagnostic.json`, request PNGs,
-response text, `evidence.log` and the `.xcresult` bundle as separate evidence
-from packaging. Request images show supplied CGImages, not the final tensors.
-Keep these files private: request images and responses can contain photo content. Running this probe is separate
-from testing Apple-hosted installation in a signed release build.
+For build 466, use `make combinedinputstest` for installed-model input contracts or `make combinedselectiontest` for the six-file selection probe. The October tab runner was retired with AI Analysis. Keep request images and model responses private when collecting photographic evidence. Verify Apple-hosted installation separately on a TestFlight or App Store build. [Makefile](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Makefile)
 
 ## Relationship to the current application
 

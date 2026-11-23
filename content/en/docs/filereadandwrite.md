@@ -3,13 +3,13 @@ title: File Read and Write Reference
 description: Files, folders, and persistent data touched by RawCull
 weight: 70
 mermaid: true
-lastmod: 2026-11-21
+lastmod: 2026-11-23
 
-reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version: "3.4.9"
-reviewed_build: 462
-reviewed_on: "2026-11-21"
-review_scope: "Content and references updated"
+reviewed_build: 466
+reviewed_on: "2026-11-23"
+review_scope: "Updated Review inspection and distinguished in-memory burst entries from shared MCP records."
 ---
 
 # File Read and Write Reference
@@ -199,7 +199,7 @@ Combined Review has durable diagnostic/evidence storage in
 exact PNG inputs and opt-in rejected responses. `maximumInputBytes` defaults to
 256,000,000 bytes for retained inputs; this is not a universal limit on every
 artifact category. Run inspection is backed by `ReviewDiagnostics` and the
-Combined diagnostic views. Retained inputs and rejected model text can contain
+Review Record window. Retained inputs and rejected model text can contain
 photographic content: follow the selected retention policy when sharing bundles.
 OSLog and focused tests remain separate diagnostic channels.
 
@@ -323,3 +323,7 @@ The host supplies synchronous main-actor storage methods. Package save failures
 remain pending for retry and surface in the panel; successful rendering does not
 establish that a region was saved. See the
 [PhotoEvidenceKit guide]({{< relref "packages/photoevidencekit.md" >}}).
+
+## Burst assessment storage
+
+The in-app **Assess All Bursts** command publishes its results to session memory. The app can show them alongside saved MCP assessments in AI Assessments. Only the latter use the shared job store and its retention rules. [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/BurstBatchAssessment.swift)

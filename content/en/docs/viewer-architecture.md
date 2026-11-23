@@ -2,24 +2,23 @@
 author = "Thomas Evensen"
 title = "Viewer Architecture and Keyboard Ownership"
 date = "2026-10-22"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 description = "Trace loupe, zoom, burst, comparison and AI presentation through sessions, task owners, shared geometry and keyboard routing."
 weight = 15
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Updated outline lookup, Review geometry, inspector navigation and the source baseline."
 +++
 
 # Viewer Architecture and Keyboard Ownership
 
 The October 22 refactor separates screen composition, session state, transient
 analysis, and event routing. Read this guide after
-[Thumbnails and Scan Pipeline]({{< relref "thumbnail.md" >}}). It describes
-RawCull 3.4.5, build 436 at `a68253b73cbad14a7b1030dba6b439e6bce7d3da` on the unmerged `version-3.4.5` branch. The historical source-level design note is
+[Thumbnails and Scan Pipeline]({{< relref "thumbnail.md" >}}). The original walkthrough used build 436. The Review screen and outline paths below follow build 466. The historical source-level design note is
 [ViewComposition.md](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/Docs/ViewComposition.md).
 
 ## Find the owner before changing a screen
@@ -97,8 +96,8 @@ these different transitions with one unconditional clear.
 
 [SubjectOutlinePresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/SubjectOutlinePresentationModel.swift) applies
 the same generation principle to outline publication. The shared
-[ImageReviewSubjectOutlineLoader.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/ImageReviewSubjectOutlineLoader.swift) loads a
-stored Deep Review subject mask and uses the original mask if outline rendering
+[ImageReviewSubjectOutlineLoader.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/Handlers/ImageReviewSubjectOutlineLoader.swift) loads a
+retained subject mask from Review and uses the original mask if outline rendering
 cannot produce a contour.
 
 ## Burst decoding is a bounded working set
@@ -121,11 +120,7 @@ global thumbnail caches described in [Cache System]({{< relref "cache.md" >}}).
 
 [ImageReviewGeometry.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ImageReviewGeometry.swift) returns one centered aspect-fit
 rectangle, or zero for nonfinite/nonpositive dimensions.
-[AnalysisImageCanvas.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/AIAnalysis/AnalysisImageCanvas.swift) applies that rectangle
-to the photograph, focus map and overlays. Camera AF points are positioned
-directly in their normalized visual coordinates. Object boxes use their own
-bottom-origin convention; `ObjectOverviewImage` converts Y when displaying them.
-Sharing a rectangle does not make these coordinate conventions interchangeable.
+Review records the source-space bounds and encoder geometry for each inspected crop. Selecting a finding in the inspector highlights its associated region on the photo. Region details expose the retained rectangle and its provenance. [CombinedReviewInspectorPane](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Views/AIAnalysis/CombinedReviewInspectorPane.swift)
 
 `ImageReviewRasterOverlay` shares raster drawing; `OverlayControlCapsule` shares
 control chrome. Neither chooses the analysis source or changes mask semantics.

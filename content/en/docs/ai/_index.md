@@ -3,248 +3,39 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-11-21"
-description = "Local AI architecture, Swift concurrency, Combined Review, model preparation, and evidence-based diagnostics."
+lastmod = "2026-11-23"
+description = "Review, burst assessments, semantic search and the boundaries between RawCull and its model providers."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Replaced the tab tour with task, input and storage choices for Review, burst assessments and MCP."
 +++
 
-# Artificial Intelligence in RawCull
+# Artificial intelligence in RawCull
 
-This section explains how RawCull uses reusable AI components without allowing
-model-runtime details to spread through the application. It is written as a
-learning path: first understand the boundary between RawCull and PhotoAIKit,
-then study the package itself, and finally follow CLIP from application startup
-to a persisted similarity artifact.
+Use **Review** to inspect selected or tagged photos. Use the burst list to assess ranked pairs across a catalog. Both workflows run inference locally. Each exposes different evidence and stores its results for a different lifetime.
 
-The source for this section comes from the pinned PhotoAIKit dependency and the
-RawCull repository. Paths beginning with `Sources/` refer to PhotoAIKit at the
-revision in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). RawCull intelligence code lives under
-`RawCull/Intelligence`; app composition and presentation remain under
-`RawCull/Main`, `RawCull/Model`, and `RawCull/Views`.
+| Task | Input and result | Guide |
+| --- | --- | --- |
+| Inspect focus, describe a photo or run all Review stages | One to eight selected or tagged images. Review saves a run record and can retain the exact inputs behind a finding. | [Review presets and findings]({{< relref "aiinrawcull.md" >}}) |
+| Compare a burst’s top candidates across the catalog | The recommended and distinct alternate from each eligible ranked group. AI Assessments displays session results. | [Burst groups]({{< relref "/docs/burstgroup.md" >}}) |
+| Request an assessment from a desktop AI client | An authorized MCP source job. The consumer reads structured findings under the shared job’s consent and retention rules. | [RawCull MCP]({{< relref "/docs/mcp.md" >}}) |
+| Find similar frames or search by description | Vision or CLIP image artifacts support visual similarity. Text queries require compatible CLIP embeddings. | [CLIP indexing and search]({{< relref "aiinrawcull.md" >}}#how-clip-works-in-rawcull) |
 
-## What This Section Documents
+## Model and application boundaries
 
-| Document                                                       | Main question                                          | Start here when                                                                                                      |
-| -------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| This overview | Where does AI belong in the system? | You need the vocabulary and responsibility split |
-| [The RawCull AI Runtime](/docs/ai/airuntime/) | How are providers and long-lived features assembled? | You are tracing startup, refresh, or service replacement |
-| [AI Models in RawCull](/docs/ai/aiinrawcull/) | How do CLIP, Vision, SAM 3, Qwen, and Objects work in the app? | You are tracing an analysis from input to result |
-| [Download AI models](/docs/ai/rawcullai/) | How are the three release packs rebuilt? | You are preparing source weights, conversions, or archives |
-| [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review) (formerly Combined Review) | How do the Focus check, Describe and Full presets connect source, masks, observations and the report? | You need the multi-stage workflow and saved-run contracts |
-| [Concurrency](/docs/concurrency-revised/) | How do actors, observation, cancellation, and typed evidence fit together? | You are learning the Swift implementation |
-| [Model licence and provenance preparation](/docs/ai/rawcullai/#8-stage-licences-notices-and-build-provenance) | What evidence is required before a model can ship? | You are reviewing licences, provenance, or release readiness |
+**SAM 3** produces candidate masks for prompted subjects. Review uses registered masks for subject-detail measurements. **DataComp CLIP** encodes images and text for comparison. **Qwen3-VL** supplies whole-photo descriptions, crop observations and report text where the preset calls for them. Qwen also supplies the structured findings for burst and MCP assessments. A stored model finding is advisory. Tagging, rating and marking a burst reviewed require an explicit action.
 
-PhotoAIKit and RawCull use these AI backends:
+PhotoAIKit owns provider contracts, model validation, inference backends and reusable indexing workflows. RawCull owns the catalog, file access, model activation, run budgets, evidence presentation and culling decisions. PhotoAnalysisKit owns sharpness and Vision measurement facilities. Its Vision queue is also used by the app’s PhotoAIKit feature-print backend.
 
-- **CLIP image embeddings** for visual similarity and semantic search.
-- **SAM 3 and EfficientSAM subject segmentation** for subject masks.
-- **Apple Vision feature prints** for always-available image similarity.
-- **Qwen3-VL** for local photo analysis and for concept discovery and assessment
-  of numbered SAM 3 objects.
+- [AI runtime]({{< relref "airuntime.md" >}}) traces how settings changes reach a running service.
+- [Model preparation]({{< relref "rawcullai.md" >}}) records the pinned build recipe for the three model packs.
+- [Package snapshot]({{< relref "/docs/packages/_index.md" >}}) identifies the revisions used by the application.
 
-The catalog inspected in the 3.3.6 (build 428) checkout exposes DataComp CLIP, Meta SAM 3,
-and Qwen3-VL-2B-Instruct. OpenAI CLIP remains excluded and EfficientSAM is not
-a production download. SAM 3 requires acceptance of its verified bundled
-licence before download. The App Store build uses Apple-hosted Managed
-Background Assets; the Direct/Developer ID build retains a self-hosted `v3`
-manifest. See [AI Model Downloads](/docs/ai/rawcullai/) for the exact distinction.
-
-Vision is the startup and service-selection fallback: RawCull uses it when CLIP
-is disabled or the selected CLIP bundle cannot produce a validated provider. A
-selected CLIP indexing pass keeps its valid per-file artifacts and records the
-files that fail; it does not mix Vision artifacts into that pass or
-automatically rerun the whole batch.
-
-The [AI Models in RawCull](/docs/ai/aiinrawcull/) guide follows code connected
-to similarity, semantic search, burst analysis, Deep Review, Qwen, and Objects.
-The [PhotoAIKit architecture guide](/docs/packages/photoaikit/) covers SAM 3
-contracts, workflows, and storage so that the package design is understandable. Not every reusable package capability is necessarily
-exposed as a finished RawCull user workflow.
-
-## Objects evidence and historical evaluations
-
-Objects combines Qwen concepts, SAM 3 masks and numbered-crop assessment. The
-decoder validates response shape and ownership; it cannot establish visual truth.
-After bounded repair, selective focus abstention can preserve supported findings
-while removing unsupported focus claims. The current implementation and fixtures
-are described in [AI Models in RawCull]({{< relref "aiinrawcull.md" >}}).
-
-The older publishing/test reports are no longer in the current application tree.
-Dated photographic observations in these guides remain historical and do not
-establish current release readiness. This review did not rerun installed models.
-Use the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`) for present test entry points.
-
-## The Central Design Idea
-
-RawCull and PhotoAIKit answer different kinds of questions.
-
-**PhotoAIKit asks:**
-
-- What does an image source look like at a package boundary?
-- How is a model bundle validated and identified?
-- How does a backend produce and compare a similarity artifact?
-- How is bounded indexing or segmentation orchestrated?
-- How can reusable artifacts and masks be encoded or cached?
-
-**RawCull asks:**
-
-- Where are models installed for this application?
-- How is a registered RAW file decoded for AI input, and what source fidelity is admitted?
-- Which backend did the user request?
-- When should a catalog be indexed or reindexed?
-- How do similarity distances affect burst grouping and culling?
-- What state and wording should SwiftUI present?
-
-This is dependency inversion in practical form. PhotoAIKit defines small
-protocols such as `ImageDecoding`, `ImageSimilarityArtifactProviding`, and
-`ImageSimilarityArtifactComparing`. RawCull injects app-specific implementations
-and keeps its file model, UI, sandbox policy, and culling decisions outside the
-package.
-
-```mermaid
-flowchart LR
-    UI["RawCull SwiftUI and settings"] --> Integration["RawCullApplicationState composition root"]
-    Integration --> AppAdapter["RawCull adapters: paths, RAW decoding, policy"]
-    AppAdapter --> Contracts["PhotoAIContracts"]
-    Integration --> CLIP["CoreAICLIPBackend"]
-    Integration --> SAM3["CoreAISAM3Backend"]
-    Integration --> Vision["VisionFeaturePrintBackend"]
-    AppAdapter --> Workflows["PhotoAIWorkflows"]
-    Workflows --> Contracts
-    Storage["PhotoAIStorage"] --> Contracts
-    CLIP --> Contracts
-    SAM3 --> Contracts
-    Vision --> Contracts
-```
-
-The arrow direction matters: PhotoAIKit does not import RawCull. A reusable
-package should not need to know what `FileItem`, `RawCullViewModel`, an
-app-specific model folder, or a burst winner means.
-
-## Responsibility Boundary
-
-| Concern                                                                          | Owner                       | Reason                                                           |
-| -------------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------- |
-| Typed model, image, artifact, and segmentation contracts                         | PhotoAIKit                  | Backends and hosts need one stable language                      |
-| Core AI CLIP and SAM 3 inference                                                 | PhotoAIKit backend products | Framework-specific tensor and inference code is reusable         |
-| Vision feature-print generation and native distance                              | PhotoAIKit backend product  | The opaque Vision payload stays behind its backend boundary      |
-| Bounded indexing, optional fallback mechanisms, segmentation, and mask selection | PhotoAIKit workflows        | These mechanisms do not depend on RawCull UI or culling policy   |
-| Optional embedding codecs and mask stores                                        | PhotoAIKit storage          | Persistence mechanics are reusable, but locations are not        |
-| Model installation directories and candidate order                               | RawCull                     | Paths and sandbox policy belong to the host application          |
-| RAW decoding                                                                     | RawCull                     | PhotoAIKit should not depend on `RawParserKit` or camera formats |
-| Settings and capability wording                                                  | RawCull                     | User-facing state and localization belong to the app             |
-| Similarity ranking adjustments and burst grouping                                | RawCull                     | These are photo-culling product decisions, not CLIP behavior     |
-| Burst-analysis cache location and lifecycle                                      | RawCull                     | The host owns when and where catalog results persist             |
-
-## Current Runtime Shape
-
-`RawCullApplicationState` is the object-graph assembly boundary. It creates one
-`RawCullAIModelRuntime`, one shared `SimilarityScoringModel`, the focused
-similarity and semantic-search features, Deep Review, Qwen, Objects, and Combined Review features,
-the main view model, and one `RawCullIntelligenceRuntime`. Identity assertions
-protect against accidentally constructing parallel observable state.
-
-`RawCullAIModelRuntime` owns concrete providers, resource managers, Qwen
-inference, and separate subject/object mask stores. `RawCullIntelligenceRuntime`
-owns stable feature lifetimes and applies complete revisioned configurations
-from settings. See [The RawCull AI Runtime](/docs/ai/airuntime/) for the full
-construction and refresh sequence. Views receive focused feature surfaces
-instead of the composition root or low-level scoring model:
-
-| Consumer                       | Narrow dependency                                                 | Capability and persistence rule                                                                                                           |
-| ------------------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `RawCullSimilarityFeature`     | Shared `SimilarityScoringModel` plus `RawCullSimilarityServicing` | Owns the public hydration, indexing, ranking, cancellation, and backend-presentation surface while persisting descriptor-valid artifacts  |
-| `RawCullSemanticSearchFeature` | Shared scoring model and optional semantic-search service         | Projects semantic-search state, binds weakly to application selection/navigation, and never indexes missing images as a query side effect |
-| `BurstAnalysisCoordinator`     | Similarity feature, scoring models, and cache repository          | Owns burst generation, progress, cache preparation, missing computation, grouping, ranking, cancellation, and derived-cache saving        |
-| `DeepAIReviewController`       | `DeepAIReviewFeature`                                             | Builds immutable requests from app evidence and validates the group signature before recommendations reach culling policy                 |
-| `RawCullAISettingsModel`       | `RawCullIntelligenceConfigurationApplying`                        | Publishes one ordered configuration; the runtime ignores stale revisions and applies only meaningful identity changes                     |
-
-The safe startup and refresh path is:
-
-1. `RawCullApp` calls `RawCullApplicationState.live()` and retains its view
-   model and intelligence runtime as stable `@State` roots.
-2. Assembly creates the shared scoring model and focused features from the
-   initial Vision-backed configuration.
-3. `RawCullAISettingsModel.refresh()` asks the model runtime to validate both CLIP
-   and both segmentation-model candidates.
-4. PhotoAIKit validates model bundles and derives model-asset fingerprints.
-5. Settings publishes a monotonically revisioned configuration. The runtime
-   replaces similarity or semantic-search services only when their identities
-   changed and applies segmentation selection independently.
-6. Missing, invalid, or disabled CLIP leaves burst similarity on Vision and
-   semantic search unavailable.
-7. CLIP indexing retains valid files and logs per-file failures; Vision is not
-   inserted into that CLIP result set.
-8. Changing the segmentation selection immediately updates the active provider.
-   A full refresh rechecks every candidate and saved-evidence state.
-
-```mermaid
-stateDiagram-v2
-    [*] --> VisionStartup
-    VisionStartup --> CheckingModels: settings refresh
-    CheckingModels --> Configuration: publish newer configuration revision
-    Configuration --> CLIPSelected: preference enabled and provider ready
-    Configuration --> VisionSelected: selected CLIP unavailable
-    CLIPSelected --> CLIPArtifacts: keep valid per-file artifacts
-    CLIPSelected --> PartialCLIP: record and exclude failed files
-    VisionSelected --> VisionArtifacts: index catalog
-    CheckingModels --> SegmentationSelected: activate SAM 3 or EfficientSAM
-```
-
-Burst similarity, semantic search, and Deep Review are separate features even
-when they share package code. Burst similarity may use Vision or CLIP. Semantic
-search requires CLIP image artifacts whose descriptor exactly matches the text
-provider. Deep Review uses segmentation masks and has its own availability,
-selection, and storage lifecycle.
-
-## Vocabulary
-
-| Term                    | Meaning in this codebase                                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Provider**            | A backend object that performs inference or creates an artifact                                                                              |
-| **Backend descriptor**  | Identity of the backend, model, representation, preprocessing, normalization, and configuration                                              |
-| **Similarity artifact** | A descriptor plus a backend-owned payload; CLIP stores an encoded vector, while Vision stores an opaque archived observation                 |
-| **Source fingerprint**  | Standardized file path, size, and modification date used to detect changed source images                                                     |
-| **Model fingerprint**   | Identity derived from the selected `.aimodel` or `.aimodelc`, cryptographically verified when the manifest provides a checksum               |
-| **Composition root**    | The one place where concrete providers, stores, paths, and app adapters are assembled                                                        |
-| **Partial CLIP result** | Valid CLIP artifacts plus per-file failures; failed files remain unavailable to similarity and burst grouping until a later successful index |
-| **Host**                | The application integrating PhotoAIKit; here, RawCull                                                                                        |
-
-## Learning route for the October implementation
-
-1. Read the model-role table in [AI Models in RawCull](/docs/ai/aiinrawcull/).
-   Separate embeddings, masks, generated observations, and deterministic metrics.
-2. Follow composition and provider replacement in [AI Runtime](/docs/ai/airuntime/).
-3. Read [Concurrency](/docs/concurrency-revised/) with the source open.
-4. Trace [Review](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/README.md#review) from a frozen run snapshot to
-   independently scoped observations and grounded report selections.
-5. Run the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`),
-   which cover bounded retries and the negated-focus regression.
-6. Study model preparation and provenance separately from inference accuracy.
-
-The October 13 tab probes exercise SAM Deep Review, a separate CLIP embedding
-check, standalone Qwen, and Objects. They do not execute Combined Review.
-Passing a JSON contract establishes accepted structure and some consistency;
-it does not establish visual accuracy. The historical October 13 account reported 17/18 successful analyses before
-a later Objects negation fix. It is a dated result, not a fresh evaluation of
-3.3.6. Current source inspection and model-free fixtures do not replace a new
-installed-model run.
-
-## Current state owners
-
-`SimilarityScoringModel` retains `RawCullSemanticSearchModel` for semantic
-evidence, configuration, hydration and query execution. Its existing semantic
-API forwards to that owner. `BurstWorkflowController` retains `BurstReviewSessionModel`
-for review decisions, independently of viewport sessions. Combined Review's
-three execution extensions still share one mutable feature/run owner. Read
-[AI Runtime]({{< relref "airuntime.md" >}}) and
-the [AI features decision](https://github.com/rsyncOSX/RawCull/blob/e287946087ccba47e29cc9fffdbc513d2b65e79c/Docs/ai-features-decision.md) for the boundaries.
+The earlier AI Analysis tabs appeared in development builds. Their source-level replacement and rationale are recorded in the [AI feature decision](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Docs/ai-features-decision.md).

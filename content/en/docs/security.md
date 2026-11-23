@@ -2,16 +2,16 @@
 author = "Thomas Evensen"
 title = "Security-Scoped URLs"
 date = "2026-02-05"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 tags = ["security", "sandbox", "bookmarks"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Traced the separate session-catalog and MCP-grant access paths used by the assessment window."
 +++
 
 # Security-Scoped URLs
@@ -161,7 +161,7 @@ Opening a catalog hydrates compatible artifacts from the app-owned cache into
 
 `searchSemantically(for:)` and `rankSemantically(query:files:)` do not decode RAW files, generate image embeddings, or read image contents from the catalog. The text-query embedding exists only for that search call and is not persisted. Consequently, semantic ranking itself does not acquire a new security scope; it uses in-memory artifacts that were restored or created earlier.
 
-The catalog scope nevertheless remains active during semantic search. Ranked files can immediately flow into preview, zoom, export, culling, burst, or Deep Review operations that do need their source URLs. Clearing a search changes the working set, not the security-scope owner or lifetime.
+The catalog scope nevertheless remains active during semantic search. Ranked files can immediately flow into preview, zoom, export, culling, burst, or Review operations that do need their source URLs. Clearing a search changes the working set, not the security-scope owner or lifetime.
 
 ### Scope lifetime for the AI workflow
 
@@ -328,3 +328,7 @@ Saved manual regions are preference-sized UserDefaults records, not writes to
 the photo catalog, XMP sidecars or the rating store. The renderer itself writes
 no region file into the catalog; existing developed-JPEG loader persistence
 continues to follow its own established policy.
+
+## Photo access from AI Assessments
+
+The assessment window can display findings from an in-app burst batch or an MCP request. For session entries the app asks the workspace to retain access to the session catalog. For MCP entries it delegates to the controller’s saved follow-up grant. The shared window chooses access from the selected request’s origin. [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Main/RawCullApp.swift)

@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Updated viewer ownership and distinguished the calibrated focus overlay from a retained Review subject mask."
 +++
 
 # Detailed Focus Mask Computation
@@ -441,19 +441,13 @@ When changing the mask:
 
 ## Presentation after the October viewer refactor
 
-The package computation above is unchanged at the current pin. The app's
+The formula walkthrough above uses the dated package revision. The app's
 publication boundary now includes `LoupeFocusPresentationModel` and
 `ZoomOverlayAnalysisCoordinator`, with focused raster/canvas views for rendering.
 The zoom coordinator snapshots selected file, image identity and source and
-rechecks them after analysis. `AnalysisImageCanvas` shares one aspect-fit
-rectangle for photograph, mask and AF overlay without changing their coordinate
-conventions. Follow [Viewer Architecture]({{< relref "viewer-architecture.md" >}})
+rechecks them after analysis. Follow [Viewer Architecture]({{< relref "viewer-architecture.md" >}})
 for the current task owners; the small raster view is not an analysis engine.
 
-## Calibration compatibility at build 462
+## Focus overlay and Review subject outline
 
-The host calibrates on embedded previews at a fixed scale. Analysis screens
-can rescale the preview before computing the overlay. Deep Review separately
-keys subject masks by render identity, regenerates masks that fail geometry
-checks and invalidates prior results after a segmentation-model replacement.
-See [Focus Mask and Sharpness]({{< relref "/docs/focusmask.md" >}}) for host calibration ownership.
+The host calibrates the focus overlay on embedded previews at a fixed scale. A Review subject outline comes from a retained segmentation mask. Focus check or Full must first produce a usable subject for that photo. The viewer checks the file fingerprint before drawing the retained mask. [Review presets and subject masks]({{< relref "/docs/ai/aiinrawcull.md" >}})

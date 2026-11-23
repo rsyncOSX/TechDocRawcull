@@ -2,23 +2,22 @@
 author = "Thomas Evensen"
 title = "RawCull Internal Swift API"
 date = "2026-10-22"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 description = "Application-internal catalog, culling, preview, scoring, similarity, AI, persistence and copy method contracts."
 weight = 25
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Replaced removed controller calls with the current Review, batch plan and culling action interfaces."
 +++
 
 # RawCull Internal Swift API
 
 Use this reference alongside the
-[application walkthrough]({{< relref "rawcullapidoc.md" >}}). These are internal
-App-internal Swift interfaces reviewed against RawCull 3.4.5, build 436.
+[application walkthrough]({{< relref "rawcullapidoc.md" >}}). These Swift interfaces belong to the RawCull application target. This review covers 3.4.9 build 466.
 Observable progress and completion state remain part of asynchronous contracts.
 Source excerpts show the reviewed implementation; usage examples are illustrative
 calls inside the application target.
@@ -204,47 +203,30 @@ Helper functions: group signatures, cache snapshots, ranking assembly, undo capt
 
 ### 7. AI analysis input and feature actions
 
-Source: [CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
+Source: [CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) and feature files under `RawCull/Intelligence`.
 
 `aiAnalysisFiles(for:) -> [FileItem]` resolves `.gridSelection` or `.taggedImages`. Grid selection uses `selectedFileIDs`, falling back to the focused ID, and admits only visible filtered files. Tagged input uses persisted ratings of at least 2 within the active scope. `preserveAIAnalysisGridSelection()` freezes the fallback batch before browsing tagged images changes focus.
 
-| Feature and function | Input | Result and lifecycle |
-|---|---|---|
-| `DeepAIReviewController.start(for:) async` | Burst/group files | Uses bound application context and SAM 3 capability to evaluate subject detail. Inspect controller state for unavailable, preparing, running, cancelled, failed or completed result. |
-| `applyDeepAIReviewRecommendation(_:to:)` | Result and matching group files | Checks group signature, stores winner override, rates winner 3 and marks reviewed. Does not reject other frames. |
-| `RawCullQwenAnalysisFeature.analyze(_:) async` | Files and nonblank `prompt` property | Processes files not already represented in results, uses local vision-language inference, validates structured output and retries a rejected response once with feedback. Publishes `results`, `progress`, `failureMessage`, `isRunning`. |
-| `RawCullObjectAnalysisFeature.analyze(_:) async` | Files and feature configuration | Uses Qwen concept discovery, SAM 3 instance segmentation and a numbered review board for assessment. Publishes per-photo results and stage/progress state. |
-| `RawCullObjectAnalysisFeature.retryFailed(_:) async` | Files | Retries failed object-analysis entries. |
-| `cancel()` / `cancelAndWait() async` | None, on Deep Review, Qwen or Objects controller/feature | Requests cancellation / waits for cancellation handling to drain. Use the waiting form when ordering shutdown or replacement matters. |
+The Review workspace passes this selection into `CombinedReviewFeature`. The separate burst-list action calls `BurstBatchAssessment.makePlan(catalog:catalogName:generation:groups:results:files:)` using completed rankings. Its `start(_:navigation:isStillCurrent:)` publishes session entries and rechecks the generation between groups. [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/BurstBatchAssessment.swift)
 
-```swift
-let files = catalogController.aiAnalysisFiles(for: .gridSelection)
-runtime.qwenAnalysisFeature.prompt =
-    "Evaluate composition, exposure, subject visibility, and obstructions."
-await runtime.qwenAnalysisFeature.analyze(files)
-let assessments = runtime.qwenAnalysisFeature.results
-```
+For result actions, `ReviewDecisionActions.act(on:_:)` resolves a saved file and checks its fingerprint before executing the closure. Tagging sets two stars. A rating of three or more disables the tag toggle. `burstGroupID(for:)` returns a group only for unambiguous membership, which controls whether **Mark Reviewed** is available. [ReviewDecisionActions](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ReviewDecisionActions.swift)
 
-Qwen requires an available vision model and nonempty pending files. Objects requires both Qwen and SAM 3. AI analysis can be unavailable or return rejected/partial evidence; model output is advisory. Objects analysis finds instances matching requested concepts, not a guaranteed exhaustive object inventory. Feature actions respect the Combined Review resource lease where implemented.
+### 8. Review run API
 
-Helper functions: response decoders, validation feedback, mask outlines, object deduplication, prompt assembly and diagnostic capture support the main analysis APIs.
-
-### 8. Combined Review
-
-Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift), and execution/backend files in the same directory.
+Source: [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift), [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift), and execution/backend files in the same directory.
 
 | Function | Request | Response and effects |
 |---|---|---|
 | `prepareParameters(_:) async` | `[ReviewSelectedFile]` | Prepares admission and model/source information for the selected input. |
 | `canStartReview(for:) -> Bool` | Selected files | Evaluates current admission; it does not run review. |
-| `analyze(_:) async` | Selected files plus `criteria`, `depth`, source preference and retention properties | Acquires the shared lease, freezes source metadata, validates models and snapshot, persists manifest, executes stages and publishes results. |
+| `analyze(_:) async` | Selected files plus `preset`, `criteria`, `depth`, source preference and retention properties | Acquires the shared lease, freezes source metadata, validates models and snapshot, persists manifest, executes stages and publishes results. |
 | `restoreStoredRun() async` | None | Restores latest manifest and saved history when idle. |
 | `resume() async` | Existing manifest | Revalidates sources, models, pipeline and artifacts before resuming compatible pending work. |
 | `cancel()` | None | Cancels worker and marks the manifest; completion handling retains finished evidence. |
 | `exactInput(_:) async -> CGImage?` | Retained input key | Decodes retained image when available; nil does not imply the report is missing. |
 | `currentManifest() throws -> CombinedReviewRunV1` | Current state | Returns the validated current manifest or throws. |
 | `clearAllReviews() async throws` | None | Deletes stored reviews through the feature's cleanup path. |
-| `clearRejectedResponses() async` / `clearRetainedInputs() async` | None | Removes optional rejected-text diagnostics / retained source inputs. |
+| `clearRejectedResponses() async throws` / `clearRetainedInputs() async throws` | None | Removes optional rejected-text diagnostics / retained source inputs. |
 
 ```swift
 // selectedReviewFiles is the UI-prepared [ReviewSelectedFile].
@@ -257,7 +239,7 @@ let manifest = feature.manifest
 let failure = feature.failureMessage
 ```
 
-Depth uses `standard`, `deep` or `exhaustive` budgets. The run records criteria, source fingerprints, model identities, stage versions, pipeline/render versions and retention policy. Source, overview, segmentation, identity, measurement, CLIP, crop observation, reconciliation, report and comparison are explicit stage categories; work dependencies and budgets constrain execution.
+`preset` selects the work graph. Historical snapshots without it decode as Full. See [preset requirements]({{< relref "/docs/ai/aiinrawcull.md" >}}). Depth uses `standard`, `deep` or `exhaustive` budgets. The run records criteria, source fingerprints, model identities, stage versions, pipeline/render versions and retention policy. Source, overview, segmentation, identity, measurement, CLIP, crop observation, reconciliation, report and comparison are explicit stage categories; work dependencies and budgets constrain execution.
 
 Success is observable evidence and run state, not simply the absence of a thrown error: `analyze` catches failures into `failureMessage` and progress. Failed synthesis can leave observations without a synthesized conclusion. Resume rejects changed sources or incompatible models/contracts rather than silently merging different evidence. Exact-input retention consumes storage and is optional.
 

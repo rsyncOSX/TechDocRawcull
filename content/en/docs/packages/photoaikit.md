@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-08"
+lastmod = "2026-11-23"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 10
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Existing content retained after delta and reference checks; historical package audit retained"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Checked the 3.1.0 serializer against its resolved source. Distinguished current integration from the October audit."
 +++
 
 # How PhotoAIKit Is Constructed
@@ -31,6 +31,10 @@ handling, paths, sandbox rules, and culling policy.
 
 This document explains the construction from the bottom up and gives the reason
 for each boundary.
+
+## Build 466 integration
+
+RawCull resolves PhotoAIKit 3.1.0. Its Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. The detailed walkthrough below describes the earlier audited revision. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
 ## 1. Begin With The Package Boundary
 
@@ -66,7 +70,7 @@ mode, **eight** library products and one test target. `CoreAIQwenBackend` is the
 eighth library product. The inspected manifest requires `apple/coreai-models`
 exactly at `1.0.0`; RawCull resolves it to
 `5de95c6cd29e5e390fb36d87e13b2396668f7974`; it declares
-`huggingface/swift-transformers` from 1.3.3 and RawCull resolves 1.3.5.
+`huggingface/swift-transformers` from 1.3.3 and the October app resolved 1.3.5. Build 466 resolves swift-transformers 1.4.0.
 
 ```mermaid
 flowchart TD
@@ -474,7 +478,7 @@ Actor isolation does not remove the need for a host policy. RawCull still owns
 generation tokens and catalog checks that prevent an older task from replacing
 results for a newer selection.
 
-## 9. RawCull Integration And Policy Boundary
+## 9. RawCull integration at the October audit
 
 RawCull imports the package products and assembles concrete providers in
 `RawCullAIModelRuntime`. `RawCullApplicationState` binds those providers to
@@ -587,7 +591,7 @@ it probably belongs in RawCull's adapter layer instead.
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).
 
-## October 13 package additions and application boundaries
+## Historical October 13 package additions and application boundaries
 
 `CoreAIQwenBackend` validates and configures a local Qwen provider and constructs
 the model used by the host's inference runtime. RawCull owns session creation,
@@ -619,7 +623,7 @@ three use a `CGImage`. Their outputs and acceptance conditions differ.
 
 ## Host semantic-state ownership
 
-The package pin is unchanged. RawCull's `RawCullSemanticSearchModel` owns
+The semantic-state extraction kept the package pin used at that time. RawCull's `RawCullSemanticSearchModel` owns
 cached evidence, capability, hydration and query presentation, retained behind
 SimilarityScoringModel's existing API. The package still owns encoding and
 comparison of compatible embeddings; this host extraction does not alter its
@@ -627,7 +631,7 @@ models, artifact compatibility or ranking algorithms.
 
 ## November 8 Integration Review: Identity Across Workflows
 
-The app still resolves PhotoAIKit 1.0.0 at
+The November 8 application resolved PhotoAIKit 1.0.0 at
 `4b85056e6c2603b5e382987710ca2f16f4c5c155`. The newer transitive versions in the
 [package snapshot]({{< relref "_index.md" >}}) do not imply a new PhotoAIKit API
 revision. Review backend behavior against the resolved source when changing the

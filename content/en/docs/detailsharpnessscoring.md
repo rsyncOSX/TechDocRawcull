@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Detailed Sharpness Scoring"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 41
 tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Corrected effective concurrency for embedded previews and RAW demosaics. The formula audit retains its original revision."
 +++
 
 # Detailed Sharpness Scoring
@@ -137,9 +137,7 @@ so the f/8 aperture fallback can reduce Auto's subject weight to 0.55.
 
 The effective maximum pixel size is clamped between the quality minimum
 and 2048; a nonpositive setting resolves to 2048. RAW demosaic further caps
-concurrency at 2. Effective concurrency is also capped at half the active
-processor count, rounded down with a minimum of one. For example, Fast can
-admit five tasks on a 10-core Mac.
+concurrency at two. Embedded-preview scoring uses the quality limit in the table. The shared Vision gate serializes blocking request bodies across these jobs. [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
 
 Protected by: [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SharpnessScoringTests.swift) preset, quality, size,
 and concurrency assertions; package policy also has

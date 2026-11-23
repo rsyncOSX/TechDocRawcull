@@ -3,13 +3,13 @@ title: Performance Measurement
 linkTitle: Performance
 description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-11-21
+lastmod: 2026-11-23
 
-reviewed_commit: "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version: "3.4.9"
-reviewed_build: 462
-reviewed_on: "2026-11-21"
-review_scope: "Content and references updated"
+reviewed_build: 466
+reviewed_on: "2026-11-23"
+review_scope: "Added the source project’s 275-ARW gate comparison, stress run, Release sharpness evidence and limits."
 ---
 
 # Performance Measurement
@@ -353,10 +353,8 @@ Build 436 adds current-frame detection on an embedded preview capped at
 the preview pixels for crops. Animal detection runs separately. This source
 review adds no latency, memory or detection-accuracy measurements.
 
-## Vision scheduling validation in build 462
+## Vision gate measurements on 275 Sony ARWs
 
-The app source records three consecutive test-plan runs on a 10-core Mac,
-each with 955 passing tests and six skipped real-model tests. The runs followed
-the shared Vision backend and face analyzer changes and the sharpness task cap.
-Real-catalog indexing throughput and simultaneous indexing and sharpness scoring
-remain to be measured. [Vision test record](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/Docs/visionupdate.md)
+On 21 November the source project compared PhotoAnalysisKit 1.3.9 and 1.4.0 on a 27 GB catalog on a 10-core Mac. All 275 records matched on the compared analysis fields, all 1,650 generated masks and close-up crops were byte-identical, and the burst winners matched. Batch scoring took 22.8 s before and 21.6 s after. The source report treats that timing difference as within noise.
+
+With Fast scoring at six tasks and Vision indexing at four concurrent decodes, two warmed Debug runs completed both workloads in 18.1 s each. All 275 files were scored and indexed in each run. A separate Release sharpness run completed 3,025 comparisons in 86 minutes. The catalog had no ground-truth labels for ranking accuracy. These measurements predate the 1.4.1 shared Core Image context change. The recorded end-to-end MCP burst run for this gate change was still outstanding. [Vision implementation and catalog results](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Docs/visionupdate.md)

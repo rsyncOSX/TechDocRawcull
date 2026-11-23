@@ -3,22 +3,22 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 20
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated; historical package audit retained"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Checked 1.4.0 queue admission and the 1.4.1 shared focus-engine context at the resolved revision."
 +++
 
 # How PhotoAnalysisKit Is Constructed
 
-> **Revision audited:** RawCull resolves PhotoAnalysisKit `1.3.1` at
+> **Revision audited:** The formula walkthrough uses PhotoAnalysisKit `1.3.1` at
 > `2a1466e04d821fa2628d6985296643e0d0c7e465`. The facade, descriptors, presets,
 > batch behavior, calibration, evidence, and mask APIs below describe that
 > revision.
@@ -31,6 +31,10 @@ opaque Apple Vision feature prints.
 The package measures a photo; it does not decide whether to keep it. That
 distinction prevents image-processing code from becoming coupled to RawCull's
 files, settings, views, caches, or culling policy.
+
+## Build 466 integration
+
+RawCull resolves PhotoAnalysisKit 1.4.1. Version 1.4.0 moved blocking saliency, classification, face, animal and feature-print requests onto the shared Vision gate. Version 1.4.1 also shares a lazily initialized Core Image context across focus engine instances. Treat queue admission and render reuse separately when investigating latency. The real-catalog comparison in the performance guide evaluated the gate change. [VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [FocusMaskEngine](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine.swift) · [Performance measurements]({{< relref "/docs/performance.md" >}})
 
 ## 1. Begin With The Package Boundary
 
@@ -579,7 +583,7 @@ sensor-to-oriented coordinate conversion in the host adapter.
 
 ## Close Up Integration
 
-Build 462 uses PhotoAnalysisKit 1.3.9.
+Build 466 uses PhotoAnalysisKit 1.4.1.
 `FaceEvidenceAnalyzer` runs Vision face rectangle detection on an upright
 embedded preview and can return a local luminance-gradient measurement for
 each face. RawCull owns the disposable evidence cache. It keys compatibility

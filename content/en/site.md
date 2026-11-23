@@ -8,11 +8,11 @@ params:
   hide_feedback: true
   cSpell:ignore: docsy
 
-reviewed_commit: "a68253b73cbad14a7b1030dba6b439e6bce7d3da"
-reviewed_version: "3.4.5"
-reviewed_build: 436
-reviewed_on: "2026-11-09"
-review_scope: "source delta and reference check; existing content retained"
+reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
+reviewed_version: "3.4.9"
+reviewed_build: 466
+reviewed_on: "2026-11-23"
+review_scope: "Retained site information after checking the site links."
 ---
 
 Site built with [<span class="badge bg-primary text-bg-primary fs-6">Docsy

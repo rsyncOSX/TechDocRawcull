@@ -9,11 +9,11 @@ tags = ["swift-package", "modules", "learning", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 1
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Existing content retained after delta and reference checks"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Confirmed the PhotoEvidenceKit revision and library products. The repository transport change leaves the module example intact."
 +++
 
 # One Package, Three Imports: Understanding Swift Modules

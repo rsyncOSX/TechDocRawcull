@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Burst Groups"
 date = "2026-07-15"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 45
 tags = ["burst", "similarity", "grouping", "vision", "sharpness"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Documented eligibility, preview inputs, rubric, cancellation and session lifetime for Assess All Bursts. Updated mask lookup."
 +++
 
 # Burst Groups
@@ -46,7 +46,7 @@ typed `SimilarityArtifact` values rather than assuming one representation.
 | Burst home and review list                   | [BurstGroupsHomeView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/SimilarityGridView/BurstGroupsHomeView.swift), [SimilarityGridSelectionView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/SimilarityGridView/SimilarityGridSelectionView.swift), [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CullingGrid/CullingGridView.swift)                                             |
 | Single-burst workspace and comparison        | [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift), [ComparisonGridView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/ComparisonGridView.swift)                                                                         |
 | Batch badge selection and rating              | [CullingGridSelectionCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CullingGrid/CullingGridSelectionCoordinator.swift), [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/CullingGrid/CullingGridView.swift)                                                                      |
-| Deep Review subject outlines                  | [DeepAIReviewMaskOutlineRenderer.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/DeepReview/DeepAIReviewMaskOutlineRenderer.swift), [LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift), [ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ZoomViews/ZoomOverlayView.swift), [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)   |
+| Review subject outlines | [ReviewSubjectMasks](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/ReviewSubjectMasks.swift) · [SubjectMaskOutlineRenderer](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/SubjectMasks/SubjectMaskOutlineRenderer.swift) |
 | Tests                                        | [RawCullCore/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Tests/RawCullCoreTests/BurstGroupingEngineTests.swift), [BurstRankingEngineTests.swift](https://github.com/rsyncOSX/RawCullCore/blob/d25a51e65ad32a82bf82f86fa0ec07d6e14498e9/Tests/RawCullCoreTests/BurstRankingEngineTests.swift), app burst/culling tests         |
 
 ## End-to-End Flow
@@ -254,10 +254,15 @@ also exposes zoom, thumbnail/embedded-JPEG source selection, focus evidence,
 rating, pick/reject, reviewed state, and the detailed comparison grid. Escape
 returns to the active burst list.
 
-When Deep Review has produced a stored mask for the selected file, the workspace
-can render its orange subject outline. `S` toggles the outline. The lookup uses
-completed mask candidates indexed by file ID, and asynchronous outline results
-are committed only while the selected file and mask identity remain current.
+Focus check and Full can produce a subject outline. Press **S** on a reviewed frame to show it. RawCull looks up a retained mask in the displayed Review results by standardized file URL and checks the fingerprint before loading it. [Review presets and subject masks]({{< relref "/docs/ai/aiinrawcull.md" >}})
+
+## Assess the ranked pair in each burst
+
+Once the burst lists are ready, open the **AI assessment** card and choose **Assess All Bursts**. RawCull needs an open catalog, at least 16 GB of unified memory, an available Qwen model, and a free AI lease. The button stays disabled during catalog preparation or competing AI work.
+
+The plan snapshots the active catalog and burst-analysis generation. It skips Single Images, groups without matching analysis membership and groups with missing files. For each eligible group, it takes the recommendation and distinct alternate when available. The worker reads previews up to 2048 pixels and asks Qwen about composition, exposure and subject visibility. It counts unreadable photos and failed assessments separately from successful findings. A model change stops the run.
+
+**Cancel** stops further work. Between bursts the worker checks that the catalog and analysis generation still match. A completed burst with at least one successful assessment gets an entry in **AI Assessments**. Choose **View Results** to inspect the pair. These entries last for the app session and starting another batch clears the previous session entries. The burst ranking and ratings change only through explicit culling actions. MCP follow-ups have a separate shared store and retention policy. [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/BurstBatchAssessment.swift) · [BurstGroupsHomeView](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Views/SimilarityGridView/BurstGroupsHomeView.swift) · [BurstBatchAssessmentTests](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCullTests/BurstBatchAssessmentTests.swift)
 
 ## Review States
 

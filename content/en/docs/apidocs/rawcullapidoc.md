@@ -2,25 +2,25 @@
 author = "Thomas Evensen"
 title = "RawCull Developer Guide"
 date = "2026-10-15"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Updated launch code, Review flow, smoke inventory, model probes and tag-to-TestFlight release procedure."
 +++
 
 
 # RawCull developer documentation
 
-Last reviewed: 2026-11-09. Baseline: RawCull 3.4.5, build 436, commit `a68253b73cbad14a7b1030dba6b439e6bce7d3da` on the unmerged `version-3.4.5` branch.
+Reviewed against RawCull 3.4.9 build 466 on 23 November 2026. [Source revision](https://github.com/rsyncOSX/RawCull/commit/0513a30e4567b4b5e3093e10791d49c86ecfe7e6)
 
-Read this guide in order for a tour from application launch to exported photographs. The walkthrough establishes the ownership and data-flow model; the API reference then explains individual operations, inputs, results and failure behavior. Source links use the immutable reviewed application commit so the described implementation remains reproducible. Code marked **source excerpt** is copied from the implementation; **usage example** means an illustrative call inside the app module, with existing application objects and selected files. Neither kind is intended to be pasted into an unrelated standalone Swift program.
+Read this guide in order for a tour from application launch to exported photographs. The walkthrough establishes the ownership and data-flow model; the API reference then explains individual operations, inputs, results and failure behavior. Source links identify the application revision used for each excerpt so the described implementation remains reproducible. Code marked **source excerpt** is copied from the implementation; **usage example** means an illustrative call inside the app module, with existing application objects and selected files. Neither kind is intended to be pasted into an unrelated standalone Swift program.
 
 RawCull has no HTTP server or REST endpoints in the application workflows documented here. “API” means the internal Swift application interface. Requests are arguments and configuration; responses are return values or observable state. Errors use Swift error types, result cases, optional values, and presentation state—not HTTP status codes. These interfaces are generally internal to the app target, not a versioned public SDK.
 
@@ -45,23 +45,30 @@ Imagine opening a folder containing a short sequence of owl photographs. You wan
 
 ### 1. Launch creates the objects that will survive navigation
 
-Begin in [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullApp.swift). Its initializer asks `RawCullApplicationState.live()` for the application assembly and retains two roots: `RawCullViewModel` and `RawCullIntelligenceRuntime`.
+Begin in [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Main/RawCullApp.swift). Its initializer asks `RawCullApplicationState.live()` for the application assembly and retains two roots: `RawCullViewModel` and `RawCullIntelligenceRuntime`.
 
 **Source excerpt — application initialization:**
 
 ```swift
 let applicationState = RawCullApplicationState.live()
+let runtime = applicationState.intelligenceRuntime
 _viewModel = State(
     initialValue: applicationState.viewModel,
 )
 _intelligenceRuntime = State(
-    initialValue: applicationState.intelligenceRuntime,
+    initialValue: runtime,
 )
+_burstBatchAssessment = State(initialValue: BurstBatchAssessment(
+    qwen: runtime.modelRuntime.qwenInference as? QwenInferenceRuntime,
+    prepareModel: { await runtime.settingsModel.refresh() },
+    unavailableReason: runtime.settingsModel.canRunQwenReview
+        ? nil : String(localized: "AI assessment needs at least 16 GB of unified memory."),
+))
 ```
 
 The workspace root assembles the catalog, selection and workflow owners. The runtime retains the AI feature instances, model runtime, settings model and downloads model. Opening a sheet or changing the focused photograph should use those same instances. Otherwise, a settings screen could configure one inference service while a review screen uses another.
 
-Follow `RawCullApplicationState.make(...)` in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). It constructs a shared similarity model, passes it to similarity and semantic-search features, creates the view model, and binds the application context and settings consumer. Identity assertions at the assembly boundary check that these objects share the intended dependencies. This is the best entry point for understanding dependency wiring.
+Follow `RawCullApplicationState.make(...)` in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). It constructs a shared similarity model, passes it to similarity and semantic-search features, creates the view model, and binds the application context and settings consumer. Identity assertions at the assembly boundary check that these objects share the intended dependencies. This is the best entry point for understanding dependency wiring.
 
 The main window then passes feature instances to `RawCullMainView` and injects workspace models and controllers through `workspaceEnvironment(_:)`. Its startup tasks load culling data, apply stored scoring settings and refresh AI settings. Construction establishes ownership; those tasks initialize persisted and capability state.
 
@@ -203,15 +210,15 @@ Normally the UI lets debouncing handle repeated ratings. A catalog transition or
 
 [CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) centralizes selection rules. Grid input uses explicit selected IDs or falls back to the focused photograph, intersected with visible files. Tagged input resolves saved ratings of at least 2 in the active scope. `preserveAIAnalysisGridSelection()` captures the fallback selection before browsing tagged photographs changes focus.
 
-The analysis features answer different questions. Sharpness scoring measures image detail; burst analysis groups and ranks related frames; semantic search ranks compatible CLIP artifacts against text; Qwen produces a validated assessment; Objects combines concept discovery, segmentation and assessment. A search score is not a star rating, and an AI recommendation does not become a saved culling decision until the relevant apply action runs.
+Sharpness scoring measures image detail, burst analysis groups and ranks related frames, and semantic search ranks compatible CLIP artifacts against text. Review evaluates the selected photos with the chosen preset. Results affect ratings only when the photographer acts.
 
 The shared runtime also coordinates settings changes. `apply(configuration:)` rejects obsolete configuration revisions, avoids replacing unchanged services and updates the affected similarity, semantic-search or segmentation configuration. Model identity and preprocessing matter because cached evidence from one configuration may not be reusable under another.
 
 ### 8. Combined Review freezes a reproducible run
 
-Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages.
+Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages.
 
-`analyze(_:)` prepares admission, acquires a shared lease and captures criteria, depth, source preference and retention settings. The runtime’s `beforeStart` hook waits for Qwen, Objects and Deep Review cancellation handling. The worker then freezes source descriptions, retains catalog access, reads model identities, validates a run snapshot, saves its initial manifest and executes the work. The async method awaits that worker; returning still requires inspecting result and failure state because failures are captured internally.
+`analyze(_:)` prepares admission, acquires a shared lease and captures the preset, criteria, depth, source preference and retention settings. The worker then freezes source descriptions, retains catalog access, reads model identities, validates a run snapshot, saves its initial manifest and executes the work. The async method awaits that worker; returning still requires inspecting result and failure state because failures are captured internally.
 
 The snapshot records what the run intended to analyze. The manifest records the run and its work. Compatibility keys describe whether evidence can be reused. Source fingerprints use path, size, modification time and file resource identity; they are metadata-derived fingerprints, not a full hash of every RAW byte.
 
@@ -272,23 +279,20 @@ Launch from Xcode, open a folder containing supported RAW photographs, inspect a
 | ParseRsyncOutput | Interpretation of rsync output |
 | DecodeEncodeGeneric | Codable persistence support |
 
-Read exact direct and transitive pins in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
+Read exact direct and transitive pins in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
 
 ### Tests and release checks
 
-```bash
-make test-smoke
-make test-full
-make test-performance
-make verify-ai-import-boundary
-make release-preflight
-```
+| Command | What it verifies |
+| --- | --- |
+| `make test-smoke` | Enumerates the smoke manifest before running the selected critical paths. Build 466 expects 384 unique test identifiers. |
+| `make test-full` | Runs the RawCull plan serially with Thread Sanitizer. |
+| `make test-performance` | Verifies the performance selection and runs that plan. |
+| `make analyze` | Builds for testing in isolated DerivedData and runs the SwiftLint analyzer against the clean compiler log, including unused declarations and imports. |
+| `make combinedreviewtest`, `make combinedinputstest`, `make combinedselectiontest` | Opt-in single-image Review, encoder/input-contract and six-file selection probes. Supply the relevant model assets and fixtures. |
+| `make releasesharpnesstest` | Runs the hostless Release sharpness comparison on the chosen catalog. |
 
-Choose checks appropriate to the change. Smoke covers selected critical paths; full runs the suite with Thread Sanitizer; performance covers deliberately expensive cases. Selection manifests and enumeration verification are part of the test contract. See [test architecture](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/TEST_ARCHITECTURE.md).
-
-Installed-model probes are opt-in: `make releaseaiobjectstest`, `make releasesharpnesstest`, `make combinedinputstest`, and `make combinedselectiontest`. Read the current Makefile and [release-test guide](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullReleaseTests/README.md) before running them: they can read local photographs and write reports. These checks are not substitutes for deterministic tests.
-
-Maintenance: update requirements and commands when project settings, package resolution, schemes, or Make targets change.
+For a release candidate, tag the clean commit for the app’s Xcode marketing version and run `make release-check`. It runs preflight (including tag-on-HEAD and model provenance), the AI import boundary, MCP helper and Release store tests, then smoke tests. Confirm app and downloader build numbers match. Upload with `make upload-app-store`, install the processed build through TestFlight, verify its model downloads and workflows, then submit that tested build in App Store Connect. Upload and submission are separate steps. The Developer ID DMG has its own build path. [Make targets](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Makefile) · [Release checklist](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/README.md)
 
 ## Architecture and ownership
 
@@ -306,7 +310,7 @@ flowchart TD
     VM --> Culling[CullingModel]
     VM --> Workers[Scan and thumbnail actors]
     VM --> Burst[BurstAnalysisCoordinator]
-    Runtime --> Features[Similarity, Search, Deep Review, Qwen, Objects, Combined Review]
+    Runtime --> Features[Similarity, Semantic Search, Review]
     Features --> Packages[PhotoAIKit and PhotoAnalysisKit]
     Workers --> Parser[RawParserKit through loading interfaces]
     Workers --> Cache[SharedMemoryCache and disk caches]
@@ -404,13 +408,13 @@ RawCull helps you choose photographs to keep. A catalog is a folder of photograp
 3. **Record decisions.** Use the rating/tag/reject controls. A rejection records a culling decision; it does not delete the original photograph.
 4. **Compare related frames.** Open burst comparison and inspect recommended candidates. Applying Keep Best or Keep Top Two changes the group's ratings; undo is available for the last captured burst action.
 5. **Try optional local AI.** Install the required models through AI settings and complete their licence prompts. CLIP supports search, SAM 3 supports subject masks, and Qwen provides photo assessments. These features run locally; downloading model assets requires connectivity.
-6. **Check the input scope.** AI Analysis and Combined Review can use selected or tagged photos. Semantic search also narrows the active working set; clear it when you want the ordinary catalog again.
+6. **Check the input scope.** Review can use selected or tagged photos. Semantic search also narrows the active working set; clear it when you want the ordinary catalog again.
 7. **Export keepers.** Export JPEGs or copy RAWs to a chosen folder. Use copy dry run to inspect the planned operation. Check final completion and any per-file errors, then verify destination files.
 8. **Close safely.** If saving fails during quit, retry after restoring access or cancel quitting to keep changes in memory. Quit Without Saving explicitly discards unsaved decisions.
 
 Example: for a sequence of owl photographs, open the folder, inspect the eye detail in comparison, rate the strongest frame, and export its embedded JPEG for a quick share. A developed RAW export can differ from the camera's embedded preview.
 
-For Combined Review, start with Photo-first to see the retained overview and findings. Use Inspect evidence for crops and observations. Coverage limits explain what the analysis could establish; missing retained imagery does not erase stored measurements or reports.
+In Review, select a finding to highlight its region and inspect the associated crop. Choose **Region details** for geometry and provenance. Open **Coverage & limits** or **Technical record** in the separate Review Record window. [Review presets and subject masks]({{< relref "/docs/ai/aiinrawcull.md" >}})
 
 Maintenance: revisit onboarding when visible labels, input scope rules, export modes or recovery dialogs change. Avoid documenting shortcuts without checking the current command and keyboard-routing code.
 
@@ -475,7 +479,7 @@ Maintenance: change comments in the same review as their function contract. DocC
 | Sharpness used fewer files than expected | Selection, star filter and semantic scope | Inspect `sharpnessScoringTargetFiles` and its displayed target description; clear scope if appropriate. |
 | Semantic search finds nothing | CLIP availability, compatible indexed count, rating/name admission | Index with a compatible CLIP backend, then search again. A search does not automatically decode missing source images. |
 | AI action is disabled | Model validation, missing licence, empty input/prompt, another operation | Inspect capability and progress state; complete model installation or finish/cancel the conflicting review. |
-| Objects results miss a subject | Concepts, mask availability and board assessment | Refine concepts and inspect masks. Treat the result as concept matching rather than an exhaustive count. |
+| Review has no usable subject mask | Preset, SAM 3 availability, segmentation result and retained image | Describe has no mask stage. In Focus check or Full, inspect Coverage & limits for segmentation or registration failures. |
 | Combined Review cannot resume | Source changed, model identity changed, contract/version mismatch | Preserve saved evidence; start a new run with current inputs and settings when compatibility cannot be restored. |
 | Combined Review shows observations only | Synthesis failed or evidence was insufficient | Read retained observations and coverage limits; do not relabel them as a completed recommendation. |
 | JPEG export partially fails | Per-file decode/write messages and destination access | Retain successful output, fix the named cause and retry affected files. |
@@ -615,7 +619,7 @@ worker slot and catalog grant through completion. See
 [Performance Measurement]({{< relref "../performance.md" >}}) for the
 cache-preserved recordings and the unproven backlog-performance benefit.
 
-The smoke manifest expects 401 unique identifiers; parameterized invocations
+The smoke manifest expects 384 unique identifiers; parameterized invocations
 are separate from identifier counts. `make releaseafcomparison` is an additional
 opt-in real-photo export/comparison workflow, not a production scoring change.
 

@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Memory Cache"
 date = "2026-05-19"
-lastmod = "2026-11-21"
+lastmod = "2026-11-23"
 weight = 20
 tags = ["memory", "cache", "evictions", "thumbnails"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "a0c72d11b6dea1f409542faf90f76fba43cdb0f5"
+reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
 reviewed_version = "3.4.9"
-reviewed_build = 462
-reviewed_on = "2026-11-21"
-review_scope = "Content and references updated"
+reviewed_build = 466
+reviewed_on = "2026-11-23"
+review_scope = "Distinguished obsolete Objects cache cleanup from retained Review masks and reports."
 +++
 
 # Cache System
@@ -330,3 +330,7 @@ An artifact read error preserves the stored record. Forced re-indexing can
 replace it when a new artifact is generated successfully. See
 [PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift)
 and the tests for `PerFileAnalysisArtifactStore` before changing read or refresh behavior.
+
+## Review masks after upgrading
+
+The runtime attempts to remove the obsolete Objects mask directory during initialization. Current Review outlines resolve a retained input key from a displayed result and recheck the source fingerprint before loading the image. Clearing retained inputs can remove the outline while leaving its measurements and report readable. [RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [ReviewSubjectMasks](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/ReviewSubjectMasks.swift)
