@@ -31,6 +31,8 @@ Open **Review** from the toolbar to inspect a shortlist. Choose **Selected** or 
 
 Describe and Full require at least 16 GB of unified memory. Below 32 GB the app displays a memory advisory. Review starts with Full on eligible machines and switches to Focus check when Qwen presets are disabled for memory. Enter nonblank criteria of at most 512 UTF-8 bytes. Review checks that the chosen preview or RAW-detail source works across the selection. Model availability is checked for the chosen preset when the run starts. [ReviewRunContract](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift) · [CombinedReviewFeature](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
+Select **Full**, then click **Review** to start. For the call path and model inputs, see [Full Review execution]({{< relref "full-review.md" >}}).
+
 ## Read a result
 
 The photo stays in place as you inspect the findings. During a run, the card on the photo shows the current step and progress. Select a finding to see its crop and highlight its region when region evidence exists. **Region details** shows the subject, crop geometry and provenance. The up and down arrows move between findings and Escape goes back one level. The layer controls below the photo show regions, subject masks and crop geometry.

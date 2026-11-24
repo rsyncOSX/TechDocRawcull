@@ -36,6 +36,8 @@ for each boundary.
 
 RawCull resolves PhotoAIKit 3.1.0. Its Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. The detailed walkthrough below describes the earlier audited revision. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
+For Full Review, `CoreAIQwenProvider` validates the host-supplied bundle URL and creates the local vision-language model. RawCull builds the instructions, then supplies the text and image attachment through `LanguageModelSession`. The [Full Review execution chapter]({{< relref "/docs/ai/full-review.md" >}}) traces that handoff and the SAM 3 and CLIP request paths against the resolved package.
+
 ## 1. Begin With The Package Boundary
 
 The package owns:

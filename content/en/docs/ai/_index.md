@@ -34,6 +34,7 @@ Use **Review** to inspect selected or tagged photos. Use the burst list to asses
 
 PhotoAIKit owns provider contracts, model validation, inference backends and reusable indexing workflows. RawCull owns the catalog, file access, model activation, run budgets, evidence presentation and culling decisions. PhotoAnalysisKit owns sharpness and Vision measurement facilities. Its Vision queue is also used by the app’s PhotoAIKit feature-print backend.
 
+- [Full Review execution]({{< relref "full-review.md" >}}) follows the preset from SwiftUI through model URLs, prompts, inference and saved evidence.
 - [AI runtime]({{< relref "airuntime.md" >}}) traces how settings changes reach a running service.
 - [Model preparation]({{< relref "rawcullai.md" >}}) records the pinned build recipe for the three model packs.
 - [Package snapshot]({{< relref "/docs/packages/_index.md" >}}) identifies the revisions used by the application.

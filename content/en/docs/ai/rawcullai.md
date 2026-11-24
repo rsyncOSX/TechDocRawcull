@@ -706,3 +706,6 @@ Current download/installation UI ownership is described in
 the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/e287946087ccba47e29cc9fffdbc513d2b65e79c) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`). Earlier links to
 `RawCull/Docs/newmodels.md` open historical commits because that report has been
 removed from the current application tree.
+
+To trace an installed bundle from its resolved directory into a provider and an
+inference request, see [Full Review execution]({{< relref "full-review.md" >}}).

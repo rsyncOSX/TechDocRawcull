@@ -39,6 +39,8 @@ review_scope = "Traced model activation, live backend admission, Qwen generation
 
 [RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift) · [CombinedReviewFeature](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) · [CombinedReviewRecordWindow](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Views/AIAnalysis/CombinedReviewRecordWindow.swift)
 
+For a debugger walkthrough of Full, including the precise instruction and pixel inputs at each provider boundary, see [Full Review execution]({{< relref "full-review.md" >}}).
+
 ## Startup Refresh and Installed-Model Activation
 
 The graph is usable immediately with Vision while disk checks happen later.
