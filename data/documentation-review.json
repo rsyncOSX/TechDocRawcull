@@ -7,7 +7,7 @@
     "version": "3.5.0",
     "build": 469,
     "lockfile": "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
-    "merge_status": "not yet on main",
+    "merge_status": "present on main",
     "local_packages": []
   },
   "previous_application_commit": "5169ffd3487fe4ddc005d511fffa38172657d703",
@@ -288,7 +288,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "13b845909259337a89e226fe51caf83d67af20b6a843e2467698cc7c127fe49d"
+      "sha256": "3dfb85d5af4842215665306f762737e9a565992c994cf78dcdde52b65ec1b19f"
     },
     {
       "path": "content/en/docs/ai/_index.md",
@@ -1225,7 +1225,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "c1661823bd3e5c7611331ca6ce93414c4396aaacfc981554e852136de3e22101"
+      "sha256": "06fc9c06dfe8daf6a89c4d683ddff8767b952f910012b6f96446e5172367ed4c"
     },
     {
       "path": "content/en/docs/packages/_index.md",
@@ -1593,7 +1593,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "fe54306ca05a23cadce1db56bd3da651302951f8ae070bc7b964891ef96a030d"
+      "sha256": "f725083d7015ca90e71c178a6cd2752af5f48f61adae601886d66963ce3ca075"
     },
     {
       "path": "content/en/docs/viewer-architecture.md",

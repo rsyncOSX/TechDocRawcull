@@ -30,7 +30,7 @@ on, not from adding more models.
 
 | Item | Value |
 | --- | --- |
-| Application source | [`328b570b`](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439) on `version-3.5.0`, not yet on `main`, **3.5.0 build 469**, checked 25 November 2026 |
+| Application source | [`328b570b`](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439) on `main`, **3.5.0 build 469**, checked 25 November 2026 |
 | Release status | No `v3.5.0` tag exists yet. The local `v3.4.9` tag points to [3c8e7aba](https://github.com/rsyncOSX/RawCull/commit/3c8e7aba0c72e00b05f2f6c88a1868565075e6b3). App Store availability was outside this source review. |
 | Platform | Apple silicon, macOS 27 |
 | Competitor evidence | Vendor documentation checked **5 November 2026**, not requalified for this revision |

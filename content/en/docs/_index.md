@@ -147,7 +147,7 @@ because it shows both ownership and the complete lifetime of the operation.
 
 Reviewed on **25 November 2026** against **RawCull 3.5.0 build 469**,
 commit [328b570b](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439). The commit
-is on `version-3.5.0` and not yet on `main`. The Xcode workspace resolves
+is present on both `version-3.5.0` and `main`. The Xcode workspace resolves
 24 remote pins. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}) and
 [review record]({{< relref "/docs/update.md" >}}). Historical measurements retain
 their original source revisions.
