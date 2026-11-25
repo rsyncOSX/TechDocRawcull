@@ -1,25 +1,25 @@
 +++
 author = "Thomas Evensen"
-title = "RawCull 3.4.9: Features, Competition and the 3.5.0 Plan"
+title = "RawCull 3.5.0: Features, Competition and Plan"
 linkTitle = "Features and Competition"
 date = "2026-09-01"
-lastmod = "2026-11-23"
-description = "RawCull 3.4.9 features, a cross-platform photo-culling comparison, and a prioritized plan for version 3.5.0."
+lastmod = "2026-11-25"
+description = "RawCull 3.5.0 features, a cross-platform photo-culling comparison, and a prioritized plan."
 tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces", "mcp"]
 categories = ["technical details"]
 weight = 10
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Updated source and tag evidence, assessment scope and Vision qualification. Competitor evidence remains dated 5 November."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Recorded the 3.5.0 delta, removed the manual-winner claim and kept the ranked plan. Competitor evidence remains dated 5 November."
 +++
 
-# RawCull 3.4.9: Features, Competition and the 3.5.0 Plan
+# RawCull 3.5.0: Features, Competition and Plan
 
 RawCull's strongest position is **local, evidence-based selection for RAW
-photographers who want to understand and control the decision**. Version 3.4.9
+photographers who want to understand and control the decision**. Version 3.5.0
 combines fast preview review, camera autofocus evidence, burst ranking, face and
 animal close-ups, semantic search, a single AI **Review** with three presets, and
 an MCP server for desktop AI clients. The next gains should come from getting
@@ -30,8 +30,8 @@ on, not from adding more models.
 
 | Item | Value |
 | --- | --- |
-| Application source | [`0513a30e`](https://github.com/rsyncOSX/RawCull/commit/0513a30e4567b4b5e3093e10791d49c86ecfe7e6) on `main`, **3.4.9 build 466**, checked 23 November 2026 |
-| Release status | The local `v3.4.9` tag points to [3c8e7aba](https://github.com/rsyncOSX/RawCull/commit/3c8e7aba0c72e00b05f2f6c88a1868565075e6b3). App Store availability was outside this source review. |
+| Application source | [`5169ffd3`](https://github.com/rsyncOSX/RawCull/commit/5169ffd3487fe4ddc005d511fffa38172657d703) on `main`, **3.5.0 build 469**, checked 25 November 2026 |
+| Release status | No `v3.5.0` tag exists yet. The local `v3.4.9` tag points to [3c8e7aba](https://github.com/rsyncOSX/RawCull/commit/3c8e7aba0c72e00b05f2f6c88a1868565075e6b3). App Store availability was outside this source review. |
 | Platform | Apple silicon, macOS 27 |
 | Competitor evidence | Vendor documentation checked **5 November 2026**, not requalified for this revision |
 
@@ -41,19 +41,19 @@ product judgments based on those capabilities and RawCull's implementation. No
 hands-on comparative benchmark was performed. Availability can vary by plan,
 platform and release. Check prices and minimum OS versions before purchase.
 
-## What RawCull 3.4.9 provides
+## What RawCull 3.5.0 provides
 
 | Area | Implemented capability | Boundary that matters |
 | --- | --- | --- |
 | RAW browsing | Dedicated ARW, NEF and DNG paths, embedded previews, cached thumbnails, viewport-sized and full-resolution developed-RAW display | Generic formats use macOS decoding; extension recognition is not a tested camera-support guarantee |
 | Broader format admission | Canon CR2/CR3/CRW, Fujifilm RAF, Olympus ORF, Panasonic RW2, Pentax PEF and other registered RAW extensions | Camera, compression and OS support still need qualification; generic admission adds no vendor AF parsing |
 | Focus inspection | Sony and Nikon AF points rotated into the upright frame, focus masks, full-frame, salient-subject and AF-region sharpness | A recorded AF location is not proof that the intended subject is sharp; scores depend on the analyzed render |
-| Burst review | Similarity grouping, ranked candidates with confidence and cautions, comparison, manual winners, review/defer state | Grouping and ranking assist the photographer; they do not establish a universally best photograph |
+| Burst review | Similarity grouping, ranked candidates with confidence and cautions, comparison, review/defer state, and a bar that names the measured, ranked and AI best frames when they differ | Grouping and ranking assist the photographer; they do not establish a universally best photograph |
 | Close Up | Manual crop comparison across frames with pinned references, saved regions, linked pan/zoom, JPG or developed-RAW source and **Use AF point** | Linked pan/zoom copies inspection state; it does not track the same subject across frames |
 | Faces and animals | Automatic strip with human face crops and a local preview detail value, plus animal head and eye crops from Vision landmarks; **People Ranking** reorders a group by face evidence | No eye-open/closed assessment. Apple documents cat and dog support; birds and other wildlife are unvalidated |
 | Similarity and search | Optional DataComp CLIP similarity and natural-language search; Vision similarity fallback | Text search requires CLIP; the Vision fallback is not semantic search |
 | Review (single AI entry point) | **Focus check** (SAM 3 masks, subject focus measurement, CLIP; no Qwen), **Describe** (one Qwen assessment) and **Full** (all stages, per-object crops, written report) for 1–8 selected or tagged images. Results offer Tag and Rate for eligible catalog files, plus Mark Reviewed for an unambiguous burst | Bounded shortlist review, not whole-catalog culling. Qwen output is advisory. Describe and Full need 16 GB of unified memory, 32 GB recommended |
-| Burst AI assessment | Local Qwen assessment of the recommended and alternate frame of every burst, with progress and cancel; results in the AI Assessments window | Up to two distinct ranked frames per eligible burst. Results last for the app session |
+| Burst AI assessment | Local Qwen assessment of the recommended and alternate frame of every burst, with progress and cancel; results in the AI Assessments window, AI scores on both filmstrips, and a way back to the burst you came from | Up to two distinct ranked frames per eligible burst. Results last for the app session |
 | MCP server | Bundled local helper: catalog queries while RawCull is closed, approved catalog setup, burst analysis, ranked recommendations and optional Qwen photo assessments from a desktop AI client | Authorization can be one-time or remembered. The AI client may send returned results to its own model provider |
 | Decisions and handoff | Batch tag/reject/rating, saved decisions, JPEG export and rsync copying of tagged or minimum-rated RAW files with live progress | Ratings are RawCull JSON, **not XMP**. Embedded-JPEG export is ARW/NEF/DNG-specific |
 | Exposure inspection | Temporary EV/tone inspection, histogram and clipping overlays in zoom | Display-referred; not a sensor-domain RAW histogram, persistent edit or export adjustment |
@@ -69,10 +69,22 @@ Detailed behavior: [RAW Formats and Exposure Inspection]({{< relref "/docs/raw-i
 [RawCull MCP]({{< relref "/docs/mcp.md" >}}) and
 [AI Models in RawCull]({{< relref "/docs/ai/aiinrawcull.md" >}}). Source
 boundaries:
-[model choices](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
-[decision persistence](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
-[Review](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift)
-and [build settings](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.pbxproj).
+[model choices](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
+[decision persistence](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
+[Review](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift)
+and [build settings](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull.xcodeproj/project.pbxproj).
+
+### What changed in 3.5.0
+
+| Change | Effect |
+| --- | --- |
+| Focus check is preselected, and choosing a review type is separate from running it | Review works on every supported Mac without a Qwen download, and cannot be started by accident |
+| Focus point, focus mask and magnifier on the Review photo | Camera focus, measured focus and pixels can be compared without leaving Review |
+| AI top, Sharpest and Best Frame marks in both filmstrips | Disagreement between methods is visible. Nothing is merged or rated automatically |
+| Confirmation before reassessing, and toolbar and maintenance actions disabled during a batch | Session results are not lost by one click |
+
+None of the eight ranked items below is complete in this build. The release was
+used for review ergonomics. The ranking stands as the plan for the next versions.
 
 ### What changed between 3.4.0 and 3.4.9
 
@@ -111,12 +123,12 @@ that desktop capability exists in a vendor's mobile app.
 | digiKam | macOS, Windows, Linux | Open-source DAM, optional local AI, face recognition, duplicates and quality labels | Free local AI is a credible alternative; a focused, efficient review must earn adoption [D] |
 | darktable | macOS, Windows, Linux | Open-source RAW editor with side-by-side culling and synchronized inspection | Manual culling plus editing is available without buying a specialist culler [T] |
 
-### Where RawCull 3.4.9 stands
+### Where RawCull 3.5.0 stands
 
 A condensed view of the capabilities that decide adoption. "Common" means
 several of the products above document it.
 
-| Capability | RawCull 3.4.9 | Competitors | Assessment |
+| Capability | RawCull 3.5.0 | Competitors | Assessment |
 | --- | --- | --- | --- |
 | Decisions reach the editor (XMP or catalog) | No | Common | **Largest gap** |
 | Closed-eye / eye-sharpness assessment | No (face crops only) | Aftershoot, Narrative, Lightroom, Capture One | Gap for portrait and event work |
@@ -228,7 +240,7 @@ has to redo the cull in the editor.
 ### 2. Explain difficult wildlife and sports burst decisions
 
 RawCull has camera AF evidence, subject masks, normalized detail scoring,
-Close Up, manual winners and Review. The missing piece is bringing them together
+Close Up, frame marks and Review. The missing piece is bringing them together
 on the frames being compared: which subject was measured, on which render,
 where the AF point falls and why the result is uncertain.
 
@@ -267,7 +279,7 @@ cancellation and recovery. A Windows or Linux port would be far larger than any
 item here because the app depends on Apple frameworks; XMP serves mixed-OS
 workflows much sooner.
 
-## Prioritized plan for RawCull 3.5.0
+## Prioritized plan after 3.5.0
 
 These are recommendations, not release commitments. Order reflects adoption
 value first, then the risk carried over from the 3.4.9 refactoring. Effort is
@@ -276,7 +288,7 @@ relative and includes qualification, not only implementation.
 | Rank | Work | Why now | Effort | Done when |
 | --- | --- | --- | --- | --- |
 | **1** | **XMP sidecar export and import of decisions** | Largest adoption gap; unchanged since 3.4.0 | Large | Lightroom Classic and Capture One round-trip; no loss of unrelated XMP; conflicts and failed writes visible per file |
-| **2** | **Qualify the 3.4.9 consolidation: CI, lint baseline, Vision hang regression test, Review preset comparison** | The Vision gate has measured catalog results. CI and a photographic comparison of the new Review presets with the retired tabs are separate qualification work | Medium | CI runs lint and smoke tests on pull requests; Focus check/Describe/Full compared with the old tabs on 20 real photos and every difference decided |
+| **2** | **Qualify the 3.4.9–3.5.0 consolidation: fix the open source findings, CI, lint baseline, Vision hang regression test, Review preset comparison** | The Vision gate has measured catalog results. CI and a photographic comparison of the new Review presets with the retired tabs are separate qualification work | Medium | CI runs lint and smoke tests on pull requests; Focus check/Describe/Full compared with the old tabs on 20 real photos and every difference decided |
 | **3** | **Evidence on Close Up cards and an explained burst recommendation** | Turns existing measurements into the burst-decision differentiator | Medium | Each card shows AF and detail values with source, region and availability; incompatible values are withheld with a reason; the recommended frame explains itself |
 | **4** | **Eye open/closed/unknown per detected face** | Closes the main portrait gap on top of the existing face strip and People Ranking | Medium–large | Per-face results across glasses, profiles, small faces and low light, with a measured false-closed rate |
 | **5** | **Camera qualification table and performance baseline** | Makes product claims dependable before wider promotion | Ongoing, start small | Published per-camera matrix; cold/warm latency and peak memory for 500, 2,000 and 10,000 images |
@@ -284,14 +296,15 @@ relative and includes qualification, not only implementation.
 | 7 | Wildlife animal-eye validation (birds, deer) and subject proposals in Close Up | Current animal support is documented for cats and dogs only | Medium | Measured detection rate on real bird and wildlife bursts; manual fallback stays authoritative |
 | 8 | Review presets over MCP; shared MCP IPC module | Extends the unique integration once the in-app presets are qualified | Small–medium | MCP clients can request Focus check; one shared module replaces duplicated helper sources |
 
-**Recommended 3.5.0 scope:** items 1–3, with 4 if time allows. Items 5–8 can run
-alongside or move to 3.5.x.
+**Recommended scope for the next version:** items 1–3, with 4 if time allows.
+Items 5–8 can run alongside. The confirmed defects behind item 2 are listed under
+[open source findings]({{< relref "/docs/update.md" >}}#open-source-findings).
 
 ### Scope for item 1: XMP exchange
 
 The detailed P0 pages were retired; this is the scope to carry forward.
 
-| In 3.5.0 | Deferred |
+| First version | Deferred |
 | --- | --- |
 | Export chosen ratings and reject state to XMP sidecars beside the originals, with a preview of every file and value | Writing metadata into RAW files |
 | Read existing sidecars on catalog open or on request, with an import preview | Background two-way sync and folder watching |
@@ -317,7 +330,7 @@ mean an open editor catalog has re-read it; document each editor's read step.
 4. Only then send a Close Up shortlist to Review with frozen inputs, and mark the
    report stale when those inputs change.
 
-### Not in 3.5.0
+### Not planned now
 
 Full RAW editing, retouching, cloud delivery, a model marketplace and new or
 alternative segmentation models. A new model is worth adding only for a measured

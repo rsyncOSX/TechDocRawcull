@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Focus Mask and Sharpness"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 weight = 40
 tags = ["sharpness", "focus", "vision", "metal"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Identified the current package pin and removed the deleted AI preview helper from the viewer map."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Moved to PhotoAnalysisKit 1.4.1 descriptors, calibration source and shared context."
 +++
 
 # Focus Mask And Sharpness
@@ -32,8 +32,9 @@ Mask presentation does not change scalar analysis. A weak or unfocused image is
 allowed to produce an empty overlay; the renderer does not lower its threshold
 merely to manufacture visible evidence.
 
-The formula walkthrough uses **PhotoAnalysisKit 1.3.1**, revision
-**2a1466e04d821fa2628d6985296643e0d0c7e465**. Build 466 resolves 1.4.1, which shares the focus engine’s Core Image context and includes the Vision request gate. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}). The package owns sharpness,
+The detailed walkthroughs follow **PhotoAnalysisKit 1.4.1**, revision
+**2f41e8b756f006e0218f86b103801ebb47cf8983**, which RawCull 3.5.0 resolves. See the
+[package snapshot]({{< relref "/docs/packages/_index.md" >}}). The package owns sharpness,
 saliency, calibration, focus evidence, and mask algorithms. RawCull owns UI
 settings, file decoding/source selection, workflow lifetime, normalization, and
 persistence.
@@ -65,7 +66,9 @@ because they publish UI state. Their `PhotoAnalyzer` and adapter values are
 immutable, nonisolated boundaries. PhotoAnalysisKit's internal `FocusMaskEngine`
 is `@unchecked Sendable` only because Core Image does not declare `CIContext`
 Sendable; the documented invariant is an immutable engine with value snapshots
-for every operation.
+for every operation. All engines share one lazily created `CIContext`. Creating one
+is expensive and waits on Metal's shader-cache database, and an engine is created
+for every `PhotoAnalyzer()`, often on the main thread.
 
 ## Configuration Resolution
 
@@ -75,7 +78,7 @@ A scoring run snapshots one effective `SharpnessConfiguration`:
 focusMaskModel.config
   -> SharpnessPhotoType.packagePreset.applying
   -> SharpnessScoringQuality.packageQuality.applying
-  -> PhotoAnalyzer applies each input's ISO and aperture hint
+  -> PhotoAnalyzer applies each input's ISO and aperture, where present
 ```
 
 RawCull's default focus configuration is `.birdsInFlight`. Photo type maps to
@@ -99,30 +102,33 @@ quality minimum:
 
 The UI currently offers 1024, 1536, and 2048 px choices. The quality minimum
 still matters for old settings and programmatic values. Embedded previews use
-RawParserKit's thumbnail loader. RAW demosaic uses `CIRAWFilter`, disables added
-sharpness, and sets detail 0.6, contrast 1.0, and exposure 0 before scaling the
-longest side to the effective size.
+RawParserKit's thumbnail loader. RAW demosaic uses `RawScoringDemosaic`: a
+`CIRAWFilter` with added sharpness off, detail 0.6, contrast 1.0 and exposure 0,
+scaled to the effective size and written as 8-bit sRGB. The size applies when
+scoring. A `SharpnessScoringModel` starts at 512 px and Fast quality until stored
+settings are applied.
 
 ## Analysis Descriptor And Cache Identity
 
 `PhotoAnalyzer.sharpnessDescriptor(for:)` produces
 `SharpnessAnalysisDescriptor`, the package-owned identity for non-mask scalar
-analysis. At the pinned PhotoAnalysisKit 1.3.1 revision it has:
+analysis. At the pinned PhotoAnalysisKit 1.4.1 revision it has:
 
-- descriptor schema version 1;
-- scalar algorithm version 4;
+- descriptor schema version 2;
+- scalar algorithm version 7;
 - ISO-scaling policy version 1;
 - aperture-hint policy version 1;
-- the scoring-affecting configuration values and the stable scoring gain 7.62.
+- the scoring-affecting configuration values and the stable scoring gain 7.62;
+- the fallback ISO and aperture hint used when a file has no capture metadata.
 
-It deliberately excludes per-image ISO and aperture, decoded image size, input
+It deliberately excludes actual capture ISO and aperture, decoded image size, input
 source, source-file identity, and mask-only presentation settings. RawCull adds
 the missing host identity in `SharpnessScoringSignature`:
 
 | Identity layer                  | Fields                                                                  |
 | ------------------------------- | ----------------------------------------------------------------------- |
 | Package descriptor              | Algorithm/policy versions, scoring configuration, stable gain           |
-| RawCull signature               | Descriptor + embedded-preview/RAW source + effective maximum pixel size |
+| RawCull signature               | Descriptor + embedded-preview/RAW source + effective maximum pixel size + input pipeline version |
 | Per-file persistence validation | Signature + source file size + modification date                        |
 
 Legacy signatures without a package descriptor still decode, but compare stale
@@ -139,9 +145,10 @@ the scalar score. Before scoring, RawCull asks `FocusMaskModel` to load inputs
 and call `PhotoAnalyzer.calibrate`, using a dedicated 1616 px maximum rather
 than the scoring thumbnail size. PhotoAnalysisKit:
 
-1. loads inputs with the same bounded concurrency and source choice as scoring;
+1. loads embedded previews, whatever source scoring uses, with the same bounded
+   concurrency;
 2. applies each file's ISO and aperture;
-3. disables classification;
+3. measures the same native-pixel detail image that the mask renders;
 4. samples up to about 4096 positive Laplacian energies per successful image;
 5. requires at least five successful images;
 6. chooses the requested percentile (RawCull uses 0.90) and clamps the threshold
@@ -248,31 +255,31 @@ for overlay rendering.
 
 | Boundary or invariant                                                                                | Tests                                                          |
 | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull/package Metal integration and scoring-source adaptation                                      | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
-| Preset/quality mapping, descriptor signatures, legacy invalidation, coalesced runs, UI normalization | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/SharpnessScoringTests.swift)                     |
-| Persistence merge and file/signature validation behavior                                             | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CullingModelTests.swift)                         |
-| Batch bounds, ordering, progress, decode failure, cancellation                                       | [PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          |
-| Descriptor inclusions/exclusions and policy versions                                                 | [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) |
-| Numeric score helpers, aperture policy, ISO curve, focus-failure classification                      | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
-| Analyze, mask, calibration, and cancellation facade                                                  | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
+| RawCull/package Metal integration and scoring-source adaptation                                      | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| Preset/quality mapping, descriptor signatures, legacy invalidation, coalesced runs, UI normalization | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift)                     |
+| Persistence merge and file/signature validation behavior                                             | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CullingModelTests.swift)                         |
+| Batch bounds, ordering, progress, decode failure, cancellation                                       | [PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          |
+| Descriptor inclusions/exclusions and policy versions                                                 | [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) |
+| Numeric score helpers, aperture policy, ISO curve, focus-failure classification                      | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
+| Analyze, mask, calibration, and cancellation facade                                                  | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
 
 ## Restoring scores without repeated normalization
 
-[CatalogController+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Sharpness.swift) restores persisted scores by building one
+[CatalogController+Sharpness.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Sharpness.swift) restores persisted scores by building one
 filename index and validating the scoring signature, source byte size and
 modification date (within 0.001 seconds). It collects the valid values before
 publishing dictionaries, so normalization runs once per restoration. AF-center
 scores additionally require a valid current AF point, finite value and value
 above 1e-6. Empty restoration clears stale evidence. Store recovery invokes this
 same path before refreshing filters and selection; see
-[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ReviewPersistenceTests.swift).
+[RawCullTests/ReviewPersistenceTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ReviewPersistenceTests.swift).
 
 ## Current presentation owners
 
 Loupe mask task/generation state now lives in
-[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift); zoom mask
+[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift); zoom mask
 coordination lives in
-[ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift).
+[ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift).
 The PhotoAnalysisKit pin and scalar algorithm are unchanged by these view
 extractions. A mask may remain visible during a same-photo source transition,
 while new-file/config transitions reset presentation. See
@@ -284,7 +291,7 @@ image can differ; follow the coordinator's actual input when evaluating detail.
 
 Older burst caches can contain blended scores without AF-center scores.
 `loadMissingAFPointScores(for:)` in
-[SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
+[SharpnessScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
 analyzes valid AF points with missing evidence unless ordinary scoring is active.
 It retains access, checks cancellation and the scoring signature, and publishes
 only AF-center values. Existing blended scores and winners remain intact. The
@@ -293,8 +300,10 @@ workspace requests this when its file set changes; package formulas are unchange
 ## Close-up AF assistance is independent of scoring
 
 The burst workspace synchronizes its AF-overlay preference with
-`CloseUpModel.usesAFPoint`. The model centers available manual regions on current,
-orientation-corrected camera AF targets and removes displaced viewport pan.
+`CloseUpModel.usesAFPoint`. The model centers available manual regions on current
+camera AF targets and removes displaced viewport pan. The points are already in
+upright image coordinates, because `RawParserKitImageLoader.fileMetadata` applies
+`AFPointOrientation` during the scan.
 Group changes preserve that preference while resetting the inspection session.
 This does not call `PhotoAnalyzer`, rerank candidates or replace AF-center scores.
 Moving a manual region is not a request to recompute the focus mask or score.
@@ -303,7 +312,8 @@ See [viewer ownership]({{< relref "viewer-architecture.md" >}}).
 ## Calibration source and display scale
 
 The visual mask cutoff is calibrated on embedded previews at a 1616-pixel
-target even when scalar scoring uses RAW demosaic. The overlay analysis
-can rescale its input to match that calibration scale. A late burst
+target even when scalar scoring uses RAW demosaic. A helper,
+`FocusMaskAnalysisResolutionPolicy.calibrationScaled`, can rescale an analysis image
+to that size, but no view calls it at this revision. A late burst
 calibration result is applied only while its run is still active.
-[FocusMaskTypes.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskTypes.swift)
+[FocusMaskTypes.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskTypes.swift)

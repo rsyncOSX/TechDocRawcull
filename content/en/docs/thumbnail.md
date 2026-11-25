@@ -2,17 +2,17 @@
 author = "Thomas Evensen"
 title = "Thumbnails and Scan Pipeline"
 date = "2026-07-15"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 weight = 10
 tags = ["thumbnails", "scan", "ARW", "NEF", "extraction"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Updated the Review consumer name and checked grid/preload admission against the source delta."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Corrected size resolution, AF orientation, loader requirements and test references."
 +++
 
 # Thumbnails and Scan Pipeline
@@ -32,16 +32,16 @@ is a different source when its size or modification date changes.
 
 | Area                             | Main files                                                                                                                                                                                          |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Catalog lifecycle                | [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Main/RawCullMainView.swift)                                                                                                                                           |
-| App/package loading boundary     | [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoading.swift), [RawParserKit/Sources/RawParserKit/RawImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawImageLoader.swift)                                                                                                             |
-| File discovery and metadata scan | [Actors/DiscoverFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/DiscoverFiles.swift), [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanFiles.swift)                                                                                                                                              |
-| Catalog thumbnail preload        | [Actors/ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ScanAndCreateThumbnails.swift), [Model/Handlers/CreateFileHandlers.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/CreateFileHandlers.swift)                                                                                                                   |
-| Preload/UI contention gate       | [Actors/ThumbnailPreloadGate.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ThumbnailPreloadGate.swift)                                                                                                                                                                 |
-| UI-driven thumbnails             | [Actors/ThumbnailLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/ThumbnailLoader.swift), [Actors/RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/RequestThumbnail.swift), [Views/ThumbnailComponents/ThumbnailImageView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ThumbnailComponents/ThumbnailImageView.swift)                                                                               |
-| Thumbnail identity and caches    | [Model/Cache/ThumbnailCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Cache/ThumbnailCacheKey.swift), [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/SharedMemoryCache.swift), [Actors/DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/DiskCacheManager.swift), [Model/Cache/CachedThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Cache/CachedThumbnail.swift)                                                       |
-| Full-size preview loading        | [Model/FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/FullSizePreviewLoader.swift), [Model/Handlers/ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/ZoomPreviewHandler.swift), [Actors/FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/FullSizeJPGDiskCache.swift)                                                                                 |
-| Vendor dispatch                  | [RawParserKit/Sources/RawParserKit/RawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawFormat.swift), [RawFormatRegistry.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/RawFormatRegistry.swift), [SonyRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/SonyRawFormat.swift), [NikonRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/07801a34a82d7720d301a80724c36a5b8c9f1d6c/Sources/RawParserKit/NikonRawFormat.swift)                                                                       |
-| Behavior tests                   | [RawCullTests/ThumbnailLoaderConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailLoaderConcurrencyTests.swift), [ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailProviderTests.swift), [DiskCacheAndScanAdmissionTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/DiskCacheAndScanAdmissionTests.swift), [ThumbnailCacheIdentityTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailCacheIdentityTests.swift), [RawCullVerifyTestsConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/RawCullVerifyTestsConcurrencyTests.swift) |
+| Catalog lifecycle                | [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullMainView.swift)                                                                                                                                           |
+| App/package loading boundary     | [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoading.swift), [RawParserKit/Sources/RawParserKit/RawImageLoader.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/RawImageLoader.swift)                                                                                                             |
+| File discovery and metadata scan | [Actors/DiscoverFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/DiscoverFiles.swift), [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanFiles.swift)                                                                                                                                              |
+| Catalog thumbnail preload        | [Actors/ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanAndCreateThumbnails.swift), [Model/Handlers/CreateFileHandlers.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/CreateFileHandlers.swift)                                                                                                                   |
+| Preload/UI contention gate       | [Actors/ThumbnailPreloadGate.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ThumbnailPreloadGate.swift)                                                                                                                                                                 |
+| UI-driven thumbnails             | [Actors/ThumbnailLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ThumbnailLoader.swift), [Actors/RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/RequestThumbnail.swift), [Views/ThumbnailComponents/ThumbnailImageView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ThumbnailComponents/ThumbnailImageView.swift)                                                                               |
+| Thumbnail identity and caches    | [Model/Cache/ThumbnailCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/ThumbnailCacheKey.swift), [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/SharedMemoryCache.swift), [Actors/DiskCacheManager.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/DiskCacheManager.swift), [Model/Cache/CachedThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/CachedThumbnail.swift)                                                       |
+| Full-size preview loading        | [Model/FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/FullSizePreviewLoader.swift), [Model/Handlers/ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ZoomPreviewHandler.swift), [Actors/FullSizeJPGDiskCache.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/FullSizeJPGDiskCache.swift)                                                                                 |
+| Vendor dispatch                  | [RawParserKit/Sources/RawParserKit/RawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/RawFormat.swift), [RawFormatRegistry.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/RawFormatRegistry.swift), [SonyRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/SonyRawFormat.swift), [NikonRawFormat.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/NikonRawFormat.swift)                                                                       |
+| Behavior tests                   | [RawCullTests/ThumbnailLoaderConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailLoaderConcurrencyTests.swift), [ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailProviderTests.swift), [DiskCacheAndScanAdmissionTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/DiskCacheAndScanAdmissionTests.swift), [ThumbnailCacheIdentityTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailCacheIdentityTests.swift), [ThumbnailPreloadGateTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPreloadGateTests.swift) |
 
 ## Catalog Load Flow
 
@@ -88,7 +88,7 @@ actors.
 through `RawFormatRegistry.allExtensions`. Its `recursive` parameter controls
 whether subdirectories are traversed.
 
-The RawParserKit 1.3.2 registry contains:
+The RawParserKit 1.3.3 registry contains:
 
 | Format    | Extension | Conformer        |
 | --------- | --------- | ---------------- |
@@ -116,7 +116,11 @@ once. `maximumConcurrentReads` defaults to
 4. records the package focus-location string when available.
 
 The production adapter, `RawParserKitImageLoader`, maps
-`RawParserKit.RawImageLoader.metadata(for:)` into the app's `ExifMetadata`.
+`RawParserKit.RawImageLoader.metadata(for:)` into the app's `ExifMetadata`. It
+also reads the EXIF orientation and converts the camera's AF point from sensor
+coordinates to the upright image with `AFPointOrientation`. Everything that later
+uses `FileItem.afFocusNormalized` can assume the same coordinate space as the
+decoded pixels.
 RawParserKit reads ImageIO EXIF/TIFF data, dispatches format-specific details
 through `RawFormatRegistry`, and resolves MakerNote or EXIF subject-area focus
 evidence. DNG preview discovery classifies TIFF IFDs with `NewSubFileType` and
@@ -126,7 +130,7 @@ raw strip is not mistaken for a rendered preview.
 Progress reports the first admitted file, every 32 admissions, and the final
 non-multiple of 32. This is discovery/admission progress, not a count of finished
 decodes. Cancellation returns an empty scan result. See
-[RawCullTests/ScanAdmissionTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ScanAdmissionTests.swift) for the bound and progress contract.
+[RawCullTests/ScanAdmissionTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ScanAdmissionTests.swift) for the bound and progress contract.
 
 This is a single metadata pass per file. The app no longer runs separate EXIF
 and MakerNote extraction passes.
@@ -248,10 +252,15 @@ wait; AI indexing, semantic search, Review, model downloads, non-grid
 requests, and other catalogs are independent of this gate. Cancellation removes
 and resumes the gate waiter safely.
 
-After a slot is acquired, the loader reads saved settings and asks
-`RequestThumbnail` for `settings.thumbnailSizePreview`. The passed grid target
-controls the grid-cache fast path; the slower preview request uses the
-configured preview size.
+After a slot is acquired, `resolvedTargetSize(_:)` decides what to ask
+`RequestThumbnail` for. A positive size from the caller wins. Zero or less means
+"use the preview setting", which is read on the main actor for each request, so a
+Settings change applies without a relaunch.
+
+> **Known limit.** The `targetSize <= 200` grid check runs before the size is
+> resolved. A request for `0` could therefore be answered with a cached 200 px
+> image. No caller passes `0` at this revision, so this is a hazard in the API
+> rather than a visible fault. Resolve the size first if you add such a caller.
 
 `RequestThumbnail` resolves a request in this order:
 
@@ -350,6 +359,7 @@ conformers directly:
 | `fileMetadata`       | Scan metadata and normalized focus evidence |
 | `thumbnailCGImage` / `thumbnailImage` | On-demand and preload thumbnail generation  |
 | `previewCGImage`                      | Embedded/sidecar full-size preview loading  |
+| `embeddedPreviewJPEGData`             | Original embedded JPEG bytes that match given pixel dimensions |
 
 `RawParserKitImageLoader` is the production adapter. Tests can inject alternate
 loaders without performing real RAW decoding.
@@ -397,13 +407,13 @@ style, file size and modification date. `ThumbnailPresentationModel` owns the
 visible image and a generation UUID. A new URL clears the previous image;
 a late completion can publish only if its generation is still current and the
 task is not cancelled. This is a UI publication guard in addition to cache-key
-identity and producer coalescing. See [RawCullTests/ThumbnailPresentationModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailPresentationModelTests.swift)
-and [RawCullTests/ThumbnailPreloadGateTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailPreloadGateTests.swift).
+identity and producer coalescing. See [RawCullTests/ThumbnailPresentationModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPresentationModelTests.swift)
+and [RawCullTests/ThumbnailPreloadGateTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPreloadGateTests.swift).
 
 The loading bounds are deliberately separate: metadata reads use at most eight
 workers, preload uses `min(4, max(1, activeProcessorCount / 2))`, and explicit
 batch extraction uses `max(1, activeProcessorCount * 2)`. Their shared policy is
-[Model/RawImageLoadingConcurrency.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/RawImageLoadingConcurrency.swift); changing one limit does not change all
+[Model/RawImageLoadingConcurrency.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoadingConcurrency.swift); changing one limit does not change all
 other workloads.
 
 ## Format admission and viewer ownership
@@ -422,7 +432,7 @@ keyboard lifetimes described in
 
 ## Verify ownership separately from throughput
 
-[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift) stalls saves to
+[ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift) stalls saves to
 check worker admission, gate release, completion ownership, cancellation,
 preview-RAM admission and disk-backed warm reload. These are fixture contracts.
 A cached catalog may produce no writes and cannot establish backpressure savings;
@@ -431,7 +441,7 @@ see [Performance Measurement]({{< relref "performance.md" >}}).
 ## Catalog progress publication and measurement
 
 Since October 24, each catalog load owns separate main-actor
-[CatalogProgressCoalescer instances](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Handlers/CatalogProgressCoalescer.swift)
+[CatalogProgressCoalescer instances](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/CatalogProgressCoalescer.swift)
 for metadata counts and thumbnail completed/total/ETA state. Intermediate UI
 publication is coalesced at 100 ms; initial values, thumbnail total and terminal
 completion publish immediately. Metadata still reports admission counts, not

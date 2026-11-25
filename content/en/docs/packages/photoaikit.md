@@ -3,26 +3,26 @@ author = "Thomas Evensen"
 title = "How PhotoAIKit Is Constructed"
 linkTitle = "PhotoAIKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "A detailed guide to PhotoAIKit's contracts, CLIP image and text inference, semantic comparison, SAM 3 and EfficientSAM, workflows, storage, concurrency, and model identity."
 tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 10
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Checked the 3.1.0 serializer against its resolved source. Distinguished current integration from the October audit."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Audited 3.1.0, corrected the dependency diagram and added serializer, Qwen and instance-segmentation sections."
 +++
 
 # How PhotoAIKit Is Constructed
 
-> **Revision scope:** Updated against the RawCull dependency pin
-> `4b85056e6c2603b5e382987710ca2f16f4c5c155` on 16 October 2026.
-> The original walkthrough used `20e57359603313af7c2d38cae3e8b6e37f8838ef`.
-> Current application policy is described in [AI Models in RawCull](/docs/ai/aiinrawcull/)
-> and [AI Runtime](/docs/ai/airuntime/).
+> **Revision audited:** PhotoAIKit `3.1.0` at
+> `26647c62d9933968d92bd00b162290cdd7c78fee`, the version RawCull 3.5.0 resolves.
+> Compared with 1.0.0 (`4b85056e`), the only source change is the Vision serializer in
+> `VisionFeaturePrintBackend`. Application policy is described in
+> [AI Models in RawCull](/docs/ai/aiinrawcull/) and [AI Runtime](/docs/ai/airuntime/).
 
 PhotoAIKit is a reusable Swift package extracted from application code. Its most
 important achievement is not merely that CLIP, SAM 3, and EfficientSAM run. It
@@ -32,9 +32,9 @@ handling, paths, sandbox rules, and culling policy.
 This document explains the construction from the bottom up and gives the reason
 for each boundary.
 
-## Build 466 integration
+## How RawCull 3.5.0 uses it
 
-RawCull resolves PhotoAIKit 3.1.0. Its Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. The detailed walkthrough below describes the earlier audited revision. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
+The Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
 For Full Review, `CoreAIQwenProvider` validates the host-supplied bundle URL and creates the local vision-language model. RawCull builds the instructions, then supplies the text and image attachment through `LanguageModelSession`. The [Full Review execution chapter]({{< relref "/docs/ai/full-review.md" >}}) traces that handoff and the SAM 3 and CLIP request paths against the resolved package.
 
@@ -65,38 +65,32 @@ This boundary makes PhotoAIKit reusable. A package that imports `FileItem` or
 searches `Bundle.main` for a RawCull resource might be convenient for one app,
 but it would silently encode application policy into the AI layer.
 
-## 2. Read [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift) As An Architecture Diagram
+## 2. Read [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Package.swift) As An Architecture Diagram
 
-[PhotoAIKit/Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift) declares Swift tools 6.4, macOS 27, Swift 6 language
+[PhotoAIKit/Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Package.swift) declares Swift tools 6.4, macOS 27, Swift 6 language
 mode, **eight** library products and one test target. `CoreAIQwenBackend` is the
 eighth library product. The inspected manifest requires `apple/coreai-models`
 exactly at `1.0.0`; RawCull resolves it to
-`5de95c6cd29e5e390fb36d87e13b2396668f7974`; it declares
-`huggingface/swift-transformers` from 1.3.3 and the October app resolved 1.3.5. Build 466 resolves swift-transformers 1.4.0.
+`5de95c6cd29e5e390fb36d87e13b2396668f7974`. It declares
+`huggingface/swift-transformers` from 1.3.3, and RawCull resolves 1.4.0.
 
 ```mermaid
 flowchart TD
-    Contracts["PhotoAIContracts\nvalues + protocols"]
-    CLIP["CoreAICLIPBackend"] --> Contracts
+    CLIP["CoreAICLIPBackend"] --> Contracts["PhotoAIContracts\nvalues + protocols"]
     Efficient["CoreAIEfficientSAMBackend"] --> Contracts
     SAM3["CoreAISAM3Backend"] --> Contracts
-    Vision["VisionFeaturePrintBackend"] --> Contracts
     Qwen["CoreAIQwenBackend"] --> Contracts
-    CoreLM["coreai-models CoreAILM"] --> Qwen
+    Vision["VisionFeaturePrintBackend"] --> Contracts
     Workflows["PhotoAIWorkflows"] --> Contracts
     Storage["PhotoAIStorage"] --> Contracts
-    CoreAI["apple/coreai-models\nCoreAISegmentation product"] --> CLIP
-    CoreAI --> Efficient
-    CoreAI --> SAM3
-    Transformers["swift-transformers\nTokenizers product"] --> CLIP
-    Tests["PhotoAIKitTests"] --> Contracts
-    Tests --> CLIP
-    Tests --> Efficient
-    Tests --> SAM3
-    Tests --> Vision
-    Tests --> Workflows
-    Tests --> Storage
+    CLIP --> Seg["coreai-models\nCoreAISegmentation"]
+    Efficient --> Seg
+    SAM3 --> Seg
+    Qwen --> LM["coreai-models\nCoreAILM"]
+    CLIP --> Tok["swift-transformers\nTokenizers"]
 ```
+
+Every arrow means “depends on”. The test target depends on all of them.
 
 There is intentionally no large umbrella target in which every feature can reach
 every implementation. Each higher-level product depends on `PhotoAIContracts`,
@@ -117,7 +111,7 @@ not application decisions.
 
 ### 3.1 Translate Host Photos Into `AIImageSource`
 
-[Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/AIImageSource.swift) defines the package-owned source
+[Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/AIImageSource.swift) defines the package-owned source
 value:
 
 ```swift
@@ -163,7 +157,7 @@ flowchart LR
 
 ### 3.3 Separate Generation From Comparison
 
-[Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SimilarityArtifact.swift) defines two protocols:
+[Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/SimilarityArtifact.swift) defines two protocols:
 
 - `ImageSimilarityArtifactProviding` creates an artifact from a `CGImage` and
   source.
@@ -180,7 +174,7 @@ unverified arbitrary data.
 
 ### 3.4 Keep Text Queries Query-Scoped
 
-[Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/TextEmbedding.swift) defines a second, deliberately
+[Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/TextEmbedding.swift) defines a second, deliberately
 different similarity value. `TextEmbedding` contains a normalized text vector
 and a `TextEmbeddingDescriptor` with the complete backend identity, dimensions,
 tokenizer version, and schema version.
@@ -232,10 +226,10 @@ definition.
 
 The model types are spread across:
 
-- [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelIdentity.swift);
-- [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelAssetFingerprint.swift);
-- [ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelBundleResolver.swift);
-- [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelResource.swift).
+- [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelIdentity.swift);
+- [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelAssetFingerprint.swift);
+- [ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelBundleResolver.swift);
+- [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelResource.swift).
 
 `ModelIdentity.cacheIdentifier` preserves compatibility with older cache naming.
 `artifactIdentifier` adds the selected asset fingerprint for new artifacts. This
@@ -366,11 +360,32 @@ The public contract speaks in `SubjectSegmentationRequest` and
 `SubjectSegmentationResult`, not Core AI tensors. This lets workflows and hosts
 work at the domain level while the backend handles framework details.
 
-### 5.4 `VisionFeaturePrintBackend`
+The same actor also conforms to `ObjectInstanceSegmenting`. Where
+`SubjectSegmenting` answers “where is everything that matches this prompt?” with one
+mask, instance segmentation returns separate, scored instances with boxes. Review
+uses this second contract, because it has to decide which bird a finding is about.
+
+### 5.4 `CoreAIQwenBackend`
+
+`CoreAIQwenProvider` validates a supplied Qwen bundle, reads its configuration
+(modality, context size, compression) and makes the local vision-language model on
+request. It holds no prompts, sessions or photo schemas. Those belong to the host.
+
+### 5.5 `VisionFeaturePrintBackend`
 
 This actor uses `VNGenerateImageFeaturePrintRequest`. The produced
 `VNFeaturePrintObservation` is securely archived into an opaque artifact
 payload.
+
+The Vision request runs through the injected serializer. `perform(_:)` blocks its
+thread, and Vision needs a free pool thread to finish. If every cooperative thread
+were blocked in Vision, or blocked waiting to start Vision, the process would stop.
+`SerialVisionWorkQueue` therefore runs bodies on a dispatch queue and lets callers
+*suspend*. Each caller holds a `Ticket` whose state is protected by a `Mutex`.
+Whoever moves the ticket out of `.waiting`, the queue or the cancellation handler,
+resumes the continuation. That is how “resume exactly once” is guaranteed when
+cancellation and start race. A body must never call `run` again, because it would
+wait for itself.
 
 Comparison returns to this backend, which unarchives the observations and calls
 Vision's native `computeDistance`. The observation never becomes part of
@@ -426,6 +441,7 @@ The SAM 3 side is split into focused units:
 | `SegmentationBatchPipeline` | Batch generation, progress events, summary, and versioned JSON-lines transport                   |
 | `SubjectMaskRepository`     | Cache-only access using explicit prompt/model/size configuration                                 |
 | `SubjectMaskSelector`       | Ordered prompt fallback, quality/confidence thresholds, and best-mask selection                  |
+| `ObjectSegmentationService` | Concept-based instance segmentation with input bounds, an instance limit and optional stores      |
 | `SubjectMaskCatalogIndex`   | Incremental cache inventory without invoking inference                                           |
 | `SubjectMaskGeometry`       | Alpha coverage, bounds, centroid, and freshness                                                  |
 | `SubjectMaskQuality`        | Reusable geometry-based quality classification                                                   |
@@ -450,6 +466,7 @@ For similarity data:
 
 For segmentation:
 
+- `ObjectMaskMemoryStore` and `ObjectMaskDiskStore` do the same for instance masks.
 - `SubjectMaskMemoryStore` is an injected actor-backed dictionary.
 - `SubjectMaskDiskStore` stores PNG mask data plus JSON metadata, validates the
   storage key, reports disk usage, supports pruning, and rejects stale or
@@ -480,7 +497,7 @@ Actor isolation does not remove the need for a host policy. RawCull still owns
 generation tokens and catalog checks that prevent an older task from replacing
 results for a newer selection.
 
-## 9. RawCull integration at the October audit
+## 9. RawCull integration
 
 RawCull imports the package products and assembles concrete providers in
 `RawCullAIModelRuntime`. `RawCullApplicationState` binds those providers to
@@ -491,7 +508,10 @@ stable features owned by `RawCullIntelligenceRuntime`:
 | `CoreAICLIPProvider`, `ImageSimilarityArtifactProviding`, and `ImageSimilarityArtifactComparing` | `RawCullCLIPSimilarityService`, `SimilarityScoringModel`, and `RawCullSimilarityFeature` | managed model locations, selected CLIP model, RAW decoding, concurrency 1, retry/replacement recovery, per-file persistence, burst thresholds, and subject-mismatch adjustment     |
 | `VisionFeaturePrintBackend`                                                                      | `RawCullVisionSimilarityService`                                                         | always-available startup service, concurrency 4, service selection, cache admission, and UI state                                                                                  |
 | `TextEmbeddingProviding` and `ImageTextSimilarityComparing`                                      | `RawCullCLIPSemanticSearchService` and `RawCullSemanticSearchFeature`                    | query admission, progress, catalog/rating filters, deterministic ties, result count, selection/navigation binding, and ephemeral query lifetime                                    |
-| `SubjectSegmenting`, `SegmentationService`, mask stores, repository, and selector                | `RawCullAIModelRuntime`, `DeepAIReviewFeature`, and `DeepAIReviewController`              | SAM 3 versus EfficientSAM selection, application-support paths, saved-evidence status, candidate admission, review presentation, group-signature validation, and culling decisions |
+| `VisionWorkSerializing` | `RawCullVisionWorkSerializer` | forwarding to PhotoAnalysisKit's process-wide gate |
+| `ObjectInstanceSegmenting` and `ObjectSegmentationService` | `RawCullAIModelRuntime.combinedSegmentationService()` and `CombinedReviewLiveBackend` | eight-instance limit, empty store list, mask registration, deduplication, subject priority and saved evidence |
+| `CoreAIQwenProvider` | `QwenInferenceRuntime` | lazy model lifetime, generation gate, prompts, schemas, retries and diagnostics |
+| `SubjectSegmenting`, `SegmentationService`, `SubjectMaskRepository` and mask stores | `RawCullAIModelRuntime` | kept ready by the runtime; no feature reads them at this revision |
 
 The package owns validation, descriptors, backend actors, mathematical
 comparison, bounded generic workflows, and reusable codecs/stores. The app owns
@@ -535,7 +555,7 @@ The package includes tools under `Tools/` for exporting CLIP and SAM 3 assets,
 selecting a SAM 3 asset, generating fingerprints, and producing reference CLIP
 image/text similarities. Output paths are explicit.
 
-[export_clip.py](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Tools/export_clip.py) supports the existing OpenAI `clip-vit-base-patch32` model and
+[export_clip.py](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Tools/export_clip.py) supports the existing OpenAI `clip-vit-base-patch32` model and
 OpenCLIP `ViT-B-32-256` with `datacomp_s34b_b86k` weights. It writes the image
 and text encoders as named functions in one Core AI asset, verifies tokenizer
 parity for the OpenCLIP export, and records the runtime metadata consumed by
@@ -573,38 +593,33 @@ it probably belongs in RawCull's adapter layer instead.
 
 | Topic                                     | PhotoAIKit source                                                                                                                                                                                                  |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Products and dependency graph             | [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Package.swift)                                                                                                                                                                                                    |
-| Host-neutral image and decoder boundary   | [Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/AIImageSource.swift), [ImageEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ImageEmbedding.swift)                                                                                                                                             |
-| Model validation and identity             | [Sources/PhotoAIContracts/ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelBundleResolver.swift), [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelResource.swift), [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelIdentity.swift), [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/ModelAssetFingerprint.swift)                                                                                  |
-| Similarity descriptors and protocols      | [Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SimilarityArtifact.swift)                                                                                                                                                                |
-| Text embeddings and image/text comparison | [Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/TextEmbedding.swift)                                                                                                                                                                     |
-| Segmentation contracts                    | [Sources/PhotoAIContracts/SubjectSegmentation.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SubjectSegmentation.swift), [SubjectMaskStorage.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIContracts/SubjectMaskStorage.swift)                                                                                                                                   |
-| CLIP runtime and backend                  | [Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift), [CoreAICLIPProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)                                                                                                                             |
-| EfficientSAM backend                      | [Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift)                                                                                                                                               |
-| SAM 3 backend                             | [Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)                                                                                                                                                               |
-| Vision backend                            | [Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift)                                                                                                                                                |
-| Similarity orchestration                  | [Sources/PhotoAIWorkflows/EmbeddingIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/EmbeddingIndexer.swift), [SimilarityArtifactIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SimilarityArtifactIndexer.swift)                                                                                                                               |
-| Segmentation orchestration                | [Sources/PhotoAIWorkflows/SegmentationService.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SegmentationService.swift), [SegmentationBatchPipeline.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/4b85056e6c2603b5e382987710ca2f16f4c5c155/Sources/PhotoAIWorkflows/SegmentationBatchPipeline.swift), `SubjectMask*.swift`                                                                                                      |
+| Products and dependency graph             | [Package.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Package.swift)                                                                                                                                                                                                    |
+| Host-neutral image and decoder boundary   | [Sources/PhotoAIContracts/AIImageSource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/AIImageSource.swift), [ImageEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ImageEmbedding.swift)                                                                                                                                             |
+| Model validation and identity             | [Sources/PhotoAIContracts/ModelBundleResolver.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelBundleResolver.swift), [ModelResource.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelResource.swift), [ModelIdentity.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelIdentity.swift), [ModelAssetFingerprint.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ModelAssetFingerprint.swift)                                                                                  |
+| Similarity descriptors and protocols      | [Sources/PhotoAIContracts/SimilarityArtifact.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/SimilarityArtifact.swift)                                                                                                                                                                |
+| Text embeddings and image/text comparison | [Sources/PhotoAIContracts/TextEmbedding.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/TextEmbedding.swift)                                                                                                                                                                     |
+| Segmentation contracts                    | [Sources/PhotoAIContracts/SubjectSegmentation.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/SubjectSegmentation.swift), [SubjectMaskStorage.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/SubjectMaskStorage.swift)                                                                                                                                   |
+| CLIP runtime and backend                  | [Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/CoreAICLIPBackend/CLIPRuntimeConfiguration.swift), [CoreAICLIPProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/CoreAICLIPBackend/CoreAICLIPProvider.swift)                                                                                                                             |
+| EfficientSAM backend                      | [Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/CoreAIEfficientSAMBackend/CoreAIEfficientSAMProvider.swift)                                                                                                                                               |
+| SAM 3 backend                             | [Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/CoreAISAM3Backend/CoreAISAM3Provider.swift)                                                                                                                                                               |
+| Qwen backend | [Sources/CoreAIQwenBackend/CoreAIQwenProvider.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/CoreAIQwenBackend/CoreAIQwenProvider.swift) |
+| Object instance contracts and workflow | [Sources/PhotoAIContracts/ObjectSegmentation.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIContracts/ObjectSegmentation.swift), [ObjectSegmentationService.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIWorkflows/ObjectSegmentationService.swift) |
+| Vision backend                            | [Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionFeaturePrintBackend.swift)                                                                                                                                                |
+| Similarity orchestration                  | [Sources/PhotoAIWorkflows/EmbeddingIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIWorkflows/EmbeddingIndexer.swift), [SimilarityArtifactIndexer.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIWorkflows/SimilarityArtifactIndexer.swift)                                                                                                                               |
+| Segmentation orchestration                | [Sources/PhotoAIWorkflows/SegmentationService.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIWorkflows/SegmentationService.swift), [SegmentationBatchPipeline.swift](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/PhotoAIWorkflows/SegmentationBatchPipeline.swift), `SubjectMask*.swift`                                                                                                      |
 | Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                                                                                                          |
 | Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                                                                                                   |
 | Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                                                                                                           |
-| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).
 
-## Historical October 13 package additions and application boundaries
+## Boundaries worth remembering
 
-`CoreAIQwenBackend` validates and configures a local Qwen provider and constructs
-the model used by the host's inference runtime. RawCull owns session creation,
-request caps, criteria, retries and photo/object schemas. A package backend can
-be correct while an application's generated response fails its stricter contract.
-
-Objects crosses the package boundary through `SegmentationConcept`, instance
-segmentation results and object-mask storage contracts. `ObjectSegmentationService`
-coordinates providers/stores; RawCull chooses concept mode, deduplicates retained
-instances, renders a numbered board and validates Qwen's descriptions. Subject
-mask stores for Deep Review and object-mask stores are separate concerns.
+A package backend can be correct while the host rejects its output. RawCull owns
+session creation, request caps, criteria, retries and response schemas for Qwen, and
+a generated response that does not fit the stricter host contract is refused.
 
 The CLIP provider's descriptor includes model, representation, preprocessing,
 normalization and configuration versions. In the inspected implementation,
@@ -616,7 +631,7 @@ Reusable geometry and mask contracts can carry source-normalized registration,
 foreground and scorer semantics. The host must preserve those identities when
 cropping, measuring, displaying and persisting evidence. A SAM producer box alone
 is not a substitute for decoding foreground against the declared source raster.
-Combined's `ReviewMaskRegistration` performs that application-owned registration.
+RawCull's `ReviewMaskRegistration` performs that application-owned registration.
 
 Study the layers in order: package values/protocols, backend actors, package
 workflows/stores, application feature, SwiftUI presentation. Do not place Qwen
@@ -625,19 +640,13 @@ three use a `CGImage`. Their outputs and acceptance conditions differ.
 
 ## Host semantic-state ownership
 
-The semantic-state extraction kept the package pin used at that time. RawCull's `RawCullSemanticSearchModel` owns
+RawCull's `RawCullSemanticSearchModel` owns
 cached evidence, capability, hydration and query presentation, retained behind
 SimilarityScoringModel's existing API. The package still owns encoding and
 comparison of compatible embeddings; this host extraction does not alter its
 models, artifact compatibility or ranking algorithms.
 
-## November 8 Integration Review: Identity Across Workflows
-
-The November 8 application resolved PhotoAIKit 1.0.0 at
-`4b85056e6c2603b5e382987710ca2f16f4c5c155`. The newer transitive versions in the
-[package snapshot]({{< relref "_index.md" >}}) do not imply a new PhotoAIKit API
-revision. Review backend behavior against the resolved source when changing the
-lockfile; a sibling development checkout can contain later code.
+## Identity across workflows
 
 Treat an AI artifact's identity as more than its file URL. Backend, model asset
 fingerprint, preprocessing/configuration and representation dimensions establish

@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "Developer and API Documentation"
 linkTitle = "API Documentation"
 date = "2026-10-17"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "Developer guides and internal Swift API references for RawCull."
 tags = ["API"]
 categories = ["technical details"]
 weight = 70
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Updated the developer reading route for Review, batch assessment and release checks."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Checked the reading route."
 +++
 
 ## Developer and API Guides
@@ -36,7 +36,6 @@ For current presentation and image-source policy, use
 [RAW Formats and Exposure Inspection]({{< relref "../raw-inspection.md" >}}).
 
 The current guides also cover Review admission, explicit decision actions, ranked-pair assessment and the App Store release checks.
-The historical build-426 references include explicit burst-review commands, dedicated
-semantic-state ownership, AF evidence backfill and bounded preload saves. For
-measured behavior and its limits, read
+They also describe the burst-review commands, semantic-state ownership, AF evidence
+backfill and bounded preload saves. For measured behavior and its limits, read
 [Performance Measurement]({{< relref "../performance.md" >}}).

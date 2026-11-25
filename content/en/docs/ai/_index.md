@@ -3,18 +3,18 @@ author = "Thomas Evensen"
 title = "Artificial Intelligence"
 linkTitle = "AI"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "Review, burst assessments, semantic search and the boundaries between RawCull and its model providers."
 tags = ["ai", "clip", "sam3", "qwen", "photoaikit"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Replaced the tab tour with task, input and storage choices for Review, burst assessments and MCP."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Updated the Review entry for the preselected Focus check."
 +++
 
 # Artificial intelligence in RawCull
@@ -23,7 +23,7 @@ Use **Review** to inspect selected or tagged photos. Use the burst list to asses
 
 | Task | Input and result | Guide |
 | --- | --- | --- |
-| Inspect focus, describe a photo or run all Review stages | One to eight selected or tagged images. Review saves a run record and can retain the exact inputs behind a finding. | [Review presets and findings]({{< relref "aiinrawcull.md" >}}) |
+| Inspect focus, describe a photo or run all Review stages | One to eight selected or tagged images. Focus check is preselected. Review saves a run record and can retain the exact inputs behind a finding. | [Review presets and findings]({{< relref "aiinrawcull.md" >}}) |
 | Compare a burst’s top candidates across the catalog | The recommended and distinct alternate from each eligible ranked group. AI Assessments displays session results. | [Burst groups]({{< relref "/docs/burstgroup.md" >}}) |
 | Request an assessment from a desktop AI client | An authorized MCP source job. The consumer reads structured findings under the shared job’s consent and retention rules. | [RawCull MCP]({{< relref "/docs/mcp.md" >}}) |
 | Find similar frames or search by description | Vision or CLIP image artifacts support visual similarity. Text queries require compatible CLIP embeddings. | [CLIP indexing and search]({{< relref "aiinrawcull.md" >}}#how-clip-works-in-rawcull) |
@@ -39,4 +39,4 @@ PhotoAIKit owns provider contracts, model validation, inference backends and reu
 - [Model preparation]({{< relref "rawcullai.md" >}}) records the pinned build recipe for the three model packs.
 - [Package snapshot]({{< relref "/docs/packages/_index.md" >}}) identifies the revisions used by the application.
 
-The earlier AI Analysis tabs appeared in development builds. Their source-level replacement and rationale are recorded in the [AI feature decision](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Docs/ai-features-decision.md).
+The earlier AI Analysis tabs appeared in development builds. Their source-level replacement and rationale are recorded in the [AI feature decision](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Docs/ai-features-decision.md).

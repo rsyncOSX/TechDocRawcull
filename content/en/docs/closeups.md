@@ -3,18 +3,18 @@ title = "Close Up"
 linkTitle = "Close Up"
 description = "Compare detail across frames using manual regions, pinned references, recorded autofocus points and detected crops."
 weight = 42
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Checked manual crop and AF behavior and documented scheduling of automatic face and animal detection."
-lastmod = "2026-11-23"
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Corrected AF orientation, the multi-frame detection strip and the decision controls."
+lastmod = "2026-11-25"
 +++
 
 Close Up is the inspection panel in the burst and Single Images workspace.
 Use it to compare the same part of a subject across frames before choosing
 a keeper. The manual cards give you control over the region and pixel source.
-A strip above them shows automatic detections for the current frame.
+A strip above them shows automatic detections for the frames you compare.
 
 ## Compare two or more frames
 
@@ -65,18 +65,20 @@ linking the views.
 ## Inspect the recorded autofocus point
 
 **Use AF point** uses the recorded autofocus location where supported.
-RawCull maps the camera coordinates to the upright image and shares this
-setting with the main stage. The recorded point tells you where the camera
+RawCull converts the camera's sensor coordinates to the upright image once,
+while scanning the catalog. Every screen then uses the same point. The setting is
+shared with the main stage. The recorded point tells you where the camera
 reported focusing. Check the crop itself for sharpness. If the point is
 unavailable or on a different part of the subject, select a manual region
 in the overview.
 
 ## Read the automatic detection strip
 
-**Detected faces and animal landmarks** uses the current frame's upright
-embedded preview, capped at 1,600 pixels on its longest side. It refreshes
-when you activate another frame and resumes after indexing. Detection and
-manual comparison use separate regions.
+**Detected faces and animal landmarks** uses the upright embedded preview of
+each compared frame, capped at 1,600 pixels on its longest side. With no explicit
+selection that is the current frame. With several frames the strip scrolls and
+**Jump to image** moves to one of them. It pauses during similarity indexing and
+resumes afterwards. Detection and manual comparison use separate regions.
 
 | Tile | What you see | How to use it |
 | --- | --- | --- |
@@ -97,7 +99,7 @@ measures local luminance gradients and is separate from ratings and burst
 ranking. If the strip reports that detection is unavailable, use **Retry**.
 A manual card with a render failure offers **Retry image**.
 
-The automatic strip awaits PhotoAnalysisKit’s face and animal requests. Those requests use the same serial Vision queue as sharpness and feature-print indexing. RawCull also bounds work in the detected-evidence loader. A manual crop uses PhotoEvidenceKit’s renderer and can be inspected independently of detection. [BurstDetectedFacesView](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift)
+The automatic strip awaits PhotoAnalysisKit’s face and animal requests. Those requests use the same serial Vision queue as sharpness and feature-print indexing. RawCull also bounds work in the detected-evidence loader with `BurstEvidenceWorkLimiter`, which hands a finished slot straight to the next waiter. Face results are cached on disk for 30 days. Animal regions are cached in memory for 64 previews. A manual crop uses PhotoEvidenceKit’s renderer and can be inspected independently of detection. [BurstDetectedFacesView](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift)
 
 ## Example workflow for a wildlife burst
 
@@ -105,8 +107,8 @@ Start with the best-looking pose and pin it. Select two nearby frames.
 Use any animal tiles as a quick check, then choose each subject's eye or
 head in the manual overviews. Switch to **RAW** and **Source pixels** to
 judge fine detail from the developed render. Link pan and zoom after
-aligning the regions. Use the workspace's rating or winner controls to
-record your decision.
+aligning the regions. Use the workspace's rating controls to record
+your decision.
 
 For implementation details, see [PhotoEvidenceKit]({{< relref "packages/photoevidencekit.md" >}}),
 [PhotoAnalysisKit]({{< relref "packages/photoanalysiskit.md" >}}), and

@@ -3,25 +3,23 @@ author = "Thomas Evensen"
 title = "How PhotoEvidenceKit Is Constructed"
 linkTitle = "PhotoEvidenceKit Architecture"
 date = "2026-11-08"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "PhotoEvidenceKit contracts, close-up geometry, bounded rendering, retained references, region persistence, AF assistance, and RawCull integration."
 tags = ["close-ups", "image-inspection", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 50
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Verified the HTTPS repository change at the same 1.1.5 revision."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Audited 1.1.5: device-pixel scale and owned detected-face crops."
 +++
 
 # How PhotoEvidenceKit Is Constructed
 
-> **November 8 baseline:** RawCull resolved PhotoEvidenceKit **1.0.7** at
-> [ `7614fd1528bb7cf2549799fb937678ea39d90228`](https://github.com/rsyncOSX/PhotoEvidenceKit/commit/7614fd1528bb7cf2549799fb937678ea39d90228). This guide reviews that source and
-> the RawCull 3.4.0 build 434 integration on November 8, 2026. The package README
-> and changelog still use initial/unreleased wording; the lockfile records that historical remote version.
+> **Revision audited:** PhotoEvidenceKit `1.1.5` at
+> `e49d34adcfa2e2c43a4240c2e962dbe9defa4cad`, the version RawCull 3.5.0 resolves.
 
 [PhotoEvidenceKit on GitHub](https://github.com/rsyncOSX/PhotoEvidenceKit) is a reusable manual image-inspection package. It lets a
 photographer compare selected regions, retain a reference while navigating, and
@@ -31,9 +29,9 @@ RawBrowse and preserves the original MIT attribution.
 The package requires Swift tools 6.2, Swift 6 language mode, and macOS 26 or newer.
 It has no external package dependencies, bundled photo assets or model downloads.
 
-Repository references: [README](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/README.md),
-[package manifest](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift),
-and [MIT license](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/LICENSE).
+Repository references: [README](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/README.md),
+[package manifest](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Package.swift),
+and [MIT license](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/LICENSE).
 
 ## 1. Products And Dependency Direction
 
@@ -117,10 +115,12 @@ Inverse mapping supports overview interactions back into canonical coordinates.
 ## 4. Fit Region And Source-Pixel Scale
 
 `CloseUpScaleMode.fitRegion` fits the requested inspection region to the viewport.
-`sourcePixels` uses zoom in display points per source pixel; zoom 1 means one
-source pixel per display point. On a high-density display this is distinct from
-one source pixel per physical screen pixel. Display scale controls raster output
-resolution separately.
+`sourcePixels` at zoom 1 means one source pixel per **device pixel**, also on
+Retina. A viewport of 280 × 210 points at display scale 2 therefore covers 560 × 420
+source pixels, and a one-point drag moves two source pixels. The panel divides the
+drawn size by the display scale to get back to points. Versions before 1.1.5 used one
+source pixel per point, which showed every crop at 200 % of its pixels on a Retina
+screen.
 
 Requests default to a 280 × 210-point viewport. Viewport dimensions are normalized
 to `1...4096` and display scale to `1...4`. The panel is 304 points wide and can
@@ -221,7 +221,7 @@ orientation into canonical coordinates. A target from an obsolete frame revision
 is disabled/rejected. Supply entries for a retained reference as well as selected
 frames, and refresh them when metadata changes.
 
-There are two related behaviors in 1.0.7:
+There are two related behaviors:
 
 - `useAFPoint(_:)` performs one placement for one active frame. It preserves region
   size, viewport and linking, and persists through the normal store. Existing pan
@@ -243,7 +243,7 @@ its AF overlay state in the burst workspace.
 | `BurstCloseUpIdentity` | File revision from standardized URL, size, modification time and inode; separate preview/RAW render descriptors |
 | `BurstCloseUpRenderer` | Retain catalog access, serialize rendering, decode the requested source, validate identities twice and rasterize |
 | `BurstCloseUpRegionStore` | Persist source-bound region records in `UserDefaults` |
-| `BurstCloseUpAFPoint` | Read EXIF orientation and map all eight orientation cases |
+| `BurstCloseUpAFPoint` | Turn an upright AF point into an available or unavailable close-up target. `availability(frame:orientedPoint:)` is the path the view uses. A sensor-space overload maps all eight EXIF orientations through `AFPointOrientation`. |
 | `BurstCloseUpSelection` | Plain selection, command-toggle and shift-range comparison membership |
 | `BurstCloseUpsView` | Assemble frames, render sources, retained-reference metadata, AF availability and host callbacks |
 
@@ -257,15 +257,16 @@ can rerender without resetting a manual region bound to the RAW source.
 comparison membership. The package has no knowledge of the app's ranking results,
 rsync transfers, rating persistence or selected winner.
 
-### Detected crops in the local integration
+### Detected crops
 
-The November 9 development build uses the sibling `../PhotoEvidenceKit`
-checkout. RawCull's `BurstDetectedFacesView` supplies normalized rectangles
-to `DetectedFaceRasterizer`, which adds context and clips the crop to the
-upright preview. The app obtains human face rectangles from PhotoAnalysisKit
-and derives animal head and eye rectangles from Vision landmarks in
-`AnimalCloseUpDetector`. These tiles sit above the manual `CloseUpPanel`
-and have no region records of their own.
+RawCull's `BurstDetectedFacesView` supplies normalized rectangles as
+`DetectedFaceCloseUp` values to `DetectedFaceRasterizer`. It pads each rectangle by
+20 % of its size on every side, clips it to the upright preview and redraws it into
+an owned buffer of at most 512 pixels. `CGImage.cropping(to:)` alone shares the
+source's backing store, so one small tile would keep the whole decoded preview
+alive. Both the face rectangles (`FaceEvidenceAnalyzer`) and the animal head and eye
+rectangles (`AnimalCloseUpDetector`) come from PhotoAnalysisKit. These tiles sit
+above the manual `CloseUpPanel` and have no region records of their own.
 
 See [using Close Up]({{< relref "closeups.md" >}}) for the source picker,
 manual regions and detected tiles.
@@ -294,34 +295,26 @@ failures and peak memory during full-resolution loads. The package tests establi
 contract behavior; they do not measure a host decoder's cold/warm latency or memory
 budget.
 
-## Changes at 1.1.5
-
-Source-pixel zoom 1 now maps a source pixel to one physical display pixel
-at the active display scale. Detected-face crops are redrawn into bounded,
-owned buffers. The earlier geometry walkthrough describes the original
-1.0.7 implementation.
-
 ## Source Map
 
 Paths below belong to the PhotoEvidenceKit repository at the reviewed revision:
 
 | Topic                                                                  | PhotoEvidenceKit source                                                                                                                                                                                         |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Products, platform and dependency graph                                | [Package.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift)                                                                                       |
-| Frame, region, request, viewport and storage contracts                 | [Sources/PhotoEvidenceContracts/CloseUpContracts.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpContracts.swift)       |
-| Render identity and affine coordinate transform                        | [Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift) |
-| Validated AF targets and availability                                  | [Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift)           |
-| Fit/source-pixel bounds and coordinate mapping                         | [Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift)       |
-| Owned bounded raster buffers                                           | [Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift)           |
-| Async provider, result and error contracts                             | [Sources/PhotoEvidenceEngine/CloseUpRendering.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpRendering.swift)             |
-| Reference, regions, AF session preference, linked inspection and retry | [Sources/PhotoEvidenceUI/CloseUpModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpModel.swift)                             |
-| Generation checks, result validation and release                       | [Sources/PhotoEvidenceUI/CloseUpCardModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpCardModel.swift)                     |
-| Embedding API and controls                                             | [Sources/PhotoEvidenceUI/CloseUpPanel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpPanel.swift)                             |
-| Synthetic public-contract tests                                        | [Tests/PhotoEvidenceKitTests/](https://github.com/rsyncOSX/PhotoEvidenceKit/tree/7614fd1528bb7cf2549799fb937678ea39d90228/Tests/PhotoEvidenceKitTests/)                                                         |
+| Products, platform and dependency graph                                | [Package.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Package.swift)                                                                                       |
+| Frame, region, request, viewport and storage contracts                 | [Sources/PhotoEvidenceContracts/CloseUpContracts.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceContracts/CloseUpContracts.swift)       |
+| Render identity and affine coordinate transform                        | [Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceContracts/CloseUpRenderSource.swift) |
+| Validated AF targets and availability                                  | [Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceContracts/CloseUpAFPoint.swift)           |
+| Fit/source-pixel bounds and coordinate mapping                         | [Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceEngine/CloseUpCropGeometry.swift)       |
+| Detected-face tiles | [Sources/PhotoEvidenceContracts/DetectedFaceCloseUp.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceContracts/DetectedFaceCloseUp.swift), [Sources/PhotoEvidenceEngine/DetectedFaceRasterizer.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceEngine/DetectedFaceRasterizer.swift) |
+| Owned bounded raster buffers                                           | [Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceEngine/CloseUpRasterizer.swift)           |
+| Async provider, result and error contracts                             | [Sources/PhotoEvidenceEngine/CloseUpRendering.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceEngine/CloseUpRendering.swift)             |
+| Reference, regions, AF session preference, linked inspection and retry | [Sources/PhotoEvidenceUI/CloseUpModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceUI/CloseUpModel.swift)                             |
+| Generation checks, result validation and release                       | [Sources/PhotoEvidenceUI/CloseUpCardModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceUI/CloseUpCardModel.swift)                     |
+| Embedding API and controls                                             | [Sources/PhotoEvidenceUI/CloseUpPanel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceUI/CloseUpPanel.swift)                             |
+| Synthetic public-contract tests                                        | [Tests/PhotoEvidenceKitTests/](https://github.com/rsyncOSX/PhotoEvidenceKit/tree/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Tests/PhotoEvidenceKitTests/)                                                         |
 
 Continue with [RawParserKit]({{< relref "rawparserkit.md" >}}) for decoding,
 [PhotoAnalysisKit]({{< relref "photoanalysiskit.md" >}}) for measurements,
 [RawCullCore]({{< relref "rawcullcore.md" >}}) for recommendations, and
 [PhotoAIKit]({{< relref "photoaikit.md" >}}) for optional inference workflows.
-
-Build 466 resolves PhotoEvidenceKit 1.1.5 at `e49d34adcfa2e2c43a4240c2e962dbe9defa4cad` over HTTPS. This is the same source revision as build 462. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved)

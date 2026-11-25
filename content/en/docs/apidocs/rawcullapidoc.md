@@ -2,23 +2,23 @@
 author = "Thomas Evensen"
 title = "RawCull Developer Guide"
 date = "2026-10-15"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 weight = 20
 tags = ["API"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Updated launch code, Review flow, smoke inventory, model probes and tag-to-TestFlight release procedure."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Updated test commands, scan failure handling, Review start and troubleshooting for build 469."
 +++
 
 
 # RawCull developer documentation
 
-Reviewed against RawCull 3.4.9 build 466 on 23 November 2026. [Source revision](https://github.com/rsyncOSX/RawCull/commit/0513a30e4567b4b5e3093e10791d49c86ecfe7e6)
+Reviewed against RawCull 3.5.0 build 469 on 25 November 2026. [Source revision](https://github.com/rsyncOSX/RawCull/commit/5169ffd3487fe4ddc005d511fffa38172657d703)
 
 Read this guide in order for a tour from application launch to exported photographs. The walkthrough establishes the ownership and data-flow model; the API reference then explains individual operations, inputs, results and failure behavior. Source links identify the application revision used for each excerpt so the described implementation remains reproducible. Code marked **source excerpt** is copied from the implementation; **usage example** means an illustrative call inside the app module, with existing application objects and selected files. Neither kind is intended to be pasted into an unrelated standalone Swift program.
 
@@ -45,7 +45,7 @@ Imagine opening a folder containing a short sequence of owl photographs. You wan
 
 ### 1. Launch creates the objects that will survive navigation
 
-Begin in [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Main/RawCullApp.swift). Its initializer asks `RawCullApplicationState.live()` for the application assembly and retains two roots: `RawCullViewModel` and `RawCullIntelligenceRuntime`.
+Begin in [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift). Its initializer asks `RawCullApplicationState.live()` for the application assembly and retains two roots: `RawCullViewModel` and `RawCullIntelligenceRuntime`.
 
 **Source excerpt — application initialization:**
 
@@ -68,13 +68,13 @@ _burstBatchAssessment = State(initialValue: BurstBatchAssessment(
 
 The workspace root assembles the catalog, selection and workflow owners. The runtime retains the AI feature instances, model runtime, settings model and downloads model. Opening a sheet or changing the focused photograph should use those same instances. Otherwise, a settings screen could configure one inference service while a review screen uses another.
 
-Follow `RawCullApplicationState.make(...)` in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). It constructs a shared similarity model, passes it to similarity and semantic-search features, creates the view model, and binds the application context and settings consumer. Identity assertions at the assembly boundary check that these objects share the intended dependencies. This is the best entry point for understanding dependency wiring.
+Follow `RawCullApplicationState.make(...)` in [RawCullIntelligenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift). It constructs a shared similarity model, passes it to similarity and semantic-search features, creates the view model, and binds the application context and settings consumer. Identity assertions at the assembly boundary check that these objects share the intended dependencies. This is the best entry point for understanding dependency wiring.
 
 The main window then passes feature instances to `RawCullMainView` and injects workspace models and controllers through `workspaceEnvironment(_:)`. Its startup tasks load culling data, apply stored scoring settings and refresh AI settings. Construction establishes ownership; those tasks initialize persisted and capability state.
 
 ### 2. Opening a folder is a guarded transition
 
-In [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+Loading.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
+In [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Loading.swift), `startCatalogLoad(for:)` first recognizes an already active source with valid access. Otherwise, it requests a transition from [CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift).
 
 The coordinator flushes pending decisions before allowing the replacement. After that suspension, it checks cancellation, transition generation and whether the requested source is still selected. A successful flush for folder B must not open B if the user has already selected folder C. A failed flush restores the previous source selection.
 
@@ -96,11 +96,11 @@ This explains why UI code should call the catalog controller instead of merely r
 
 ### 3. Scanning builds file descriptions before loading every preview
 
-Open [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ScanFiles.swift). `scanFiles(url:onProgress:)` lists the immediate folder, skips hidden entries and admits formats recognized by `RawFormatRegistry`. It uses a task group with a bounded number of pending metadata reads. Before scheduling beyond that bound, it waits for a result. This limits simultaneous file access rather than starting a decode task for every photograph at once.
+Open [ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanFiles.swift). `scanFiles(url:onProgress:)` lists the immediate folder, skips hidden entries and admits formats recognized by `RawFormatRegistry`. It uses a task group with a bounded number of pending metadata reads. Before scheduling beyond that bound, it waits for a result. This limits simultaneous file access rather than starting a decode task for every photograph at once.
 
-Each admitted file becomes a `FileItem` containing its URL, name, size, modification date, optional capture time, EXIF metadata and normalized autofocus point. [RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Main/RawCullFileItem.swift) aliases `FileItem` and `ARWSourceCatalog` to RawCullCore domain types: the application uses package models through familiar local names.
+Each admitted file becomes a `FileItem` containing its URL, name, size, modification date, optional capture time, EXIF metadata and normalized autofocus point. The point is already rotated to the upright image, so every later screen and analysis step can use it as it is. [RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullFileItem.swift) aliases `FileItem` and `ARWSourceCatalog` to RawCullCore domain types: the application uses package models through familiar local names.
 
-Metadata and native focus information are read together. If no native focus locations were collected, the scanner attempts the catalog’s `focuspoints.json` fallback. This fallback is chosen for the collected scan, rather than filling each individual missing native point independently. Progress counts discovered supported files; it is not a count of successfully rendered previews.
+Metadata and native focus information are read together. If no native focus locations were collected, the scanner attempts the catalog’s `focuspoints.json` fallback. This fallback is chosen for the collected scan, rather than filling each individual missing native point independently. Progress counts discovered supported files; it is not a count of successfully rendered previews. If the directory itself cannot be read, the scan returns an empty list and sets `directoryReadFailed`, which the controller turns into a folder-access message instead of “no photos”.
 
 **Usage example — inspect metadata without starting the app’s catalog workflow:**
 
@@ -152,7 +152,7 @@ These are observations of current state. Do not reconstruct a workflow’s input
 
 ### 5. A thumbnail request follows the cache and shares duplicate work
 
-[RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/RequestThumbnail.swift) is an actor that coordinates preview requests. It resolves a `ThumbnailCacheKey` from source identity, purpose and requested pixel size. With a usable key, concurrent callers for the same thumbnail join one in-flight request.
+[RequestThumbnail.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/RequestThumbnail.swift) is an actor that coordinates preview requests. It resolves a `ThumbnailCacheKey` from source identity, purpose and requested pixel size. With a usable key, concurrent callers for the same thumbnail join one in-flight request.
 
 The resolution order is memory cache, disk cache, then the RAW loading interface. A disk hit is promoted to memory. A decoded image is added to memory and encoded to JPEG data for a background disk save. Display can proceed before that disk save finishes. If a trustworthy cache key cannot be produced, the actor still attempts to load the image, but avoids keyed cache reuse.
 
@@ -177,7 +177,7 @@ A nil return means no image is available to that caller, including cancellation 
 
 ### 6. Rating changes state immediately and persists it separately
 
-Follow the public action in [CullingController+Ratings.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CullingController+Ratings.swift), then the store in [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ViewModels/CullingModel.swift). The view model keeps the UI’s derived state consistent; the store updates the record identified by catalog and filename and schedules persistence.
+Follow the public action in [CullingController+Ratings.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CullingController+Ratings.swift), then the store in [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CullingModel.swift). The view model keeps the UI’s derived state consistent; the store updates the record identified by catalog and filename and schedules persistence.
 
 The store must reach `ready` before mutations are admitted. A missing store initializes an empty collection. An unreadable or damaged store produces a failed load and blocks automatic mutation, preserving the original data for recovery.
 
@@ -208,7 +208,7 @@ Normally the UI lets debouncing handle repeated ratings. A catalog transition or
 
 ### 7. Analysis input is resolved before inference starts
 
-[CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) centralizes selection rules. Grid input uses explicit selected IDs or falls back to the focused photograph, intersected with visible files. Tagged input resolves saved ratings of at least 2 in the active scope. `preserveAIAnalysisGridSelection()` captures the fallback selection before browsing tagged photographs changes focus.
+[CatalogController+AIAnalysis.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+AIAnalysis.swift) centralizes selection rules. Grid input uses explicit selected IDs or falls back to the focused photograph, intersected with visible files. Tagged input resolves saved ratings of at least 2 in the active scope. `preserveAIAnalysisGridSelection()` captures the fallback selection before browsing tagged photographs changes focus.
 
 Sharpness scoring measures image detail, burst analysis groups and ranks related frames, and semantic search ranks compatible CLIP artifacts against text. Review evaluates the selected photos with the chosen preset. Results affect ratings only when the photographer acts.
 
@@ -216,7 +216,7 @@ The shared runtime also coordinates settings changes. `apply(configuration:)` re
 
 ### 8. Combined Review freezes a reproducible run
 
-Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages.
+Read [CombinedReviewFeature.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) alongside [ReviewRunContract.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/Execution/ReviewRunContract.swift). The feature coordinates execution and presentation; the contract defines snapshots, typed IDs, compatibility and work stages. The feature starts on the **Focus check** preset. The run button names the chosen preset, and only that button starts a run.
 
 `analyze(_:)` prepares admission, acquires a shared lease and captures the preset, criteria, depth, source preference and retention settings. The worker then freezes source descriptions, retains catalog access, reads model identities, validates a run snapshot, saves its initial manifest and executes the work. The async method awaits that worker; returning still requires inspecting result and failure state because failures are captured internally.
 
@@ -236,9 +236,9 @@ Resume revalidates source fingerprints, model identities and pipeline versions b
 
 ### 9. Export creates output; copying has its own process lifecycle
 
-JPEG export uses [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ExtractAndSaveJPGs.swift) and returns a batch result with successes and per-file failures. Embedded export uses the camera preview; developed export renders the RAW. These can look different because they use different image sources. Cancellation can leave successful outputs already written.
+JPEG export uses [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ExtractAndSaveJPGs.swift) and returns a batch result with successes and per-file failures. Embedded export uses the camera preview; developed export renders the RAW. These can look different because they use different image sources. Cancellation can leave successful outputs already written.
 
-RAW copying starts through [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift). It prepares access, selection and a unique include list before launching rsync. Startup success means the subprocess launched. Final completion and dry-run status determine what can be reported as copied. This is a different completion contract from awaiting a JPEG export result.
+RAW copying starts through [ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift). It prepares access, selection and a unique include list before launching rsync. Startup success means the subprocess launched. Final completion and dry-run status determine what can be reported as copied. This is a different completion contract from awaiting a JPEG export result.
 
 At this point the complete chain is visible: the assembly owns services, the lifecycle admits a folder, scanning creates domain records, projections determine scope, workers load imagery, decisions persist independently, analysis produces evidence, and explicit output workflows write or copy files. The reference below gives the individual calls for each part of that chain.
 
@@ -279,20 +279,21 @@ Launch from Xcode, open a folder containing supported RAW photographs, inspect a
 | ParseRsyncOutput | Interpretation of rsync output |
 | DecodeEncodeGeneric | Codable persistence support |
 
-Read exact direct and transitive pins in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
+Read exact direct and transitive pins in [Package.resolved](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved). Model bundles are separate assets with separate licences; consult [ModelAssets](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/ModelAssets/README.md) and its notices. Avoid copying a static version list into additional documents.
 
 ### Tests and release checks
 
 | Command | What it verifies |
 | --- | --- |
-| `make test-smoke` | Enumerates the smoke manifest before running the selected critical paths. Build 466 expects 384 unique test identifiers. |
-| `make test-full` | Runs the RawCull plan serially with Thread Sanitizer. |
+| `make test-smoke` | Enumerates the smoke manifest before running the selected critical paths. Build 469 expects 384 unique test identifiers. |
+| `make test-full` | Copies the app version and build number into the README (`make sync-readme-version`), then runs the RawCull plan serially with Thread Sanitizer. It can therefore leave `README.md` modified. |
+| `make sync-readme-version` | Runs `Scripts/SyncReadmeVersion.sh`. With `--check` the script changes nothing and fails when the README is out of date. |
 | `make test-performance` | Verifies the performance selection and runs that plan. |
 | `make analyze` | Builds for testing in isolated DerivedData and runs the SwiftLint analyzer against the clean compiler log, including unused declarations and imports. |
 | `make combinedreviewtest`, `make combinedinputstest`, `make combinedselectiontest` | Opt-in single-image Review, encoder/input-contract and six-file selection probes. Supply the relevant model assets and fixtures. |
 | `make releasesharpnesstest` | Runs the hostless Release sharpness comparison on the chosen catalog. |
 
-For a release candidate, tag the clean commit for the app’s Xcode marketing version and run `make release-check`. It runs preflight (including tag-on-HEAD and model provenance), the AI import boundary, MCP helper and Release store tests, then smoke tests. Confirm app and downloader build numbers match. Upload with `make upload-app-store`, install the processed build through TestFlight, verify its model downloads and workflows, then submit that tested build in App Store Connect. Upload and submission are separate steps. The Developer ID DMG has its own build path. [Make targets](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Makefile) · [Release checklist](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/README.md)
+For a release candidate, tag the clean commit for the app’s Xcode marketing version and run `make release-check`. It runs preflight (including tag-on-HEAD and model provenance), the AI import boundary, MCP helper and Release store tests, then smoke tests. Confirm app and downloader build numbers match. Upload with `make upload-app-store`, install the processed build through TestFlight, verify its model downloads and workflows, then submit that tested build in App Store Connect. Upload and submission are separate steps. The Developer ID DMG has its own build path. [Make targets](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Makefile) · [Release checklist](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/README.md)
 
 ## Architecture and ownership
 
@@ -483,6 +484,8 @@ Maintenance: change comments in the same review as their function contract. DocC
 | Combined Review cannot resume | Source changed, model identity changed, contract/version mismatch | Preserve saved evidence; start a new run with current inputs and settings when compatibility cannot be restored. |
 | Combined Review shows observations only | Synthesis failed or evidence was insufficient | Read retained observations and coverage limits; do not relabel them as a completed recommendation. |
 | JPEG export partially fails | Per-file decode/write messages and destination access | Retain successful output, fix the named cause and retry affected files. |
+| Copy failed, but the details table is empty or short | The table drops the last 11 output records, including failure diagnostics | Read the summary and the copy outcome. See [open source findings]({{< relref "/docs/update.md" >}}#open-source-findings). |
+| Reviewed or deferred marks are gone | **Delete Cache** was used, or the catalog path is very long | Marks live in the burst snapshot. Ratings are stored separately. |
 | RAW copy does not start | Typed `CopyStartupFailure` | Check active scope, rsync configuration, source/destination access and writable include-list storage. |
 | Dry run completes but destination is empty | `CopyOperation.dryRun` | Run an actual copy after reviewing the preview. A dry run is not an export. |
 | Test manifest verification fails | Changed suite names/selectors or counts | Update the source, response file and expected enumeration inventory together when the change is intentional. |
@@ -651,7 +654,7 @@ renderer-provided metadata and shows preparation progress plus the latest reques
 duration. See [viewer ownership]({{< relref "viewer-architecture.md" >}}) and
 [the internal API]({{< relref "rawcull-internal-api.md" >}}) for publication and
 cleanup. The expanded
-[scripts guide](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/Scripts/README.md)
+[scripts guide](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Scripts/README.md)
 documents benchmark, analysis and repository-check commands, including
 `make test-scripts` for fixture-based Python checks.
 
@@ -687,4 +690,4 @@ and the [internal API]({{< relref "rawcull-internal-api.md" >}}).
 The source troubleshooting guide describes `MDB_MAP_FULL` messages from
 macOS Metal's per-user shader archive database. If they recur, the guide
 shows how to identify and clear RawCull's Metal cache while the app and
-tests are stopped. [RawCull troubleshooting](https://github.com/rsyncOSX/RawCull/blob/a0c72d11b6dea1f409542faf90f76fba43cdb0f5/README.md)
+tests are stopped. [RawCull troubleshooting](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/README.md)

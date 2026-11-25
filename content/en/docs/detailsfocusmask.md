@@ -2,23 +2,25 @@
 author = "Thomas Evensen"
 title = "Detailed Focus Mask Computation"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 weight = 42
 tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Updated viewer ownership and distinguished the calibrated focus overlay from a retained Review subject mask."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Rewrote for PhotoAnalysisKit 1.4.1: fixed threshold, capture fallbacks, gate order and calibration scale."
 +++
 
 # Detailed Focus Mask Computation
 
-This page follows visible focus-mask rendering at **PhotoAnalysisKit 1.3.1**,
-revision **2a1466e04d821fa2628d6985296643e0d0c7e465**.
+This page follows visible focus-mask rendering at **PhotoAnalysisKit 1.4.1**,
+revision **2f41e8b756f006e0218f86b103801ebb47cf8983**, the version RawCull 3.5.0
+resolves. The largest change since the earlier edition (1.3.1) is the threshold: it
+is now a fixed cutoff and no longer adapts to each image.
 
 The focus mask is not the camera's AF-point marker. The marker reports where the
 camera attempted focus. The mask is a package-generated bitmap of selected
@@ -64,13 +66,14 @@ view, app model, URL, or persistence object.
 | Main thumbnail/detail | `generateFocusMask`              | `PhotoAnalyzer.focusMask`            | Can reuse existing `FocusEvidence`; classification is skipped and a saved winning saliency rectangle avoids a new saliency pass |
 | Zoom overlay          | `generateFocusMaskWithBreakdown` | `PhotoAnalyzer.analyzeWithFocusMask` | Recomputes saliency, scalar breakdown, evidence, and mask together                                                              |
 | Comparison grid       | `generateFocusMaskWithBreakdown` | `PhotoAnalyzer.analyzeWithFocusMask` | Same aligned diagnostic path per comparison image                                                                               |
+| Review photo layer    | `generateFocusMask`              | `PhotoAnalyzer.focusMask`            | No saved evidence, so subject isolation runs a saliency pass on the retained overview                                           |
 
 The RawCull entry files are:
 
-- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
-- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
-- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
-- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
+- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
+- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
+- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
+- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
 
 Views snapshot the effective config, inject ISO, aperture, and normalized AF
 point, cancel a previous mask task when image or config identity changes, and
@@ -105,7 +108,7 @@ These change only the rendered overlay or its visibility:
 
 | Value                           | Current default | Effect                                                              |
 | ------------------------------- | --------------: | ------------------------------------------------------------------- |
-| `threshold`                     |            0.46 | Fallback/floor reference for adaptive visual threshold              |
+| `threshold`                     |            0.46 | The cutoff itself, in edge-energy units, clamped to 0.01–0.95       |
 | `dilationRadius`                |             0.0 | Optionally connects thresholded edge pixels                         |
 | `erosionRadius`                 |             0.0 | Optionally removes isolated/small responses                         |
 | `featherRadius`                 |             0.5 | Softens the clipped mask alpha                                      |
@@ -124,8 +127,8 @@ mask threshold itself never becomes a scalar multiplier:
 
 - pre-blur radius, energy gain, ISO, aperture blur damp, and image resolution
   determine the shared primary Laplacian;
-- border inset excludes scalar border samples and blackens the corresponding
-  mask border;
+- border inset excludes scalar border samples (the mask has no border inset, its
+  input is clamped to the extent instead);
 - saliency candidates and AF point determine scoring regions and potential mask
   search regions;
 - AF radii determine scalar evidence regions and which mask region can be
@@ -135,37 +138,40 @@ mask threshold itself never becomes a scalar multiplier:
 ### Calibration Output
 
 Calibration returns
-`FocusCalibrationResult(threshold, sampleCount, p50, p90, p95, p99)`. RawCull
-applies only **threshold** to the active config. The percentiles and sample
-count are diagnostics. Calibration changes visual threshold policy; it does not
+`FocusCalibrationResult(threshold, sampleCount, p50, p90, p95, p99, measuredLongSide)`.
+RawCull applies only **threshold** to the active config. The percentiles and sample
+count are diagnostics. `measuredLongSide` is the median long side of the images the
+energies came from. Edge energy depends on decode size, so a threshold fits masks
+drawn from images near that size. Calibration changes visual threshold policy; it does not
 rescale stored scalar scores.
 
 ## Stage 1: Normalize And Resolve Per-Image Configuration
 
 `PhotoAnalyzer.focusMask` and `analyzeWithFocusMask` normalize the input
-`CGImage` to sRGB. They copy the caller's `SharpnessConfiguration`, then
-replace:
+`CGImage` to sRGB. They copy the caller's `SharpnessConfiguration`, then override
+it with capture metadata that exists:
 
 ```text
-config.iso          = input.iso
-config.apertureHint = derived from input.aperture
+config.iso          = capture ISO, else the configured ISO
+config.apertureHint = from a finite, positive aperture, else the configured hint
 ```
 
-Aperture at or below f/5.6 is wide, at or above f/8 is landscape, the interval
-between is mid, and missing metadata defaults to mid.
+Aperture at or below f/5.6 is wide, at or above f/8 is landscape, and the interval
+between is mid.
 
-The package engine runs synchronous Vision/Core Image work in an explicitly
-`@concurrent` child task. A cancellation handler cancels that worker. This is
-not a detached task in the pinned revision.
+Saliency is awaited through `VisionRequestGate` *before* the render worker starts, so
+no pool thread waits for Vision. The Core Image work then runs in an explicitly
+`@concurrent` task with a cancellation handler. A result that arrives after
+cancellation is discarded.
 
 ## Stage 2: Obtain Saliency And Score Evidence
 
 The simple facade follows this rule:
 
 ```text
-saved winningSaliencyRect exists -> reuse it
-else isolateMaskToSubject         -> run saliency, without classification
-else                              -> no salient region
+saved evidence supplied      -> use its winningSaliencyRect, even when that is nil
+else isolateMaskToSubject    -> run saliency, without classification
+else                         -> no salient region
 ```
 
 The diagnostic facade always detects saliency, optionally classifies, computes a
@@ -222,8 +228,8 @@ Laplacian =
   multiplied by energyMultiplier
 ```
 
-Landscape aperture damp is 0.8; wide and mid are 1.0. The package then blackens
-the configured border inset so expanded Gaussian edges are not visual evidence.
+Landscape aperture damp is 0.8; wide and mid are 1.0. The input is clamped to its
+extent before the blur, so the photo border is not turned into a false edge.
 
 ### Raw Laplacian Debug Mode
 
@@ -232,7 +238,7 @@ scaled image extent and returns it immediately. It records the saliency/AF
 region source, but does **not**:
 
 - build or select patches;
-- calculate an adaptive visual threshold;
+- apply the visual threshold;
 - threshold or colorize edges;
 - erode, dilate, thin, clip, or feather the mask.
 
@@ -328,19 +334,28 @@ rendered mask threshold, morphology, color, or rendered coverage.
 
 ## Stage 7: Choose The Visual Threshold
 
-Samples are collected from the full selected search regions. Ranked patches
-summarize and order local evidence, but no longer truncate the visible focus
-map. The adaptive threshold is:
+```text
+threshold = clamp(config.threshold, 0.01, 0.95)     // default 0.46, or the calibration result
+```
 
-| Evidence                     | Percentile | Floor from config threshold | May exceed fallback? |
-| ---------------------------- | ---------: | --------------------------: | -------------------- |
-| AF center/neighborhood/point |       0.82 |         0.32 times fallback | No                   |
-| Saliency, mixed, or global   |       0.90 |         0.55 times fallback | Yes                  |
+That is all. The same cutoff applies to every evidence region and every image.
+Earlier versions took a percentile of *each image's own* samples. Such a mask always
+shows something: a blurred frame gets a low cutoff and lights up as readily as a
+sharp one, so two frames of a burst cannot be compared by looking at them. With a
+fixed cutoff, less red means less measured edge energy.
 
-The floor is at least 0.01 and the final threshold is at most 0.95.
+The price is that the cutoff must fit the image scale. Calibration measures embedded
+previews at a 1616 px target. A mask drawn from a much larger image, for example the
+2048 px overview behind the Review photo layer, is judged by a threshold measured at
+another scale. `FocusMaskAnalysisResolutionPolicy.calibrationScaled` exists to
+resample an image to the calibration size, but no view calls it at this revision.
+The views call `prepare`, which returns the image unchanged.
 
-The threshold is not relaxed for visibility. `relaxedForVisibility` is always
-false in the current renderer, and weak images may return an empty mask.
+Ranked patches summarize and order local evidence; they do not truncate the visible
+map. An adaptive threshold still exists inside patch ranking, where it measures how
+much of a patch is covered (percentile 0.88, capped at 0.46). It never reaches the
+overlay. The threshold is not relaxed for visibility, `relaxedForVisibility` is
+always false, and weak images may return an empty mask.
 
 ## Stage 8: Render And Clip
 
@@ -355,8 +370,8 @@ The package performs this sequence:
 7. Gaussian-feather with `featherRadius`, when positive;
 8. crop to the scaled image extent and create the output `CGImage`.
 
-After morphology and feathering, GPU area reductions compute visible-alpha
-coverage within the selected regions. This final rendered coverage—not a
+After morphology and feathering, GPU area reductions compute the fraction of the
+selected regions with alpha above 0.05. This final rendered coverage—not a
 pre-render sample estimate—is stored in the evidence.
 
 ## Stage 9: Return Diagnostics
@@ -376,6 +391,7 @@ Confidence rules are intentionally readable:
 - no viable patch -> low;
 - rendered coverage below 0.001, robust-tail below 0.01, micro-contrast below
   0.005, or patch coverage below 0.001 -> low;
+- "strong detail" means robust tail at least 0.05 and micro-contrast at least 0.02;
 - AF anchored within normalized distance 0.05 with strong detail -> high;
 - AF aligned with measurable but weaker detail -> medium;
 - AF farther than 0.05 -> low;
@@ -408,7 +424,8 @@ the owning SwiftUI task is the final stale-result boundary.
 3. Compare AF-center, AF-neighborhood, broad AF, saliency, and global scores.
 4. Inspect sorted patch composite components, especially AF distance,
    silhouette, linear-edge, and below-AF penalties.
-5. Check effective visual threshold and final rendered coverage.
+5. Check the visual threshold, the size it was calibrated at, and the final rendered
+   coverage.
 6. Enable raw Laplacian mode to separate edge-energy input from threshold and
    morphology.
 7. Remember that a strong scalar score and a sparse mask are compatible: the
@@ -418,12 +435,12 @@ the owning SwiftUI task is the final stale-result boundary.
 
 | Stage                                                                                   | Tests                                                          |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
-| Public analyze/mask/calibration behavior and cancellation                               | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
-| Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | [PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift)           |
-| Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
-| Descriptor excludes mask-only presentation and includes scalar policy                   | [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) |
-| Bounded input loading and analysis cancellation                                         | [PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          |
+| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| Public analyze/mask/calibration behavior and cancellation                               | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
+| Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | [PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift)           |
+| Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |
+| Descriptor excludes mask-only presentation and includes scalar policy                   | [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) |
+| Bounded input loading and analysis cancellation                                         | [PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          |
 
 ## Change Checklist
 

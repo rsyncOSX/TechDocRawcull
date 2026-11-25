@@ -3,28 +3,28 @@ author = "Thomas Evensen"
 title = "New Features"
 linkTitle = "New Features"
 date = "2026-11-05"
-lastmod = "2026-11-23"
-description = "RawCull 3.4.9 features, competition and the prioritized 3.5.0 plan."
+lastmod = "2026-11-25"
+description = "RawCull 3.5.0 features, competition and the prioritized plan."
 tags = ["roadmap", "planning", "culling"]
 categories = ["technical details"]
 weight = 55
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Checked the roadmap destination and its distinction between implemented features and proposals."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Updated the destination for 3.5.0."
 +++
 
 # New Features
 
-This section tracks what RawCull 3.4.9 build 466 provides and what should come
+This section tracks what RawCull 3.5.0 build 469 provides and what should come
 next. Implementation status in the source does not establish store-release
 availability.
 
-[Features, competition and the 3.5.0 plan]({{< relref "newfeatures.md" >}})
+[Features, competition and the plan]({{< relref "newfeatures.md" >}})
 covers the current capabilities, a dated comparison with other culling
-applications and the prioritized list for version 3.5.0, including the scope of
+applications and the prioritized list for the next versions, including the scope of
 XMP exchange and unified burst evidence. Those two scopes replace the earlier
 separate P0 plan pages.
 

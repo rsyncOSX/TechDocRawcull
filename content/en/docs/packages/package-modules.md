@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "One Package, Three Imports: Understanding Swift Modules"
 linkTitle = "Understanding Package Imports"
 date = "2026-11-08"
-lastmod = "2026-11-08"
+lastmod = "2026-11-25"
 description = "Learn how Swift packages, products, targets, modules, imports, and linking fit together using PhotoEvidenceKit as a concrete example."
 tags = ["swift-package", "modules", "learning", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 1
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Confirmed the PhotoEvidenceKit revision and library products. The repository transport change leaves the module example intact."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Moved the worked example to the resolved 1.1.5 manifest."
 +++
 
 # One Package, Three Imports: Understanding Swift Modules
@@ -32,8 +32,8 @@ package does not define a module with that name. Consequently, adding the packag
 to Xcode does not make `import PhotoEvidenceKit` valid.
 
 This guide uses the actual
-[PhotoEvidenceKit manifest](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift)
-at the RawCull-resolved 1.0.7 revision. Alternative designs later in this guide are
+[PhotoEvidenceKit manifest](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Package.swift)
+at the RawCull-resolved 1.1.5 revision. Alternative designs later in this guide are
 teaching examples, not changes made to that package.
 
 ## 1. The Names Describe Different Things
@@ -390,11 +390,11 @@ system uses and avoids confusing a repository name with a module name.
 
 | Topic | PhotoEvidenceKit source |
 | --- | --- |
-| Package, products and targets | [Package.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Package.swift) |
-| Shared request and region values | [Sources/PhotoEvidenceContracts/CloseUpContracts.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceContracts/CloseUpContracts.swift) |
-| Engine imports and rendering boundary | [Sources/PhotoEvidenceEngine/CloseUpRendering.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceEngine/CloseUpRendering.swift) |
-| UI imports and public panel | [Sources/PhotoEvidenceUI/CloseUpPanel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpPanel.swift) |
-| Internal UI implementation | [Sources/PhotoEvidenceUI/CloseUpCardModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/7614fd1528bb7cf2549799fb937678ea39d90228/Sources/PhotoEvidenceUI/CloseUpCardModel.swift) |
+| Package, products and targets | [Package.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Package.swift) |
+| Shared request and region values | [Sources/PhotoEvidenceContracts/CloseUpContracts.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceContracts/CloseUpContracts.swift) |
+| Engine imports and rendering boundary | [Sources/PhotoEvidenceEngine/CloseUpRendering.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceEngine/CloseUpRendering.swift) |
+| UI imports and public panel | [Sources/PhotoEvidenceUI/CloseUpPanel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceUI/CloseUpPanel.swift) |
+| Internal UI implementation | [Sources/PhotoEvidenceUI/CloseUpCardModel.swift](https://github.com/rsyncOSX/PhotoEvidenceKit/blob/e49d34adcfa2e2c43a4240c2e962dbe9defa4cad/Sources/PhotoEvidenceUI/CloseUpCardModel.swift) |
 
 Continue with [How PhotoEvidenceKit Is Constructed]({{< relref "photoevidencekit.md" >}})
 for the detailed runtime contracts and RawCull integration, or return to the

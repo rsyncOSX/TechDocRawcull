@@ -2,18 +2,18 @@
 author = "Thomas Evensen"
 title = "Concurrency"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 tags = ["concurrency", "actors", "swift"]
 categories = ["technical details"]
 mermaid = true
 weight = 35
 slug = "concurrency-revised"
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Replaced the temporary processor cap with the implemented Vision gate, cancellation semantics and quality limits."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Added the detachedCancellable walkthrough, lease waiters and the stale-publication example. Corrected actor and guard tables."
 +++
 
 # Concurrency
@@ -161,7 +161,7 @@ Actors protect shared asynchronous state.
 | Actor                                                           | Serialized invariant                                               |
 | --------------------------------------------------------------- | ------------------------------------------------------------------ |
 | `ThumbnailPreloadGate`                                          | Active preload catalogs and parked grid-demand waiters             |
-| `ThumbnailLoader`                                               | Six decode slots, FIFO continuations, and cached settings          |
+| `ThumbnailLoader`                                               | Six decode slots and FIFO continuations                            |
 | `RequestThumbnail`                                              | Setup single flight and one producer per exact `ThumbnailCacheKey` |
 | `ScanFiles`, `ScanAndCreateThumbnails`, `ExtractAndSaveJPGs`    | Batch task, progress, cancellation, and result accumulation        |
 | `DiskCacheManager`, `BurstAnalysisCache`, `WriteSavedFilesJSON` | File-backed cache or persistence transactions                      |
@@ -229,6 +229,30 @@ or access lifetime matters, the caller must explicitly await/control the task
 and arrange cancellation. Preload now does so; interactive thumbnail requests
 still launch a separate asynchronous cache save.
 
+Where cancellation must follow the caller, use `detachedCancellable` instead. The
+name is historical. It does not create a detached task. It opens a one-child task
+group and runs an `@concurrent` closure in it, so the work leaves the caller's
+actor and still inherits cancellation, priority and structured lifetime:
+
+```swift
+nonisolated func detachedCancellable<Success: Sendable>(
+    priority: TaskPriority? = nil,
+    _ operation: @escaping @Sendable @concurrent () async -> Success,
+) async -> Success {
+    await withTaskGroup(of: Success.self) { group in
+        group.addTask(priority: priority, operation: operation)
+        return await group.next()!   // exactly one child was added
+    }
+}
+```
+
+Compare the two forms. With `Task.detached { … }.value`, a cancelled caller keeps
+waiting and the decode keeps running for a photo nobody wants. With the group, a
+child of an already cancelled task starts cancelled, so there is no window in
+which work begins before it learns that. Disk-cache decode, full-size cache
+decode, sidecar loading and preview sharpening use it. Cache *writes* stay
+detached on purpose: a write that has started should finish.
+
 Blocking ImageIO work is stronger than ordinary CPU work. RawParserKit bridges
 it to a GCD queue with a checked continuation and lock-backed cancellation state
 so it does not occupy Swift's cooperative executor. Framework pipe and PTY
@@ -274,7 +298,8 @@ identity checks.
 | Similarity hydrate/index/rank/search/group | Per-workflow generation plus catalog/query snapshots        |
 | Burst analysis                             | Burst generation plus catalog URL                           |
 | Review | Shared lease, frozen source and model snapshots, cancellation and compatibility checks |
-| Raw diagnostics                            | Generation UUID plus cancellation                           |
+| Model replacement                          | Settings refresh generation, configuration revision and identity |
+| Review photo layers                        | Optional key per layer, compared again after the await      |
 | Thumbnail single flight                    | Exact cache key plus producer-generation UUID               |
 
 Progress callbacks use the same guard as final publication. An older run must
@@ -295,6 +320,20 @@ The collection owner is responsible for exactly one continuation resume. Never
 hold a lock across `await`, invoke arbitrary client code while holding a lock,
 or use a continuation without a cancellation path.
 
+The AI lease is one more continuation owner. `CombinedReviewLease.invalidateAndWait()`
+parks a model refresh until the current AI run has released the lease. `release`
+resumes every parked waiter, and cancellation removes and resumes one waiter with
+`CancellationError`. See [AI runtime]({{< relref "/docs/ai/airuntime.md" >}}).
+
+### When serialization is not enough
+
+Main-actor and actor isolation prevent data races. They do not prevent a *stale
+publication*. `ComparisonSessionModel` is the example to study: all of its methods
+run on the main actor, and two of them can still overwrite each other's results
+after an `await`. The [viewer guide]({{< relref "viewer-architecture.md" >}}#comparison-publication-has-a-known-gap)
+walks through both cases. Ask two questions at every `await`: what could have
+changed while I was suspended, and does my guard cover exactly that?
+
 ## Security-Scope And Persistence Lifetimes
 
 | Operation           | Owner                            | Start                                                               | Stop / failure cleanup                                                                                                         |
@@ -311,16 +350,16 @@ idempotent cleanup path.
 
 | Runtime rule                                                                                                 | Protecting tests                                                             |
 | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| Exact-key thumbnail coalescing and independent waiter cancellation                                      | [RawCullTests/ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ThumbnailProviderTests.swift)                                  |
-| Preload-gate drain and cancellation races                                                                | [RawCullTests/RawCullVerifyTestsConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/2ca891be5c013dc38fe3c931a829a04083b69c2a/RawCullTests/RawCullVerifyTestsConcurrencyTests.swift)                      |
-| Six-slot limit, FIFO transfer, queued cancellation, and cancel-all                                           | [RawCullTests/ThumbnailLoaderConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ThumbnailLoaderConcurrencyTests.swift)                         |
-| Replacement-safe source/representation identity                                                              | [RawCullTests/ThumbnailCacheIdentityTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ThumbnailCacheIdentityTests.swift)                             |
-| Synchronized cache replacement, clear/insert races, and eviction accounting in isolated owners | [RawCullTests/CacheAccountingConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/CacheAccountingConcurrencyTests.swift) |
-| Scoring request coalescing and generation-safe completion                                                    | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/SharpnessScoringTests.swift)                                   |
-| Persistence debounce, failed-save dirty state, retry, atomic backup/write, and legacy decode                 | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/CullingModelTests.swift)                                       |
-| Catalog scope idempotence, replacement, failed start, cancellation, and empty catalog                        | [RawCullTests/RawCullVerifyViewModelSecurityScopeTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/RawCullVerifyViewModelSecurityScopeTests.swift)                |
-| Export selection and denied destination scope                                                                | [RawCullTests/ExtractJPGsSelectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ExtractJPGsSelectionTests.swift)                               |
-| Rsync source/destination cleanup and operation-local include files                                           | [RawCullTests/ExecuteCopyFilesStartupTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ExecuteCopyFilesStartupTests.swift)                            |
+| Exact-key thumbnail coalescing and independent waiter cancellation                                      | [RawCullTests/ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailProviderTests.swift)                                  |
+| Preload-gate drain and cancellation races                                                                | [RawCullTests/ThumbnailPreloadGateTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPreloadGateTests.swift) |
+| Six-slot limit, FIFO transfer, queued cancellation, and cancel-all                                           | [RawCullTests/ThumbnailLoaderConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailLoaderConcurrencyTests.swift)                         |
+| Replacement-safe source/representation identity                                                              | [RawCullTests/ThumbnailCacheIdentityTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailCacheIdentityTests.swift)                             |
+| Synchronized cache replacement, clear/insert races, and eviction accounting in isolated owners | [RawCullTests/CacheAccountingConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CacheAccountingConcurrencyTests.swift) |
+| Scoring request coalescing and generation-safe completion                                                    | [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift)                                   |
+| Persistence debounce, failed-save dirty state, retry, atomic backup/write, and legacy decode                 | [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CullingModelTests.swift)                                       |
+| Catalog scope idempotence, replacement, failed start, cancellation, and empty catalog                        | [RawCullTests/RawCullVerifyViewModelSecurityScopeTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/RawCullVerifyViewModelSecurityScopeTests.swift)                |
+| Export selection and denied destination scope                                                                | [RawCullTests/ExtractJPGsSelectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ExtractJPGsSelectionTests.swift)                               |
+| Rsync source/destination cleanup and operation-local include files                                           | [RawCullTests/ExecuteCopyFilesStartupTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ExecuteCopyFilesStartupTests.swift)                            |
 | Package batch ordering, bounds, progress, and cancellation                                                   | [PhotoAnalysisKit/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift) |
 
 ## Review Checklist
@@ -353,8 +392,8 @@ Cancelling a catalog releases the session reference; the actual security-scope
 stop occurs in the grant's isolated deinitializer after the final worker also
 releases it. Cancellation cannot instantly interrupt synchronous image rendering.
 A generation/catalog guard still prevents those workers from publishing stale
-results. See [RawCullTests/CatalogLifecycleCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/CatalogLifecycleCoordinatorTests.swift) and
-[RawCullTests/CatalogConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/CatalogConcurrencyTests.swift).
+results. See [RawCullTests/CatalogLifecycleCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CatalogLifecycleCoordinatorTests.swift) and
+[RawCullTests/CatalogConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CatalogConcurrencyTests.swift).
 
 ## Viewer task and event ownership
 
@@ -378,7 +417,7 @@ rendering preemptible. See
 
 ## Bounded preload saves and separate observable owners
 
-[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Actors/ScanAndCreateThumbnails.swift) keeps saving inside each
+[ScanAndCreateThumbnails.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanAndCreateThumbnails.swift) keeps saving inside each
 bounded worker: process and encode, release the file's grid gate, await
 `DiskCacheManager.save`, then release the slot. A cancellation check after
 `group.next()` prevents new admission when a cancelled producer gets a slot.
@@ -391,13 +430,13 @@ replacement advances hydration generation and rejects stale publication.
 Similarity's grid revision combines image and semantic changes. These owners
 remain observable main-actor models, not new background actors.
 
-Read [ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift),
-[CullingGridCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/CullingGridCoordinatorTests.swift) and
-[RawCullSemanticSearchTests.swift](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCullTests/RawCullSemanticSearchTests.swift) for the contracts.
+Read [ThumbnailPreloadSaveOwnershipTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailPreloadSaveOwnershipTests.swift),
+[CullingGridCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CullingGridCoordinatorTests.swift) and
+[RawCullSemanticSearchTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/RawCullSemanticSearchTests.swift) for the contracts.
 
 ## Catalog progress lifetime — October 2026
 
-[CatalogProgressCoalescer](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Model/Handlers/CatalogProgressCoalescer.swift)
+[CatalogProgressCoalescer](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/CatalogProgressCoalescer.swift)
 is main-actor presentation state. Each catalog load creates independent metadata
 and thumbnail instances. A cancellable 100 ms scheduling task weakly references
 the coalescer; scheduled identifiers and an accepting flag reject obsolete ticks.
@@ -429,7 +468,7 @@ the same publication/completion responsibilities. See
 
 ## Close-up rendering and publication
 
-[BurstCloseUpRenderer](https://github.com/rsyncOSX/RawCull/blob/a5f35b05c1e206ed4d6aa599522f5c8622b5308a/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
+[BurstCloseUpRenderer](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
 is an actor with an explicit tail-task chain. Actor isolation alone would allow
 reentrancy across awaits; waiting for the preceding task prevents overlapping
 native decodes within this renderer instance. A cancellation handler cancels the
@@ -450,7 +489,7 @@ pipelines. See [cache ownership]({{< relref "cache.md" >}}) and
 
 ## Automatic detection scheduling
 
-The current URL scopes the detection task. The view delays starting work
+Each compared URL scopes one detection task. The view delays starting work
 briefly, removes the detection strip during similarity indexing and cancels
 obsolete loads when the current URL changes. The loader retains catalog access
 and checks cancellation and source revision before saving or returning results.
@@ -461,4 +500,4 @@ cancellation check.
 
 PhotoAnalysisKit schedules saliency, classification, face and animal detection, and feature-print requests on `VisionRequestGate.shared`. RawCull injects `RawCullVisionWorkSerializer` into PhotoAIKit’s Vision similarity backend, so feature prints from similarity indexing use the same queue. The indexer can keep up to four decodes in flight while Vision executes one request body at a time. This leaves the cooperative thread pool available to other tasks.
 
-A waiting caller suspends. Cancelling before its turn skips the body. Once a request has started, it finishes on the serial queue and returns its result or error. Construct the non-Sendable Vision request and handler inside that body and return Sendable data. Sharpness still bounds concurrent images by quality and source, allowing six Fast, four Balanced or three High Precision preview jobs and at most two RAW demosaics. [VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [RawCullVisionSimilarityService](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) · [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
+A waiting caller suspends. Cancelling before its turn skips the body. Once a request has started, it finishes on the serial queue and returns its result or error. Construct the non-Sendable Vision request and handler inside that body and return Sendable data. Sharpness still bounds concurrent images by quality and source, allowing six Fast, four Balanced or three High Precision preview jobs and at most two RAW demosaics. [VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [RawCullVisionSimilarityService](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) · [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)

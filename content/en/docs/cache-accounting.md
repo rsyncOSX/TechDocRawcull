@@ -7,11 +7,11 @@ weight = 21
 tags = ["cache", "concurrency", "evictions", "swift"]
 categories = ["technical details"]
 
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Retained the owned-eviction-delegate walkthrough. The cache bookkeeping implementation has no relevant delta."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Reread the walkthrough against unchanged source. Only source links moved."
 +++
 
 # Synchronizing Cache Storage and Accounting
@@ -52,7 +52,7 @@ update its own accounting. Test fixtures consequently disabled eviction tracking
 ## One Wrapper Owns Storage, Metadata, and Callbacks
 
 The new
-[`TrackedThumbnailCache.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/Cache/TrackedThumbnailCache.swift)
+[`TrackedThumbnailCache.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/TrackedThumbnailCache.swift)
 combines these responsibilities:
 
 ```swift
@@ -146,7 +146,7 @@ They are not a combined snapshot while other tasks are mutating the cache.
 
 ## Integration with SharedMemoryCache
 
-[`SharedMemoryCache.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Actors/SharedMemoryCache.swift)
+[`SharedMemoryCache.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/SharedMemoryCache.swift)
 remains an actor for configuration and memory-pressure handling. Its two
 synchronous cache endpoints become:
 
@@ -167,7 +167,7 @@ track their own evictions exactly like the production owner.
 
 ## Tests That Protect the Contract
 
-[`CacheAccountingConcurrencyTests.swift`](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCullTests/CacheAccountingConcurrencyTests.swift)
+[`CacheAccountingConcurrencyTests.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CacheAccountingConcurrencyTests.swift)
 contains three Swift Testing tests, each parameterized for preview and grid:
 
 | Test | Workload | Checked result |

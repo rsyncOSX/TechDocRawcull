@@ -3,13 +3,13 @@ title: Performance Measurement
 linkTitle: Performance
 description: RAW ZoomView preview measurements, historical catalog findings, benchmark semantics, and validation limits.
 weight: 85
-lastmod: 2026-11-23
+lastmod: 2026-11-25
 
-reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version: "3.4.9"
-reviewed_build: 466
-reviewed_on: "2026-11-23"
-review_scope: "Added the source project’s 275-ARW gate comparison, stress run, Release sharpness evidence and limits."
+reviewed_commit: "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version: "3.5.0"
+reviewed_build: 469
+reviewed_on: "2026-11-25"
+review_scope: "Stated what 3.5.0 leaves unmeasured. Recorded measurements are unchanged."
 ---
 
 # Performance Measurement
@@ -352,6 +352,19 @@ Build 436 adds current-frame detection on an embedded preview capped at
 1,600 pixels. Human cache hits skip the Vision face request, but still need
 the preview pixels for crops. Animal detection runs separately. This source
 review adds no latency, memory or detection-accuracy measurements.
+
+## What 3.5.0 does not measure
+
+Builds 467 to 469 add the Review magnifier, focus layers and frame marks. No new
+latency, memory or frame-time measurement accompanies them. The magnifier loads a
+full-size embedded preview only while it is on. The focus-mask layer runs a saliency
+pass and a mask render on the retained overview when it is shown. Treat both as
+unmeasured work on demand.
+
+One known repetition is confirmed in source and unmeasured: the burst workspace
+builds a dictionary over the whole active catalog each time it resolves its files,
+and several properties of one view update do so. See
+[open source findings]({{< relref "update.md" >}}#open-source-findings).
 
 ## Vision gate measurements on 275 Sony ARWs
 

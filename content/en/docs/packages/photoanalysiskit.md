@@ -3,25 +3,23 @@ author = "Thomas Evensen"
 title = "How PhotoAnalysisKit Is Constructed"
 linkTitle = "PhotoAnalysisKit Architecture"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "A detailed guide to PhotoAnalysisKit's image-analysis boundary, sharpness pipeline, focus evidence, masks, calibration, batching, feature prints, resources, and concurrency."
 tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", "architecture"]
 categories = ["technical details"]
 mermaid = true
 weight = 20
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Checked 1.4.0 queue admission and the 1.4.1 shared focus-engine context at the resolved revision."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Audited 1.4.1: capture fallbacks, fixed threshold, descriptor 2/7, Vision queue and calibration scale."
 +++
 
 # How PhotoAnalysisKit Is Constructed
 
-> **Revision audited:** The formula walkthrough uses PhotoAnalysisKit `1.3.1` at
-> `2a1466e04d821fa2628d6985296643e0d0c7e465`. The facade, descriptors, presets,
-> batch behavior, calibration, evidence, and mask APIs below describe that
-> revision.
+> **Revision audited:** PhotoAnalysisKit `1.4.1` at
+> `2f41e8b756f006e0218f86b103801ebb47cf8983`, the version RawCull 3.5.0 resolves.
 
 PhotoAnalysisKit is the reusable measurement layer extracted from RawCull. It
 turns a decoded `CGImage` plus neutral capture metadata into sharpness,
@@ -32,9 +30,18 @@ The package measures a photo; it does not decide whether to keep it. That
 distinction prevents image-processing code from becoming coupled to RawCull's
 files, settings, views, caches, or culling policy.
 
-## Build 466 integration
+## What the 1.4 line changed
 
-RawCull resolves PhotoAnalysisKit 1.4.1. Version 1.4.0 moved blocking saliency, classification, face, animal and feature-print requests onto the shared Vision gate. Version 1.4.1 also shares a lazily initialized Core Image context across focus engine instances. Treat queue admission and render reuse separately when investigating latency. The real-catalog comparison in the performance guide evaluated the gate change. [VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [FocusMaskEngine](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine.swift) · [Performance measurements]({{< relref "/docs/performance.md" >}})
+Version 1.4.0 moved blocking saliency, classification, face, animal and
+feature-print requests onto the shared Vision gate. Version 1.4.1 shares one lazily
+initialized Core Image context across focus engine instances. Treat queue admission
+and render reuse separately when investigating latency. The real-catalog comparison
+in the performance guide evaluated the gate change.
+[VisionRequestGate](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) · [FocusMaskEngine](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine.swift) · [Performance measurements]({{< relref "/docs/performance.md" >}})
+
+Earlier 1.3.x releases changed the numbers themselves. Scalar algorithm 7 and the
+fixed mask threshold are described in [Detailed Sharpness Scoring]({{< relref "/docs/detailsharpnessscoring.md" >}}#what-changed-since-algorithm-4)
+and [Detailed Focus Mask Computation]({{< relref "/docs/detailsfocusmask.md" >}}).
 
 ## 1. Begin With The Package Boundary
 
@@ -48,7 +55,9 @@ PhotoAnalysisKit owns:
 - focus-mask selection and rendering;
 - numeric configuration, presets, quality levels, and analysis identity;
 - bounded batch analysis and calibration;
-- Vision feature-print generation and native comparison.
+- Vision feature-print generation and native comparison;
+- face evidence and animal head/eye regions;
+- the process-wide `VisionRequestGate`.
 
 The host application owns:
 
@@ -73,7 +82,7 @@ flowchart LR
 PhotoAnalysisKit does not import RawParserKit or RawCullCore. RawCull provides
 the adapters between them.
 
-## 2. Read [Package.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Package.swift) As The First Design Document
+## 2. Read [Package.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Package.swift) As The First Design Document
 
 The manifest declares Swift tools 6.2, Swift 6 language mode, macOS 26, one
 library product, and one test target.
@@ -98,7 +107,7 @@ isolation.
 
 ## 3. `PhotoAnalysisInput` Is The Decoding Boundary
 
-[Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift) defines the package's source
+[Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift) defines the package's source
 value:
 
 ```swift
@@ -115,9 +124,12 @@ top-left. This matches the camera metadata shape used by RawCull. Vision uses a
 bottom-left coordinate system, so the package performs the vertical conversion
 internally.
 
-ISO is clamped to at least 1. Aperture and AF point are optional because not
-every image or camera provides them. The package can still compute a global
-result when either is absent.
+There are two initializers. The one with `iso:` clamps the value to at least 1 and
+records it as capture ISO. The one without it leaves capture ISO unknown. `iso` then
+reports 400, but analysis uses the *configured* ISO. Aperture and AF point are
+optional because not every image or camera provides them. The package can still
+compute a global result when either is absent. `resolvingCaptureSettings(in:)` is
+the single place where capture metadata overrides configuration.
 
 This value has no URL or file identifier. Two consequences follow:
 
@@ -146,7 +158,7 @@ cancelled. It is different from a valid score of zero.
 
 ## 4. `PhotoAnalyzer` Is The Public Facade
 
-[Sources/PhotoAnalysisKit/PhotoAnalyzer.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/PhotoAnalyzer.swift) keeps the public entry points
+[Sources/PhotoAnalysisKit/PhotoAnalyzer.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/PhotoAnalyzer.swift) keeps the public entry points
 small:
 
 | API                    | Work performed                                                                     |
@@ -159,12 +171,12 @@ small:
 
 The facade contains an immutable `FocusMaskEngine`. Both types are
 `@unchecked Sendable` because `CIContext` does not declare sendability even
-though this package holds no mutable model or UI state and reuses the context
-concurrently.
+though this package holds no mutable model or UI state. Every engine uses the same
+static `sharedContext`, so creating a `PhotoAnalyzer` is cheap.
 
-For each input, `PhotoAnalyzer` copies the supplied configuration, replaces its
-ISO with the input ISO, and derives an aperture hint from the input aperture.
-Callers can safely reuse one base configuration across many files.
+For each input, `PhotoAnalyzer` copies the supplied configuration and overrides ISO
+and aperture hint where the input has them. Callers can safely reuse one base
+configuration across many files.
 
 When a host already stores `SharpnessBreakdown.focusEvidence`, passing it to
 `focusMask` avoids repeating the saliency selection step. This makes the
@@ -172,7 +184,7 @@ measurement result useful as an input to later presentation work.
 
 ## 5. Follow The Scalar Sharpness Pipeline
 
-The core implementation is in [FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift).
+The core implementation is in [FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift).
 
 ```mermaid
 flowchart TD
@@ -192,7 +204,9 @@ flowchart TD
 
 `normalizeToSRGB` redraws the input into an 8-bit sRGB RGBA bitmap. The Metal
 pipeline therefore receives a predictable pixel format regardless of the source
-image's bit depth or color space.
+image's bit depth or color space. If the redraw fails, the function returns nil and
+the analysis has no score. Energies are measured on encoded sRGB; a linear working
+space would change both calibration and scores.
 
 ### 5.2 Find Candidate Subject Regions
 
@@ -201,8 +215,8 @@ rectangles. Small weak objects are removed, and candidates are ordered using AF
 overlap or distance, saliency confidence, interior detail, area, and
 deterministic coordinates.
 
-When classification is enabled, `VNClassifyImageRequest` supplies a neutral
-subject label. The package filters out broad environment descriptions and
+When classification is enabled and a candidate was found, `VNClassifyImageRequest`
+supplies a neutral subject label. The package filters out broad environment descriptions and
 prefers likely subjects such as animals or people. This label is evidence, not a
 keep/reject decision.
 
@@ -249,8 +263,8 @@ host can explain the result instead of presenting a single unexplained number.
 
 `FocusFailureKind` classifies the evidence as:
 
-- `.motionBlur` when global, subject, and AF detail are all weak and
-  micro-contrast is low;
+- `.motionBlur` when global, subject, and AF detail were all measured, all are weak,
+  and measured micro-contrast is low;
 - `.missedFocus` when the frame has usable global detail but the subject is much
   weaker;
 - `.none` when neither pattern is established.
@@ -274,10 +288,10 @@ The overlay pipeline:
 1. chooses AF-center, AF-neighborhood, AF, saliency, mixed, or global evidence;
 2. builds one native-pixel fine-detail Laplacian with clamped edges for every region;
 3. ranks local patches and selects the best evidence patches;
-4. chooses an adaptive percentile threshold from the complete selected search regions;
+4. applies the configured threshold, clamped to 0.01–0.95, as one fixed cutoff;
 5. applies optional erosion and dilation to the binary edge mask;
 6. colorizes, clips to the full search regions, feathers, and crops the mask;
-7. measures visible coverage after rendering with GPU reductions;
+7. measures the fraction of the regions with alpha above 0.05, using GPU reductions;
 8. returns updated evidence and render diagnostics with the image.
 
 The renderer deliberately does not lower the threshold to force visible pixels.
@@ -319,9 +333,11 @@ records:
 - ISO-scaling policy version;
 - aperture-hint policy version;
 - every host-configurable value that affects non-mask scoring;
+- the fallback ISO and aperture hint (schema 2);
 - the stable scoring energy multiplier.
 
-The descriptor deliberately excludes per-image ISO and aperture, mask-only
+The current values are schema 2, algorithm 7, ISO policy 1 and aperture policy 1.
+The descriptor deliberately excludes actual capture ISO and aperture, mask-only
 presentation settings, decoded dimensions, source choice, and source-file
 identity. A host must account for changes in those inputs and decode policy when
 deciding whether a persisted result is reusable.
@@ -331,6 +347,7 @@ RawCull persisted sharpness identity
 ├── PhotoAnalysisKit SharpnessAnalysisDescriptor
 ├── selected embedded-preview or RAW source
 ├── effective maximum pixel size
+├── app input pipeline version
 └── source file size and modification date
 ```
 
@@ -365,7 +382,8 @@ complete batch.
 Calibration samples Laplacian energies from host-provided decoded inputs with
 bounded concurrency. It downsamples the collected sample set, sorts it, and
 returns p50, p90, p95, and p99 statistics plus a clamped threshold at the
-requested percentile.
+requested percentile. `measuredLongSide` reports the median size of the measured
+images, because the threshold only fits masks drawn near that size.
 
 At least `minimumSuccessfulImages` inputs must succeed. Cancellation or too few
 samples returns `nil`.
@@ -395,11 +413,11 @@ focused Vision measurement primitive.
 
 ## 11. Metal Resources Are Part Of The Algorithm
 
-[Sources/PhotoAnalysisKit/Resources/Kernels.ci.metal](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/Resources/Kernels.ci.metal) is the source for the Core
+[Sources/PhotoAnalysisKit/Resources/Kernels.ci.metal](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/Resources/Kernels.ci.metal) is the source for the Core
 Image kernel. SwiftPM copies Metal source resources but does not compile them
 for command-line builds, so the package also checks in `default.metallib`.
 
-[Tools/build_metallib.sh](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tools/build_metallib.sh) regenerates the binary. A kernel change is incomplete
+[Tools/build_metallib.sh](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tools/build_metallib.sh) regenerates the binary. A kernel change is incomplete
 until the checked-in library has been rebuilt and tests have been run. The
 binary resource affects algorithm output and must be treated like source, not an
 optional deployment file.
@@ -410,9 +428,12 @@ The package uses four complementary techniques:
 
 - **Immutable facade and engine:** callers pass input and configuration
   snapshots; no app state is retained.
-- **Explicit concurrent workers:** synchronous Core Image and Vision work runs
-  outside caller UI isolation while retaining task priority and task-local
-  context.
+- **Explicit concurrent workers:** synchronous Core Image work runs outside caller
+  UI isolation while retaining task priority and task-local context. A result that
+  arrives after cancellation is dropped.
+- **One Vision queue:** every Vision request body runs on `VisionRequestGate.shared`,
+  a serial dispatch queue. Callers suspend while they wait, and no cooperative
+  thread is blocked. A body must never call the gate again.
 - **Bounded task groups:** batch analysis and calibration cap simultaneous
   inputs.
 - **Cooperative checks:** expensive stages test cancellation before Vision work,
@@ -450,7 +471,7 @@ flowchart LR
     Evidence --> Presentation["RawCull FocusMaskResult + overlay state"]
 ```
 
-[FocusMaskTypes.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskTypes.swift) aliases neutral package types such as `FocusEvidence`,
+[FocusMaskTypes.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskTypes.swift) aliases neutral package types such as `FocusEvidence`,
 `FocusFailureKind`, and `FocusCalibrationResult`, then layers RawCull
 presentation metadata over `SharpnessBreakdown`. `FocusMaskModel` consumes the
 returned mask image on app-owned isolation; scoring and evidence remain package
@@ -462,11 +483,11 @@ The executable contracts are split by concern:
 
 | Package test                                                         | Required behavior                                                       |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| [Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            | Scalar metric and normalized sharpness calculations                     |
-| [Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          | Bounded batch completion, ordering, failure isolation, and cancellation |
-| [Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) | Stable configuration identity and descriptor changes                    |
-| [Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               | Facade behavior, focus evidence, calibration, and mask rendering        |
-| [Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift)          | Opaque Vision feature-print creation and comparison                     |
+| [Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            | Scalar metric and normalized sharpness calculations                     |
+| [Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalysisBatchTests.swift)          | Bounded batch completion, ordering, failure isolation, and cancellation |
+| [Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift) | Stable configuration identity and descriptor changes                    |
+| [Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               | Facade behavior, focus evidence, calibration, and mask rendering        |
+| [Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/VisionFeaturePrintTests.swift)          | Opaque Vision feature-print creation and comparison                     |
 
 `Tests/PhotoAnalysisKitTests/` imports the library through
 `import PhotoAnalysisKit`, not `@testable import`. Tests therefore exercise the
@@ -508,22 +529,24 @@ that concern belongs in RawCull's adapter or policy layer.
 
 | Topic                                | PhotoAnalysisKit source                                                           |
 | ------------------------------------ | --------------------------------------------------------------------------------- |
-| Product and resource declaration     | [Package.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Package.swift)                                                                   |
-| Input and result boundary            | [Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift)                               |
-| Public analysis facade and metrics   | [Sources/PhotoAnalysisKit/PhotoAnalyzer.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/PhotoAnalyzer.swift)                                    |
-| Batch orchestration                  | [Sources/PhotoAnalysisKit/PhotoAnalysisBatch.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/PhotoAnalysisBatch.swift)                               |
-| Configuration and presets            | [Sources/PhotoAnalysisKit/SharpnessConfiguration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/SharpnessConfiguration.swift), [SharpnessPresets.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/SharpnessPresets.swift) |
-| Cache descriptor                     | [Sources/PhotoAnalysisKit/SharpnessAnalysisDescriptor.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/SharpnessAnalysisDescriptor.swift)                      |
-| Public evidence values               | [Sources/PhotoAnalysisKit/FocusMaskTypes.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskTypes.swift)                                   |
-| Engine isolation                     | [Sources/PhotoAnalysisKit/FocusMaskEngine.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine.swift)                                  |
-| Saliency and scalar scoring          | [Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift)                          |
-| Overlay generation and patch ranking | [Sources/PhotoAnalysisKit/FocusMaskEngine+MaskGeneration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskEngine+MaskGeneration.swift)                   |
-| Calibration                          | [Sources/PhotoAnalysisKit/FocusMaskCalibration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/FocusMaskCalibration.swift)                             |
-| Vision feature prints                | [Sources/PhotoAnalysisKit/VisionFeaturePrintBackend.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2a1466e04d821fa2628d6985296643e0d0c7e465/Sources/PhotoAnalysisKit/VisionFeaturePrintBackend.swift)                        |
+| Product and resource declaration     | [Package.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Package.swift)                                                                   |
+| Input and result boundary            | [Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/PhotoAnalysisInput.swift)                               |
+| Public analysis facade and metrics   | [Sources/PhotoAnalysisKit/PhotoAnalyzer.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/PhotoAnalyzer.swift)                                    |
+| Batch orchestration                  | [Sources/PhotoAnalysisKit/PhotoAnalysisBatch.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/PhotoAnalysisBatch.swift)                               |
+| Configuration and presets            | [Sources/PhotoAnalysisKit/SharpnessConfiguration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/SharpnessConfiguration.swift), [SharpnessPresets.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/SharpnessPresets.swift) |
+| Cache descriptor                     | [Sources/PhotoAnalysisKit/SharpnessAnalysisDescriptor.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/SharpnessAnalysisDescriptor.swift)                      |
+| Public evidence values               | [Sources/PhotoAnalysisKit/FocusMaskTypes.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskTypes.swift)                                   |
+| Engine isolation                     | [Sources/PhotoAnalysisKit/FocusMaskEngine.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine.swift)                                  |
+| Saliency and scalar scoring          | [Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine+Scoring.swift)                          |
+| Overlay generation and patch ranking | [Sources/PhotoAnalysisKit/FocusMaskEngine+MaskGeneration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskEngine+MaskGeneration.swift)                   |
+| Calibration                          | [Sources/PhotoAnalysisKit/FocusMaskCalibration.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FocusMaskCalibration.swift)                             |
+| Vision request serialization         | [Sources/PhotoAnalysisKit/VisionRequestGate.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionRequestGate.swift) |
+| Face and animal evidence             | [Sources/PhotoAnalysisKit/FaceEvidenceAnalyzer.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/FaceEvidenceAnalyzer.swift), [AnimalCloseUpDetector.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/AnimalCloseUpDetector.swift) |
+| Vision feature prints                | [Sources/PhotoAnalysisKit/VisionFeaturePrintBackend.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Sources/PhotoAnalysisKit/VisionFeaturePrintBackend.swift)                        |
 | Metal source and compiled resource   | `Sources/PhotoAnalysisKit/Resources/`                                             |
 | Extraction decisions                 | `Documentation/ExtractionMap.md`                                                  |
 | Public behavior tests                | `Tests/PhotoAnalysisKitTests/`                                                    |
-| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/dc048db4ded7b324bbf8cfe4e3f0275302f4f298/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
+| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
 
 Next, see how package-neutral measurements become culling-domain decisions in
 [How RawCullCore Is Constructed](../rawcullcore/).
@@ -532,16 +555,13 @@ Next, see how package-neutral measurements become culling-domain decisions in
 
 RawCull's workspace fills missing AF-center evidence from older cached analysis
 without replacing blended scores or recommended winners. Cancellation and
-scoring identity guard publication. The resolved PhotoAnalysisKit 1.3.1 formula
-is unchanged. The host's optional `releaseafcomparison` workflow exports crops
+scoring identity guard publication. The host's optional `releaseafcomparison` workflow exports crops
 for a separately labeled comparison; it is not photographic qualification.
 
-## November 8 Integration Review: Measurement And Inspection
+## Measurement And Inspection Stay Separate
 
-RawCull continues to resolve PhotoAnalysisKit 1.3.1 at
-`2a1466e04d821fa2628d6985296643e0d0c7e465`. Its measurement boundary is unchanged
-by the addition of [PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}).
-The latter displays manually chosen regions; it does not call `PhotoAnalyzer`
+PhotoAnalysisKit's measurement boundary does not involve
+[PhotoEvidenceKit]({{< relref "photoevidencekit.md" >}}). The latter displays manually chosen regions; it does not call `PhotoAnalyzer`
 or recompute a score when a photographer moves or zooms a crop.
 
 ### Build Cache Identity Around The Actual Analysis Input
@@ -583,7 +603,6 @@ sensor-to-oriented coordinate conversion in the host adapter.
 
 ## Close Up Integration
 
-Build 466 uses PhotoAnalysisKit 1.4.1.
 `FaceEvidenceAnalyzer` runs Vision face rectangle detection on an upright
 embedded preview and can return a local luminance-gradient measurement for
 each face. RawCull owns the disposable evidence cache. It keys compatibility
@@ -594,11 +613,3 @@ RawCull calls the package’s `AnimalCloseUpDetector` for animal head and eye cr
 tiles are visual crops. The human face detail measurement stays with the
 human tiles. See the [Close Up guide]({{< relref "closeups.md" >}}) for how
 these tiles appear beside manual comparisons.
-
-## Changes at 1.3.9
-
-The package can reuse supplied focus evidence without repeating Vision.
-Scoring uses the configured capture fallbacks when metadata is missing, includes
-those fallbacks in scalar cache identity, and uses the global score when subject
-evidence is unavailable. Calibration records its decode size alongside the
-mask cutoff. Historical metric tables above describe their pinned audits.

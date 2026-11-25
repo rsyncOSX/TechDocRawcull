@@ -3,17 +3,17 @@ author = "Thomas Evensen"
 title = "RawCull Packages"
 linkTitle = "Packages"
 date = "2026-08-21"
-lastmod = "2026-11-23"
+lastmod = "2026-11-25"
 description = "Pinned package revisions, imported products, dependency direction, and the recommended architecture reading order."
 tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
-reviewed_commit = "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version = "3.4.9"
-reviewed_build = 466
-reviewed_on = "2026-11-23"
-review_scope = "Reconciled all 24 app pins and distinguished the helper lockfile and earlier package snapshots."
+reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version = "3.5.0"
+reviewed_build = 469
+reviewed_on = "2026-11-25"
+review_scope = "Confirmed all 24 pins, corrected boundary types and removed superseded snapshots."
 +++
 
 # RawCull Packages
@@ -28,14 +28,13 @@ paths under `Sources/` and `Tests/` refer to the named repository, not files cop
 into this documentation site. The app translates between package contracts and
 owns selection, file access, caches, persistence, and review decisions.
 
-The November 8, 2026 review uses RawCull 3.4.0 build 434. Existing guides retain
-their explicitly dated architecture audits and add current integration notes.
-PhotoEvidenceKit has a new guide covering the resolved 1.0.7 implementation.
-Sibling checkout HEADs do not redefine the application's resolved baseline.
+The guides describe the revisions that RawCull 3.5.0 build 469 resolves. Where a
+section keeps an older audit, it says so. A sibling checkout may be ahead of the
+revision the app builds, so always read the lockfile first.
 
-## Build 466 resolved dependencies
+## Resolved dependencies in build 469
 
-The application lockfile records 24 remote pins. Since build 462, PhotoAIKit moved from 1.0.0 to 3.1.0 and PhotoAnalysisKit from 1.3.9 to 1.4.1. PhotoEvidenceKit changed its repository URL from SSH to HTTPS at the same version and revision. The MCP helper has a separate package graph. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) · [MCP helper lockfile](https://github.com/rsyncOSX/RawCull/blob/0513a30e4567b4b5e3093e10791d49c86ecfe7e6/Tools/RawCullMCP/Package.resolved)
+The application lockfile records 24 remote pins. They are unchanged since build 466. Every direct package reference uses an *exact* version requirement, so an update is always a deliberate edit to the Xcode project. The MCP helper has a separate package graph. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) · [MCP helper lockfile](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Package.resolved)
 
 | Identity | Version | Revision |
 | --- | --- | --- |
@@ -64,65 +63,23 @@ The application lockfile records 24 remote pins. Since build 462, PhotoAIKit mov
 | `xgrammar` | `0.2.2` | `4d145cc13d878c751ebeed36af1c013074be76bc` |
 | `yyjson` | `0.13.0` | `6447536015f3d600f3d65323b10976103b337ca7` |
 
-## November 9 Close Up Development Build
-
-At the November 9 review, the `version-3.4.5` branch used two local package references.
-Its source baseline is RawCull 3.4.5, build 436, commit [`a68253b73cbad14a7b1030dba6b439e6bce7d3da`](https://github.com/rsyncOSX/RawCull/commit/a68253b73cbad14a7b1030dba6b439e6bce7d3da).
-The revisions identify the sibling checkouts used to verify the integration.
-
-| Package | Xcode path | Checkout revision | Close Up responsibility |
-| --- | --- | --- | --- |
-| PhotoAnalysisKit | `../PhotoAnalysisKit` | `27d422b100214dd1520f7ca11123f58a86f04e99` | Human face rectangles and preview detail |
-| PhotoEvidenceKit | `../PhotoEvidenceKit` | `35e8aca4135ac2151cbce033e4e9baefb8bafabc` | Crop rendering and manual inspection UI |
-
-The animal head and eye pilot lives in RawCull and uses Apple's Vision
-framework. It required no package release or dependency update. The
-November 8 table below is the historical remote snapshot. Build 436 retains
-the other 17 entries at their recorded revisions.
-See the [Close Up guide]({{< relref "closeups.md" >}}) for the workflow and
-the distinction between detected and manual crops.
-
-## November 8 Resolved Dependency Snapshot
-
-This table is derived from the local RawCull
-`RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`,
-reviewed November 8, 2026 alongside `project.pbxproj` and source imports.
-“App” means RawCull directly consumes package products; “transitive” means a
-package owns the dependency. There are 19 resolved entries.
-
-| Identity | Relationship | Version/branch | Revision |
-| --- | --- | --- | --- |
-| DecodeEncodeGeneric | app | `1.0.0` | `b5ecbbbe1b244191efec1532a979f6ae342d6617` |
-| ParseRsyncOutput | app | `1.0.0` | `e079e0c9d34bf07f7f2a4312b40feea79ae14847` |
-| PhotoAIKit | app | `1.0.0` | `4b85056e6c2603b5e382987710ca2f16f4c5c155` |
-| PhotoAnalysisKit | app | `1.3.1` | `2a1466e04d821fa2628d6985296643e0d0c7e465` |
-| [PhotoEvidenceKit](https://github.com/rsyncOSX/PhotoEvidenceKit) | app | `1.0.7` | `7614fd1528bb7cf2549799fb937678ea39d90228` |
-| RawCullCore | app | `1.1.2` | `d25a51e65ad32a82bf82f86fa0ec07d6e14498e9` |
-| RawParserKit | app | `1.3.3` | `26df4abc2178d5c07d08f3883d84d0648f5141d3` |
-| RsyncArguments | app | `1.0.0` | `0ff6518136c208dfbecc1a918f045048ca79853d` |
-| RsyncProcessStreaming | app | `1.0.0` | `dd86f012b352888fd146e0b6e103740dc237f740` |
-| coreai-models | transitive | `1.0.0` | `5de95c6cd29e5e390fb36d87e13b2396668f7974` |
-| EventSource | transitive | `1.6.0` | `bb4b61273b5a976bb571859c17f903ebc3439df1` |
-| swift-asn1 | transitive | `1.7.4` | `917b472dbe53ba699cbb0495f9a95a084bc6364d` |
-| swift-collections | transitive | `1.7.5` | `f96b909e1a9e469620bc5037c1e24e00153f376f` |
-| swift-crypto | transitive | `4.5.2` | `da9d28d69ebe3894b18376c8f2395c2f37b8448f` |
-| swift-huggingface | transitive | `1.0.0` | `c30143a4616f3fa994ee3ab3e3464f752845c07c` |
-| swift-jinja | transitive | `3.0.0` | `a091d6ae559ee97e904a0f3c2890b21949d0306f` |
-| swift-transformers | transitive | `1.4.0` | `402a8a1105f52038b0949d9596981fc9e32bed17` |
-| xgrammar | transitive | `0.2.2` | `4d145cc13d878c751ebeed36af1c013074be76bc` |
-| yyjson | transitive | `0.13.0` | `6447536015f3d600f3d65323b10976103b337ca7` |
+Nine of these are direct dependencies of the app: the five architecture packages
+plus RsyncArguments, RsyncProcessStreaming, ParseRsyncOutput and
+DecodeEncodeGeneric. `swift-sdk` is used by the `rawcull-mcp` helper target. The
+rest are transitive, mostly through PhotoAIKit's Core AI backends and the MCP SDK.
 
 Do not infer the app boundary from every transitive pin. Xcode product
-references and source imports define what RawCull actually consumes.
+references and source imports define what RawCull actually consumes. Dated
+snapshots from October and November are in this site's Git history.
 
 ## Imported Products And Boundary Types
 
 | Package                               | Products imported by RawCull                                                                                                                                 | Values or protocols crossing the boundary                                                                                                                                                  |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [RawParserKit](rawparserkit/)         | `RawParserKit`                                                                                                                                               | `RawImageLoader`, `RawImageMetadata`, `RawFocusPoint`, `RawFormatRegistry`, `CGImage` results; the app maps them through `RawParserKitImageLoader`                                         |
-| [PhotoAnalysisKit](photoanalysiskit/) | `PhotoAnalysisKit`                                                                                                                                           | `PhotoAnalyzer`, `PhotoAnalysisInput`, `PhotoAnalysisDescriptor`, `PhotoAnalysisResult`, focus evidence and mask values                                                                    |
+| [PhotoAnalysisKit](photoanalysiskit/) | `PhotoAnalysisKit`                                                                                                                                           | `PhotoAnalyzer`, `PhotoAnalysisInput`, `SharpnessAnalysisDescriptor`, `PhotoAnalysisResult`, focus evidence and mask values, `VisionRequestGate`, `FaceEvidenceAnalyzer`, `AnimalCloseUpDetector`                                                                    |
 | [RawCullCore](rawcullcore/)           | `RawCullCore`                                                                                                                                                | `RawCullFileItem`, `RawCullSourceCatalog`, `ExifMetadata`, burst inputs/results/configurations, ranking evidence, histograms; the app exposes compatibility typealiases such as `FileItem` |
-| [PhotoAIKit](photoaikit/)             | `PhotoAIContracts`, `CoreAICLIPBackend`, `CoreAIQwenBackend`, `CoreAISAM3Backend`, `CoreAIEfficientSAMBackend`, `VisionFeaturePrintBackend`, `PhotoAIWorkflows`, `PhotoAIStorage` | `AIImageSource`, model identities/resources, similarity artifacts/descriptors, provider protocols, segmentation requests/results, mask stores and workflows                                |
+| [PhotoAIKit](photoaikit/)             | `PhotoAIContracts`, `CoreAICLIPBackend`, `CoreAIQwenBackend`, `CoreAISAM3Backend`, `VisionFeaturePrintBackend`, `PhotoAIWorkflows`, `PhotoAIStorage` (`CoreAIEfficientSAMBackend` is linked but not imported) | `AIImageSource`, model identities/resources, similarity artifacts/descriptors, provider protocols, segmentation requests/results, mask stores and workflows                                |
 | [PhotoEvidenceKit](photoevidencekit/) | `PhotoEvidenceContracts`, `PhotoEvidenceEngine`, `PhotoEvidenceUI` | `CloseUpFrame`, region/viewport/source descriptors, AF availability, renderer and region-store protocols, `CloseUpModel`, `CloseUpPanel` |
 | RsyncArguments                        | `RsyncArguments`                                                                                                                                             | rsync argument builders used by `Params` and `ArgumentsSynchronize`                                                                                                                        |
 | RsyncProcessStreaming                 | `RsyncProcessStreaming`                                                                                                                                      | `RsyncProcess` and `ProcessHandlers` used by the copy executor                                                                                                                             |
@@ -176,15 +133,6 @@ workflow. The runtime sequence is not a package import chain.
 When a package pin changes, compare its manifest and public source at the new
 resolved revision before updating this documentation. A sibling checkout may be
 ahead of the revision RawCull actually builds.
-
-## November 8 Dependency Delta
-
-Compared with the October 31 snapshot, PhotoEvidenceKit is newly resolved at
-1.0.7. EventSource moves from 1.5.1 to 1.6.0, swift-asn1 from 1.7.3 to 1.7.4,
-swift-collections from 1.7.3 to 1.7.5, swift-jinja from 2.5.1 to 3.0.0,
-swift-transformers from 1.3.5 to 1.4.0, and yyjson from 0.12.0 to 0.13.0.
-The eight previously direct package pins and the other transitive pins retain
-the revisions recorded in the October 31 table.
 
 The Xcode project also lists `PhotoEvidenceDemo`, the package's executable
 example, as a product reference. RawCull source imports the three library

@@ -2,11 +2,11 @@
 title: RawCull
 description: How RawCull is built
 
-reviewed_commit: "0513a30e4567b4b5e3093e10791d49c86ecfe7e6"
-reviewed_version: "3.4.9"
-reviewed_build: 466
-reviewed_on: "2026-11-23"
-review_scope: "Updated platform and application description."
+reviewed_commit: "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_version: "3.5.0"
+reviewed_build: 469
+reviewed_on: "2026-11-25"
+review_scope: "Checked: no relevant delta."
 ---
 
 {{< blocks/cover title="How RawCull is built" image_anchor="top" height="full" >}}
