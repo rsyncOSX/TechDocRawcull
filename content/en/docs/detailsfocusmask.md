@@ -8,7 +8,7 @@ tags = ["focus mask", "sharpness", "focus", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -70,10 +70,10 @@ view, app model, URL, or persistence object.
 
 The RawCull entry files are:
 
-- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
-- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
-- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
-- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
+- [Views/ThumbnailComponents/LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift);
+- [Views/ZoomViews/ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ZoomViews/ZoomOverlayView.swift);
+- [Views/ComparisonGridView/ComparisonGridImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/ComparisonGridImageCoordinator.swift);
+- [Model/ViewModels/FocusandSharpness/FocusMaskModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/FocusandSharpness/FocusMaskModel.swift).
 
 Views snapshot the effective config, inject ISO, aperture, and normalized AF
 point, cancel a previous mask task when image or config identity changes, and
@@ -435,7 +435,7 @@ the owning SwiftUI task is the final stale-result boundary.
 
 | Stage                                                                                   | Tests                                                          |
 | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
+| RawCull facade, Metal resource, returned breakdown, scoring-source adaptation           | [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/PhotoAnalysisKitIntegrationTests.swift)          |
 | Public analyze/mask/calibration behavior and cancellation                               | [PhotoAnalysisKitTests/PhotoAnalyzerTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/PhotoAnalyzerTests.swift)               |
 | Native-pixel mask detail, full-region rendering, empty weak masks, and final coverage   | [PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/FocusMaskAccuracyTests.swift)           |
 | Robust tail, micro-contrast, ISO curve, aperture gates, failure classification, presets | [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift)            |

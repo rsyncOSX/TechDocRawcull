@@ -10,16 +10,16 @@ tags = ["ai", "architecture", "runtime", "swift", "dependency-injection", "revie
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
-review_scope = "Rebuilt topology, construction order, configuration apply, lease and gate, isolation, stale-result and fallback sections from current source."
+review_scope = "Rebuilt topology, construction order, configuration apply, lease, self-refresh and gate, isolation, stale-result and fallback sections from current source."
 +++
 
 # The RawCull AI runtime
 
-`RawCullApplicationState.live()` assembles the catalog workspace and long-lived intelligence services. `RawCullApp` holds the view model and intelligence runtime in SwiftUI state. The main view receives the similarity, semantic search, settings and Review features explicitly. Source code still uses the name `CombinedReviewFeature` for the feature behind the **Review** toolbar item. [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift) · [RawCullIntelligenceRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift)
+`RawCullApplicationState.live()` assembles the catalog workspace and long-lived intelligence services. `RawCullApp` holds the view model and intelligence runtime in SwiftUI state. The main view receives the similarity, semantic search, settings and Review features explicitly. Source code still uses the name `CombinedReviewFeature` for the feature behind the **Review** toolbar item. [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift) · [RawCullIntelligenceRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift)
 
 The model runtime and the intelligence runtime are separate on purpose. The first one answers "which providers are valid right now?". The second one answers "which feature objects does the app keep for its whole lifetime?". Models come and go when the user downloads, removes or selects them. Feature objects do not.
 
@@ -93,7 +93,7 @@ Two things in the model runtime look more active than they are. The subject-mask
 
 The factory in step 6 matters. A backend captures provider values for one run, so it must be built at the moment a run starts. If Review stored a backend at launch, it would hold "no models installed" for the whole session.
 
-[RawCullIntelligenceRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) · [RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift)
+[RawCullIntelligenceRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/RawCullIntelligenceRuntime.swift) · [RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift)
 
 ## From settings to a running Review
 
@@ -103,7 +103,7 @@ The factory in step 6 matters. A backend captures provider values for one run, s
 4. After admission, the feature holds the shared lease, retains access to selected files, freezes their fingerprints and persists the initial work manifest. Resume uses the original snapshot. A provider or file change can make work incompatible.
 5. The record window reads the same feature and navigation selection as the main workspace. Opening it does not create another run. The old SAM/CLIP, Qwen and Objects tab controllers have been removed. At startup the model runtime attempts to remove the obsolete Objects mask directory.
 
-[RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift) · [CombinedReviewFeature](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) · [CombinedReviewRecordWindow](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAnalysis/CombinedReviewRecordWindow.swift)
+[RawCullAIModelRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift) · [CombinedReviewFeature](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift) · [CombinedReviewRecordWindow](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAnalysis/CombinedReviewRecordWindow.swift)
 
 For a debugger walkthrough of Full, including the precise instruction and pixel inputs at each provider boundary, see [Full Review execution]({{< relref "full-review.md" >}}).
 
@@ -158,7 +158,9 @@ Before it touches anything, the method calls
 `CombinedReviewLease.shared.invalidateAndWait()`. That asks a running Review,
 burst batch or MCP assessment to stop and suspends until it has released the
 lease. `refreshCapabilities()` does the same. Model replacement therefore never
-runs underneath an active run.
+runs underneath active inference. The one exception is a run that refreshes the
+models itself before its first inference, described under
+[the lease](#shared-inference-the-lease-and-the-generation-gate).
 
 Using a complete snapshot avoids a transient mixture such as “new CLIP, old
 SAM, removed Qwen still active.” Every invocation describes one model-install
@@ -291,13 +293,13 @@ the same model identity as the cached image embeddings.
 
 ## Model identity at Review admission
 
-The live Review backend accepts Qwen when the installed bundle hash and encoder contract match its expected configuration: a 448 × 448 stretch input, 196 image tokens and a 4096-token context. For CLIP it recognizes two bundle hashes and records the corresponding 224- or 256-pixel encoder geometry. An unrecognized CLIP hash leaves Review without CLIP relevance. The SAM entry records the segmenter identity and source-normalized mask preprocessing. A preset requests only its participating models. For example, Focus check skips Qwen bundle hashing entirely. [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
+The live Review backend accepts Qwen when the installed bundle hash and encoder contract match its expected configuration: a 448 × 448 stretch input, 196 image tokens and a 4096-token context. For CLIP it recognizes two bundle hashes and records the corresponding 224- or 256-pixel encoder geometry. An unrecognized CLIP hash leaves Review without CLIP relevance. The SAM entry records the segmenter identity and source-normalized mask preprocessing. A preset requests only its participating models. For example, Focus check skips Qwen bundle hashing entirely. [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
 The backend also stores a runtime-version string containing historical abbreviated revisions and the OS version. That string participates in saved evidence identity. Use the [application lockfile]({{< relref "/docs/packages/_index.md" >}}) for the actual Swift package revisions in this build.
 
 ## Qwen model lifetime
 
-Validation cancels active generation, advances the model generation, checks vision modality and retains a provider. The first request lazily constructs the vision-language model. Subsequent requests can reuse that model, each with a fresh session. A generation gate limits responses to one at a time. A request waiting for its turn rechecks its captured generation after admission. After model loading and response generation the actor checks cancellation and generation again before publishing text. [QwenInferenceRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift)
+Validation cancels active generation, advances the model generation, checks vision modality and retains a provider. The first request lazily constructs the vision-language model. Subsequent requests can reuse that model, each with a fresh session. A generation gate limits responses to one at a time. A request waiting for its turn rechecks its captured generation after admission. After model loading and response generation the actor checks cancellation and generation again before publishing text. [QwenInferenceRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift)
 
 ## Shared inference: the lease and the generation gate
 
@@ -319,15 +321,15 @@ release and throws `CancellationError` if its own caller is cancelled.
 `RawCullSimilarityFeature.index` and semantic search return early while the
 lease is held.
 
-Because preparation also goes through the lease, a run that *holds* the lease must
-not start an ordinary model refresh: the refresh stops the lease owner, which is the
-caller. At commit `5169ffd3` two callers do this. `BurstBatchAssessment.run` and the
-MCP follow-up refresh the models after acquiring the lease, if Qwen has no identity
-yet, and so cancel themselves.
+Because a model refresh also goes through the lease, a run that *holds* the lease must
+not start an ordinary refresh: it would stop the lease owner, which is the caller.
+`BurstBatchAssessment.run` and the MCP follow-up both need a refresh after acquiring
+the lease, if Qwen has no identity yet. Up to commit `5169ffd3` they called it directly
+and so cancelled themselves.
 
-The fix, made on 25 November 2026 after that commit, keeps the lease held. The caller
-wraps its preparation in `lease.refreshModels(for: owner, …)`, which sets a
-`@TaskLocal` owner for the duration:
+[328b570b](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439) fixes this and keeps the lease held. The caller wraps its
+preparation in `lease.refreshModels(for: owner, …)`, which sets a `@TaskLocal` owner
+for the duration:
 
 ```swift
 func refreshModels(for owner: UUID, _ refresh: @MainActor () async -> Void) async {
@@ -340,8 +342,9 @@ func refreshModels(for owner: UUID, _ refresh: @MainActor () async -> Void) asyn
 `invalidate()` and `invalidateAndWait()` do nothing when the current task's value
 matches the lease owner. A task-local value suits this well. It follows the awaited
 call chain through Settings and the model runtime without adding a parameter to every
-method, and a refresh started by any *other* task does not see it, so it still stops
-the run. Moving the refresh ahead of `acquire` would also avoid the self-cancel, but
+method, including `async let` child tasks. A refresh started independently, for example
+from Settings, does not see the value, so it still stops the run. An unstructured
+`Task {}` created inside the scope would inherit it, and `Task.detached` would not. Moving the refresh ahead of `acquire` would also avoid the self-cancel, but
 another AI run could then start in the gap.
 
 The in-app batch and MCP follow-ups use `assessForMCP`, which binds each request
@@ -350,7 +353,7 @@ to one model generation, retries one invalid response, and throws
 lock and authorization checks for shared jobs. A batch writes session entries
 using the open catalog's access. MCP results use the job's catalog grant.
 
-[CombinedReviewLease](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/Storage/CombinedReviewLease.swift) · [QwenGenerationGate](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Qwen/QwenGenerationGate.swift) · [QwenInferenceRuntime](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) · [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/BurstBatchAssessment.swift) · [MCPAnalysisController+FollowUp](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/MCPAnalysisController+FollowUp.swift)
+[CombinedReviewLease](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/CombinedReview/Storage/CombinedReviewLease.swift) · [QwenGenerationGate](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Qwen/QwenGenerationGate.swift) · [QwenInferenceRuntime](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) · [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/BurstBatchAssessment.swift) · [MCPAnalysisController+FollowUp](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/MCPAnalysisController+FollowUp.swift)
 
 ### What the interface disables during AI work
 

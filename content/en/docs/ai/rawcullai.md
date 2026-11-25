@@ -7,7 +7,7 @@ weight = 25
 tags = ["ai", "models", "hugging-face", "core-ai", "background-assets", "release"]
 categories = ["technical details"]
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -693,7 +693,7 @@ A successful archive or model load does not imply the later gates passed.
 The app's catalog hash describes a specific release archive, not every future
 conversion of the same upstream weights.
 
-For build 469, use `make combinedinputstest` for installed-model input contracts or `make combinedselectiontest` for the six-file selection probe. The October tab runner was retired with AI Analysis. Keep request images and model responses private when collecting photographic evidence. Verify Apple-hosted installation separately on a TestFlight or App Store build. [Makefile](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Makefile)
+For build 469, use `make combinedinputstest` for installed-model input contracts or `make combinedselectiontest` for the six-file selection probe. The October tab runner was retired with AI Analysis. Keep request images and model responses private when collecting photographic evidence. Verify Apple-hosted installation separately on a TestFlight or App Store build. [Makefile](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Makefile)
 
 ## Relationship to the current application
 
@@ -703,7 +703,7 @@ application review did not rebuild or publish model packs. Do not substitute a
 new source revision into the commands merely because the app version changed.
 Current download/installation UI ownership is described in
 [AI Runtime]({{< relref "airuntime.md" >}}), and evaluation entry points in
-the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/5169ffd3487fe4ddc005d511fffa38172657d703) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`). Earlier links to
+the RawCull [test plans](https://github.com/rsyncOSX/RawCull/tree/328b570bf14d44bcf33efc58dc23da94bfadf439) (`RawCull.xctestplan`, `ReleaseObjects.xctestplan`, `ReleaseSharpness.xctestplan`). Earlier links to
 `RawCull/Docs/newmodels.md` open historical commits because that report has been
 removed from the current application tree.
 

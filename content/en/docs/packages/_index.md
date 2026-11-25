@@ -9,7 +9,7 @@ tags = ["ai", "analysis", "raw", "swift-package", "packages"]
 categories = ["technical details"]
 mermaid = true
 weight = 60
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -34,7 +34,7 @@ revision the app builds, so always read the lockfile first.
 
 ## Resolved dependencies in build 469
 
-The application lockfile records 24 remote pins. They are unchanged since build 466. Every direct package reference uses an *exact* version requirement, so an update is always a deliberate edit to the Xcode project. The MCP helper has a separate package graph. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) · [MCP helper lockfile](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Package.resolved)
+The application lockfile records 24 remote pins. They are unchanged since build 466. Every direct package reference uses an *exact* version requirement, so an update is always a deliberate edit to the Xcode project. The MCP helper has a separate package graph. [Application lockfile](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved) · [MCP helper lockfile](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Package.resolved)
 
 | Identity | Version | Revision |
 | --- | --- | --- |

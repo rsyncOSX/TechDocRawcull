@@ -7,7 +7,7 @@ weight = 21
 tags = ["cache", "concurrency", "evictions", "swift"]
 categories = ["technical details"]
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -52,7 +52,7 @@ update its own accounting. Test fixtures consequently disabled eviction tracking
 ## One Wrapper Owns Storage, Metadata, and Callbacks
 
 The new
-[`TrackedThumbnailCache.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/TrackedThumbnailCache.swift)
+[`TrackedThumbnailCache.swift`](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Cache/TrackedThumbnailCache.swift)
 combines these responsibilities:
 
 ```swift
@@ -146,7 +146,7 @@ They are not a combined snapshot while other tasks are mutating the cache.
 
 ## Integration with SharedMemoryCache
 
-[`SharedMemoryCache.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/SharedMemoryCache.swift)
+[`SharedMemoryCache.swift`](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/SharedMemoryCache.swift)
 remains an actor for configuration and memory-pressure handling. Its two
 synchronous cache endpoints become:
 
@@ -167,7 +167,7 @@ track their own evictions exactly like the production owner.
 
 ## Tests That Protect the Contract
 
-[`CacheAccountingConcurrencyTests.swift`](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CacheAccountingConcurrencyTests.swift)
+[`CacheAccountingConcurrencyTests.swift`](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/CacheAccountingConcurrencyTests.swift)
 contains three Swift Testing tests, each parameterized for preview and grid:
 
 | Test | Workload | Checked result |

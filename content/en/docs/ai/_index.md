@@ -10,7 +10,7 @@ categories = ["technical details"]
 mermaid = true
 weight = 60
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -39,4 +39,4 @@ PhotoAIKit owns provider contracts, model validation, inference backends and reu
 - [Model preparation]({{< relref "rawcullai.md" >}}) records the pinned build recipe for the three model packs.
 - [Package snapshot]({{< relref "/docs/packages/_index.md" >}}) identifies the revisions used by the application.
 
-The earlier AI Analysis tabs appeared in development builds. Their source-level replacement and rationale are recorded in the [AI feature decision](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Docs/ai-features-decision.md).
+The earlier AI Analysis tabs appeared in development builds. Their source-level replacement and rationale are recorded in the [AI feature decision](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Docs/ai-features-decision.md).

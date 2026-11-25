@@ -9,7 +9,7 @@ tags = ["raw", "arw", "nef", "dng", "makernote", "imageio", "swift-package", "ar
 categories = ["technical details"]
 mermaid = true
 weight = 40
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -555,7 +555,7 @@ Use the existing extension points:
 | Decode admission control                  | [Sources/RawParserKit/DecodeConcurrencyLimiter.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/DecodeConcurrencyLimiter.swift)                                |
 | Parser diagnostics                        | [Sources/RawParserKit/RawParserDiagnostics.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Sources/RawParserKit/RawParserDiagnostics.swift)                                    |
 | Behavior and binary-fixture tests         | `Tests/RawParserKitTests/`                                                           |
-| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanFiles.swift)              |
+| RawCull metadata adapter and catalog scan | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/RawImageLoading.swift), [RawCull/Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/ScanFiles.swift)              |
 
 Continue from decoded images into
 [How PhotoAnalysisKit Is Constructed](../photoanalysiskit/), or return to the
@@ -574,8 +574,8 @@ The renderer caps scale to the requested longest edge without upscaling and
 renders RGBA8 sRGB. `CIRAWFilter` applies source orientation. Its detached render
 checks cancellation before and after work; cancellation does not interrupt a
 framework call already executing. See [Tests/RawParserKitTests/RAWDecoderTests.swift](https://github.com/rsyncOSX/RawParserKit/blob/26df4abc2178d5c07d08f3883d84d0648f5141d3/Tests/RawParserKitTests/RAWDecoderTests.swift).
-In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
-access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
+In RawCull, [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/RawImageLoading.swift) adapts these APIs and retains catalog
+access. Embedded export deliberately uses [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/EmbeddedJPGExportLoader.swift) rather
 than this display-oriented facade.
 
 ## Version 1.3.2: generic macOS-backed RAW formats

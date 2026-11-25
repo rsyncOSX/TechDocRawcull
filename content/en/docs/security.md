@@ -7,7 +7,7 @@ tags = ["security", "sandbox", "bookmarks"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -26,15 +26,15 @@ RawCull is a sandboxed macOS app. Any access outside the app container must come
 
 | Area | Files |
 |---|---|
-| Active catalog scope | [RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/RawCullViewModel.swift), [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift) |
-| Catalog scan scope | [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ScanFiles.swift) |
-| CLIP indexing | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
-| Semantic search | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) |
-| Similarity artifact cache | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift) |
-| Copy-folder bookmarks | [Views/CopyFiles/OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/CopyFiles/OpencatalogView.swift), [SourceAndDestinationSection.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/CopyFiles/SourceAndDestinationSection.swift) |
-| rsync runtime scope | [Model/ParametersRsync/ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift) |
-| Selected JPG export | [ExtractJPGsSheetView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/RawCullSidebarMainView/ExtractJPGsSheetView.swift), [FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FileOperationsModel.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/SaveJPGImage.swift) |
-| App termination | [Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CullingModel.swift) |
+| Active catalog scope | [RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/RawCullViewModel.swift), [CatalogController+Loading.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/CatalogController+Loading.swift), [RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift) |
+| Catalog scan scope | [Actors/ScanFiles.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/ScanFiles.swift) |
+| CLIP indexing | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullVisionSimilarityService.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Similarity/RawCullVisionSimilarityService.swift) |
+| Semantic search | [CatalogController+Similarity.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/CatalogController+Similarity.swift), [SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift), [RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift) |
+| Similarity artifact cache | [Intelligence/Persistence/PerFileAnalysisArtifactStore.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Persistence/PerFileAnalysisArtifactStore.swift) |
+| Copy-folder bookmarks | [Views/CopyFiles/OpencatalogView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/CopyFiles/OpencatalogView.swift), [SourceAndDestinationSection.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/CopyFiles/SourceAndDestinationSection.swift) |
+| rsync runtime scope | [Model/ParametersRsync/ExecuteCopyFiles.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ParametersRsync/ExecuteCopyFiles.swift) |
+| Selected JPG export | [ExtractJPGsSheetView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/RawCullSidebarMainView/ExtractJPGsSheetView.swift), [FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/FileOperationsModel.swift), [ExtractAndSaveJPGs.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/ExtractAndSaveJPGs.swift), [SaveJPGImage.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/SaveJPGImage.swift) |
+| App termination | [Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift), [CullingModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/CullingModel.swift) |
 
 ## API Basics
 
@@ -292,29 +292,29 @@ App-owned JSON/cache files under Application Support or Caches do not need secur
 
 ## Read the grant implementation before changing cancellation
 
-Read [Model/ViewModels/CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift) for flush-before-switch
-and task ownership, then [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoading.swift) for `RawCullCatalogGrant`
+Read [Model/ViewModels/CatalogLifecycleCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/CatalogLifecycleCoordinator.swift) for flush-before-switch
+and task ownership, then [Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/RawImageLoading.swift) for `RawCullCatalogGrant`
 and `RawCullCatalogAccess`. The registry holds weak references; it cannot extend
 a session by itself. `retainAccess(for:)` deduplicates covering roots and uses
 path components, avoiding a string-prefix match such as `/Photos` covering
 `/PhotosOther`. Retaining an existing grant does not call the OS start API again.
 
-[FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FileOperationsModel.swift) retains source access separately from the
-operation-owned destination scope. [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/EmbeddedJPGExportLoader.swift) and
-[FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/FullSizePreviewLoader.swift) retain access at the read boundary as well. Tests
-in [CatalogLifecycleCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CatalogLifecycleCoordinatorTests.swift) verify that worker lifetime, rather
+[FileOperationsModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/FileOperationsModel.swift) retains source access separately from the
+operation-owned destination scope. [EmbeddedJPGExportLoader.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/EmbeddedJPGExportLoader.swift) and
+[FullSizePreviewLoader.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/FullSizePreviewLoader.swift) retain access at the read boundary as well. Tests
+in [CatalogLifecycleCoordinatorTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/CatalogLifecycleCoordinatorTests.swift) verify that worker lifetime, rather
 than the selected URL alone, controls the final stop.
 
 ## Exposure inspection and current release metadata
 
 The private exposure renderer in
-[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ZoomPreviewHandler.swift) retains a grant from
+[ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Handlers/ZoomPreviewHandler.swift) retains a grant from
 `RawCullCatalogAccess` until its render operation returns, including cancellation
 that occurs during synchronous rendering. Generic parser support does not
 change catalog grant ownership or turn a plain filesystem URL into permission.
 
-The checked-in privacy manifest is [PrivacyInfo.xcprivacy](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/PrivacyInfo.xcprivacy).
-[ReleaseMetadataTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ReleaseMetadataTests.swift) checks tracking is false and
+The checked-in privacy manifest is [PrivacyInfo.xcprivacy](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/PrivacyInfo.xcprivacy).
+[ReleaseMetadataTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ReleaseMetadataTests.swift) checks tracking is false and
 asserts the file-timestamp and app-owned UserDefaults declarations. This is
 release metadata, separate from security-scope access and from notarization.
 This source review does not certify sandbox behavior or platform compliance.
@@ -333,7 +333,7 @@ or cancelling a catalog does not prove every native operation has stopped.
 
 ## Close-ups retain the catalog grant through rendering
 
-[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
+[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
 retains `RawCullCatalogAccess` while reading source revisions and again
 for each render worker. `withExtendedLifetime` holds the worker's access reference
 through preview/developed loading and rasterization, including failure paths.
@@ -348,4 +348,4 @@ continues to follow its own established policy.
 
 ## Photo access from AI Assessments
 
-The assessment window can display findings from an in-app burst batch or an MCP request. For session entries the app asks the workspace to retain access to the session catalog. For MCP entries it delegates to the controller’s saved follow-up grant. The shared window chooses access from the selected request’s origin. [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift)
+The assessment window can display findings from an in-app burst batch or an MCP request. For session entries the app asks the workspace to retain access to the session catalog. For MCP entries it delegates to the controller’s saved follow-up grant. The shared window chooses access from the selected request’s origin. [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift)

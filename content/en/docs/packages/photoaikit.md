@@ -9,7 +9,7 @@ tags = ["ai", "swift-package", "clip", "semantic-search", "sam3", "architecture"
 categories = ["technical details"]
 mermaid = true
 weight = 10
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -34,7 +34,7 @@ for each boundary.
 
 ## How RawCull 3.5.0 uses it
 
-The Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
+The Vision feature-print backend accepts a `VisionWorkSerializing` instance and defaults to `SerialVisionWorkQueue.shared` in standalone clients. RawCull supplies an adapter to PhotoAnalysisKit’s Vision gate. This lets feature prints and measurement requests share a queue without adding a dependency between the packages. Review obtains SAM 3 instance segmentation and optional CLIP relevance through its live backend. [VisionWorkSerializing](https://github.com/rsyncOSX/PhotoAIKit/blob/26647c62d9933968d92bd00b162290cdd7c78fee/Sources/VisionFeaturePrintBackend/VisionWorkSerializing.swift) · [CombinedReviewLiveBackend](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Composition/CombinedReviewLiveBackend.swift)
 
 For Full Review, `CoreAIQwenProvider` validates the host-supplied bundle URL and creates the local vision-language model. RawCull builds the instructions, then supplies the text and image attachment through `LanguageModelSession`. The [Full Review execution chapter]({{< relref "/docs/ai/full-review.md" >}}) traces that handoff and the SAM 3 and CLIP request paths against the resolved package.
 
@@ -610,7 +610,7 @@ it probably belongs in RawCull's adapter layer instead.
 | Codecs and stores                         | `Sources/PhotoAIStorage/`                                                                                                                                                                                          |
 | Package boundary audit                    | `Documentation/ExtractionMap.md`                                                                                                                                                                                   |
 | Public behavior tests                     | `Tests/PhotoAIKitTests/`                                                                                                                                                                                           |
-| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
+| RawCull semantic-search policy            | [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchService.swift), [RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchFeature.swift), [RawCull/Intelligence/Similarity/SimilarityScoringModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Similarity/SimilarityScoringModel.swift) |
 
 Next, follow these abstractions into the host application in
 [How RawCull Enables and Uses CLIP](/docs/ai/aiinrawcull/#how-clip-works-in-rawcull).

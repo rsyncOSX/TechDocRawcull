@@ -4,7 +4,7 @@ linkTitle: Documentation
 menu: { main: { weight: 20 } }
 lastmod: 2026-11-25
 
-reviewed_commit: "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit: "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version: "3.5.0"
 reviewed_build: 469
 reviewed_on: "2026-11-25"
@@ -19,7 +19,7 @@ behavior lives, how data moves through the app, and which invariants must
 survive a change.
 
 Source paths in these pages are relative to the named repository. App paths such
-as [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/RawCullViewModel.swift) belong to the RawCull
+as [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/RawCullViewModel.swift) belong to the RawCull
 repository. Package paths belong to the separately versioned Swift packages
 referenced by `RawCull.xcodeproj`; this documentation repository does not
 contain or compile source snapshots.
@@ -54,9 +54,9 @@ user-selected folders, export, or copying.
 
 | Area                       | Primary source                                                            | Responsibility                                                                                                                |
 | -------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| App composition            | [RawCull/Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift)                                           | Uses `RawCullApplicationState.live()` to assemble stable models/features, inject environment state, and define windows and commands |
-| Main presentation          | [RawCull/Main/RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullMainView.swift)                                      | Switches between loupe, grid, similarity, rated, comparison, and Review modes and owns top-level sheets and overlays                  |
-| App orchestration          | [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/RawCullViewModel.swift) | Assembles catalog, culling, burst, presentation and AI owners for environment injection                         |
+| App composition            | [RawCull/Main/RawCullApp.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift)                                           | Uses `RawCullApplicationState.live()` to assemble stable models/features, inject environment state, and define windows and commands |
+| Main presentation          | [RawCull/Main/RawCullMainView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullMainView.swift)                                      | Switches between loupe, grid, similarity, rated, comparison, and Review modes and owns top-level sheets and overlays                  |
+| App orchestration          | [RawCull/Model/ViewModels/RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/RawCullViewModel.swift) | Assembles catalog, culling, burst, presentation and AI owners for environment injection                         |
 | Background ownership       | `RawCull/Actors/`                                                         | Serializes scans, thumbnail requests, caches, persistence, extraction, and contention gates                                   |
 | App services and adapters  | `RawCull/Model/`                                                          | Connects the UI model to RAW parsing, sharpness analysis, AI providers, persistence, diagnostics, and rsync                   |
 | Reusable domain logic      | `RawCullCore` package                                                     | Value models and pure algorithms such as burst grouping and ranking                                                           |
@@ -99,7 +99,7 @@ The boundaries are based on ownership:
 
 ## Workspace owners in 3.5.0
 
-[RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/RawCullViewModel.swift) wires the long-lived workspace objects together.
+[RawCullViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/RawCullViewModel.swift) wires the long-lived workspace objects together.
 `workspaceEnvironment(_:)` supplies those objects to SwiftUI. Views read the
 state and operations they use through the environment or explicit inputs.
 
@@ -146,8 +146,8 @@ because it shows both ownership and the complete lifetime of the operation.
 ## Reviewed source baseline
 
 Reviewed on **25 November 2026** against **RawCull 3.5.0 build 469**,
-commit [5169ffd3](https://github.com/rsyncOSX/RawCull/commit/5169ffd3487fe4ddc005d511fffa38172657d703). The commit
-is present on both `version-3.5.0` and `main`. The Xcode workspace resolves
+commit [328b570b](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439). The commit
+is on `version-3.5.0` and not yet on `main`. The Xcode workspace resolves
 24 remote pins. See the [package snapshot]({{< relref "/docs/packages/_index.md" >}}) and
 [review record]({{< relref "/docs/update.md" >}}). Historical measurements retain
 their original source revisions.
@@ -171,9 +171,9 @@ provides the application tour; its detailed method reference is separate.
 
 ## State ownership and historical catalog performance
 
-`BurstWorkflowController` retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
+`BurstWorkflowController` retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
 for review decisions, independently of viewport/image sessions.
-`SimilarityScoringModel` retains [RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift)
+`SimilarityScoringModel` retains [RawCullSemanticSearchModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/SemanticSearch/RawCullSemanticSearchModel.swift)
 for semantic evidence, provider configuration and queries, while keeping its
 existing forwarding API. Combined Review still has one mutable feature/run
 owner, with orchestration, work support and comparison in separate extensions.
@@ -184,7 +184,7 @@ each file's grid gate before the save. See
 October 25 catalog reference, coalesced progress, cache-state limits and deferred
 validation. The phase 3–6 encoder, grid and source-load candidates were deferred; reduced
 sampled main-thread work does not establish faster loading or smoother frames.
-The build 469 smoke manifest expects 384 unique test identifiers. [Test targets](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Makefile)
+The build 469 smoke manifest expects 384 unique test identifiers. [Test targets](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Makefile)
 
 ## RAW previews in ZoomView
 

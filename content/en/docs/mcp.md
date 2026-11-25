@@ -9,7 +9,7 @@ weight = 46
 tags = ["mcp", "burst analysis", "photo assessment", "sandbox"]
 categories = ["technical details"]
 mermaid = true
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -187,24 +187,24 @@ The links below point to the build 469 source.
 
 | Source | What to look for |
 | --- | --- |
-| [RawCullMCPMain.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Sources/RawCullMCP/RawCullMCPMain.swift) and [ToolHandlers.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Sources/RawCullMCP/ToolHandlers.swift) | Server registration, tool discovery and dispatch, saved metadata, helper status, and response formatting. |
-| [AnalysisTools.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Sources/RawCullMCP/AnalysisTools.swift) | Job and assessment schemas, argument validation, app launch, status, and pagination. |
-| [CatalogGrantStore.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Sources/RawCullMCP/CatalogGrantStore.swift) and [AnalysisJobStore.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Tools/RawCullMCP/Sources/RawCullMCP/AnalysisJobStore.swift) | App-group storage, grants, setup receipts, locks, job states, source snapshots, and result lifecycle. |
-| [MCPAnalysisController.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/MCPAnalysisController.swift) | Setup approval, scoped file access, calls into burst analysis and Qwen, and progress and result publication. |
-| [MCPSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/Settings/MCPSettingsTab.swift) and [QwenInferenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Sharing controls and local preview inference. |
+| [RawCullMCPMain.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Sources/RawCullMCP/RawCullMCPMain.swift) and [ToolHandlers.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Sources/RawCullMCP/ToolHandlers.swift) | Server registration, tool discovery and dispatch, saved metadata, helper status, and response formatting. |
+| [AnalysisTools.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Sources/RawCullMCP/AnalysisTools.swift) | Job and assessment schemas, argument validation, app launch, status, and pagination. |
+| [CatalogGrantStore.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Sources/RawCullMCP/CatalogGrantStore.swift) and [AnalysisJobStore.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Tools/RawCullMCP/Sources/RawCullMCP/AnalysisJobStore.swift) | App-group storage, grants, setup receipts, locks, job states, source snapshots, and result lifecycle. |
+| [MCPAnalysisController.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/MCPAnalysisController.swift) | Setup approval, scoped file access, calls into burst analysis and Qwen, and progress and result publication. |
+| [MCPSettingsTab.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/Settings/MCPSettingsTab.swift) and [QwenInferenceRuntime.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Qwen/QwenInferenceRuntime.swift) | Sharing controls and local preview inference. |
 
-For copyable culling prompts, see the [RawCull prompt guide](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Docs/prompts.md). For the tool reference and release evidence, see [MCP implementation and validation](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Docs/mcpserver.md).
+For copyable culling prompts, see the [RawCull prompt guide](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Docs/prompts.md). For the tool reference and release evidence, see [MCP implementation and validation](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Docs/mcpserver.md).
 
 ## App worker and shared records
 
 The app controller takes an injected `MCPAnalysisEnvironment` and exposes
 `tick()` for deterministic lifecycle tests. Its `Activity` tracks idle,
 setup, analysis and assessment with token-checked transitions. The controller
-extensions implement [setup and approval](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/MCPAnalysisController+Setup.swift),
-[burst analysis](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/MCPAnalysisController+Analysis.swift) and
-[photo assessment](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/MCPAnalysisController+FollowUp.swift).
+extensions implement [setup and approval](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/MCPAnalysisController+Setup.swift),
+[burst analysis](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/MCPAnalysisController+Analysis.swift) and
+[photo assessment](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/MCPAnalysisController+FollowUp.swift).
 `CatalogSetupStore` holds setup records. `AnalysisJobStore` handles jobs and
 its `+FollowUps` extension handles assessment records and publication. The app
 and helper compile the shared store sources into their respective targets.
 
-**Assess All Bursts** in the app uses the same Qwen assessment rubric for ranked pairs. Starting it needs the open catalog and the app’s shared AI lease. It creates session-only entries in AI Assessments. MCP follow-ups require a completed, authorized source job and publish through the shared job store. The app checks whether Review or a burst assessment is running before starting MCP work. [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/BurstBatchAssessment.swift) · [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullApp.swift)
+**Assess All Bursts** in the app uses the same Qwen assessment rubric for ranked pairs. Starting it needs the open catalog and the app’s shared AI lease. It creates session-only entries in AI Assessments. MCP follow-ups require a completed, authorized source job and publish through the shared job store. The app checks whether Review or a burst assessment is running before starting MCP work. [BurstBatchAssessment](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/BurstBatchAssessment.swift) · [RawCullApp](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullApp.swift)

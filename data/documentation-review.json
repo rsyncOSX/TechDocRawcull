@@ -2,15 +2,15 @@
   "schema_version": 1,
   "reviewed_on": "2026-11-25",
   "application": {
-    "commit": "5169ffd3487fe4ddc005d511fffa38172657d703",
+    "commit": "328b570bf14d44bcf33efc58dc23da94bfadf439",
     "branch": "version-3.5.0",
     "version": "3.5.0",
     "build": 469,
     "lockfile": "RawCull.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
-    "merge_status": "present on main",
+    "merge_status": "not yet on main",
     "local_packages": []
   },
-  "previous_application_commit": "0513a30e4567b4b5e3093e10791d49c86ecfe7e6",
+  "previous_application_commit": "5169ffd3487fe4ddc005d511fffa38172657d703",
   "excluded": [],
   "pins": [
     {
@@ -239,7 +239,7 @@
         "RawCull.xcodeproj/project.pbxproj"
       ],
       "watch_packages": [],
-      "sha256": "237ca735b85a5c2cb114fbff507cf89b0f8e9bc8980ccf3120b997c781dda90d"
+      "sha256": "83eb75d92c8d9dcc9a295e4234ae4450d9d1c87b5b403b5a1bdca67f28ec6f6e"
     },
     {
       "path": "content/en/about/index.md",
@@ -249,7 +249,7 @@
         "README.md"
       ],
       "watch_packages": [],
-      "sha256": "29e9b4d853e39425f9ccf8a8fdd28798707a5d764489cc4697b2b235c24f9e43"
+      "sha256": "d50b7c45beec525b84b12d0a4ad1593f9eeb959e00701b61f12f36c2cec25769"
     },
     {
       "path": "content/en/docs/_index.md",
@@ -288,7 +288,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "54519d7f5ff4254f6d6e93bf5fdabc34de5d4f699e6d7ed2abce8bd72101c662"
+      "sha256": "13b845909259337a89e226fe51caf83d67af20b6a843e2467698cc7c127fe49d"
     },
     {
       "path": "content/en/docs/ai/_index.md",
@@ -323,7 +323,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "299a301fe8a65ca3cc7f03758d772c41083a26fbc36443d50b461ec0866c497e"
+      "sha256": "3552e10a872d13805ff5501c705d8acd7fd5541cedd1f50edac31514145c8118"
     },
     {
       "path": "content/en/docs/ai/aiinrawcull.md",
@@ -403,11 +403,11 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "f228e5c27e4461ca67c65b55ce8da0fb05a41a58dceb2c03669e9af5725e8543"
+      "sha256": "da0c13c4fbdcc7ed39d8370d4101ce3741b0961f055f3c9bf6edba396a1771fa"
     },
     {
       "path": "content/en/docs/ai/airuntime.md",
-      "review_scope": "Rebuilt topology, construction order, configuration apply, lease and gate, isolation, stale-result and fallback sections from current source.",
+      "review_scope": "Rebuilt topology, construction order, configuration apply, lease, self-refresh and gate, isolation, stale-result and fallback sections from current source.",
       "watch_paths": [
         "Docs/visionupdate.md",
         "RawCull/Intelligence/*",
@@ -463,7 +463,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "4940b8f3965e567da7bcd7e6b510bd868b604c79049ba8ecf0ed71431b32f432"
+      "sha256": "0fb5030f57d209875ebe1d34ea213ecdefec806285771784d95f2249b9a64acc"
     },
     {
       "path": "content/en/docs/ai/full-review.md",
@@ -505,7 +505,7 @@
         "coreai-models",
         "photoaikit"
       ],
-      "sha256": "12a475688ebf2e05f266a40f9ad76c5fa9498f896598b05a9c476a873b9852df"
+      "sha256": "46bf95f23dc6f9f33d56129225e75d5c6c614151651ed471838d13f027eb89bc"
     },
     {
       "path": "content/en/docs/ai/rawcullai.md",
@@ -531,7 +531,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "0ccaf73c3604dbb93cdc14407bf8bbecb074a20cff70b75a0afaa309d1710949"
+      "sha256": "3f5f72bdfdfd4587350e0ec5f6bf5e165d9f34366d14b7a03309fc31cd9b382f"
     },
     {
       "path": "content/en/docs/apidocs/_index.md",
@@ -559,7 +559,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "084352bd97a2943015a449591959f6e23e4b23080d2a326f440be3c9956a84bb"
+      "sha256": "3f6a0bdc463456f2de325151d30de1d55ba68f9a82942f50a953c6214e003d45"
     },
     {
       "path": "content/en/docs/apidocs/rawcull-internal-api.md",
@@ -625,7 +625,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "e40b461bba1525832c1bfce93998463747df0553030e0a38c6308efaeb1163a0"
+      "sha256": "2f437f078ed3dd527b9947023a2d2ee29ea4a14995b066b6597c0a4e120900ff"
     },
     {
       "path": "content/en/docs/apidocs/rawcullapidoc.md",
@@ -678,7 +678,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "8adbdc4cfc76b72d39626662e963e857a64c2304fd6c294e61c07d3bd8d9b379"
+      "sha256": "1c4c25823ddc3bb171088453109d0eaad3c72a31c1170b213c91f74291799d8b"
     },
     {
       "path": "content/en/docs/burstgroup.md",
@@ -747,7 +747,7 @@
         "photoevidencekit",
         "rawcullcore"
       ],
-      "sha256": "2f28d64135e7b8a4e4fa0f185e8c586c5252ead69759a91bb83e4a1b0ea9f3a3"
+      "sha256": "0a9ca0a3d572f801fe084515b6bd73d86ba3bde7a89facd38de8020d6669e473"
     },
     {
       "path": "content/en/docs/cache-accounting.md",
@@ -759,7 +759,7 @@
         "RawCullTests/CacheAccountingConcurrencyTests.swift"
       ],
       "watch_packages": [],
-      "sha256": "38148c73a782cb12f33dd15c962f74a9fe66556778d57ae97ad91d129756f306"
+      "sha256": "843252b500c3b4ee6efd7c50f8853f84d71007287832bd67cfbed9b188542e66"
     },
     {
       "path": "content/en/docs/cache.md",
@@ -811,7 +811,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "10752e98819fa889d548bd2daea94b432f3b1a0929c4108ed909b8d91c6e0f32"
+      "sha256": "288879f499f2f6929c8df06d51eba13d671a9aaf1d18d0a7c6501c8f5ce628b0"
     },
     {
       "path": "content/en/docs/closeups.md",
@@ -827,7 +827,7 @@
         "photoevidencekit"
       ],
       "review_scope": "Corrected AF orientation, the multi-frame detection strip and the decision controls.",
-      "sha256": "a0b7592f9bc6f68c6d2cb3620a1216c315268efddcf4e1264494c26ef43cb918"
+      "sha256": "de24cece02a516e2b0959de910cc7729ab1c9798212202644cc0f42428227f2f"
     },
     {
       "path": "content/en/docs/concurrency.md",
@@ -915,7 +915,7 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "834aa889d0835500f5f47c207e4130b91211adc855482714cb9f547889c218e4"
+      "sha256": "6c077ec1835dd2782d7996f984f351f3ce8ef93f005e74ad14c50a62a6777925"
     },
     {
       "path": "content/en/docs/detailsfocusmask.md",
@@ -939,7 +939,7 @@
       "watch_packages": [
         "photoanalysiskit"
       ],
-      "sha256": "452f6298c78c73e8d53870c15452aa4fbc718a753b9441735c09b55217e2b346"
+      "sha256": "ac5ecb2d046a1d8e70a0f23648a51ceea45a841c413d8f8a9ba71f8ecbb7bde4"
     },
     {
       "path": "content/en/docs/detailsharpnessscoring.md",
@@ -967,7 +967,7 @@
         "photoanalysiskit",
         "rawparserkit"
       ],
-      "sha256": "2ef100c950f61f41fea015a6fc4a8e8b1263073e366088a4be13e682c8171d6e"
+      "sha256": "8a503a890116d5faa3e5d826e471c627d8749c29541f052e295e6c51d409fbcb"
     },
     {
       "path": "content/en/docs/filereadandwrite.md",
@@ -1015,7 +1015,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "fff068434928a60a20882ca1513d74e3efedb3d2864d2bf29565c232f4287c1c"
+      "sha256": "bfc2ece07fcec2bb9395e5aa81fca9790cc724632aa44e19d1ac6658210cefdb"
     },
     {
       "path": "content/en/docs/focusmask.md",
@@ -1052,7 +1052,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "1bfdba0fc62c33c96224fd7522f29bd0bccc60cf279138f893de4f862ed44b9d"
+      "sha256": "49e45a120e1ea608e4ad5ad60d0ee014a33754d196a3eaee91cda766b3b04457"
     },
     {
       "path": "content/en/docs/heavy.md",
@@ -1110,7 +1110,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "c9627234cdfefe606f363237b002a97282f74eb695d6465c30016a8656e67581"
+      "sha256": "963f4f2e7eeeed401f645b771ade6ca36ec8aa2defe81a657f0634291264a036"
     },
     {
       "path": "content/en/docs/mcp.md",
@@ -1142,7 +1142,7 @@
         "swift-sdk"
       ],
       "review_scope": "Checked tool flow against unchanged helper sources and moved the source map to build 469.",
-      "sha256": "4af3e875a2a8037592a5a5d822bca20c4611f0d660c8e25822490ab3478621aa"
+      "sha256": "9957931e78224cf21a5fe1a46ecdc0978b23ed2a29b7de1a02ce8e7d69d26e70"
     },
     {
       "path": "content/en/docs/memorypressure.md",
@@ -1169,7 +1169,7 @@
       "watch_packages": [
         "photoevidencekit"
       ],
-      "sha256": "05a3c8f4877547273601e70908f7e09cd8714e9b206a69c4a792126bacab9c59"
+      "sha256": "cd5ae009f5dc206df4956780017e343507bcc59635b9a55492f09782a0021029"
     },
     {
       "path": "content/en/docs/newfeatures/_index.md",
@@ -1191,7 +1191,7 @@
         "Scripts/*"
       ],
       "watch_packages": [],
-      "sha256": "e09a1c75e2100e1a4cea2f776bc876052d144ca089d193609500322442889dac"
+      "sha256": "71e569aac90dd4b5cf91dc1280d9b1928c8f7e6a8e28a0dc4af1378c72672e3e"
     },
     {
       "path": "content/en/docs/newfeatures/newfeatures.md",
@@ -1225,7 +1225,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "17ea90581b861f12f2e7751b6844970fc66de8be3c57545ab3dacf7f9a13c0c6"
+      "sha256": "c1661823bd3e5c7611331ca6ce93414c4396aaacfc981554e852136de3e22101"
     },
     {
       "path": "content/en/docs/packages/_index.md",
@@ -1263,7 +1263,7 @@
         "yyjson"
       ],
       "review_scope": "Confirmed all 24 pins, corrected boundary types and removed superseded snapshots.",
-      "sha256": "6f1b4d201c64738f18b7ffb36a92fa7af321a9c8ab5fcb85bde56e88c693687d"
+      "sha256": "c309d6444fbbe9e4c9f81c34688fdb25c4848317c9d3037c019e6ed3ab920456"
     },
     {
       "path": "content/en/docs/packages/package-modules.md",
@@ -1274,7 +1274,7 @@
         "photoevidencekit"
       ],
       "review_scope": "Moved the worked example to the resolved 1.1.5 manifest.",
-      "sha256": "6ad706cdd69515afa512f6467c394cc8f1cb0dddc416f35ed3b8456ba9cf0938"
+      "sha256": "35c17869d51eb128f0ea56f21cb14b1a590e8967b3a51d4fd8323593d931b6a2"
     },
     {
       "path": "content/en/docs/packages/photoaikit.md",
@@ -1289,7 +1289,7 @@
         "photoaikit"
       ],
       "review_scope": "Audited 3.1.0, corrected the dependency diagram and added serializer, Qwen and instance-segmentation sections.",
-      "sha256": "1fcd0277b6915f26f2610cc4da6f0dbd9a4a7123af5dd939674a414bb8f204ca"
+      "sha256": "bcb436296fcb0f3ea18936a26c4f91ae5d92d575e52eaa4ee38f7e11a34ae7e2"
     },
     {
       "path": "content/en/docs/packages/photoanalysiskit.md",
@@ -1303,7 +1303,7 @@
         "photoanalysiskit"
       ],
       "review_scope": "Audited 1.4.1: capture fallbacks, fixed threshold, descriptor 2/7, Vision queue and calibration scale.",
-      "sha256": "11093784c942ba87b3a77f31bcc325c97a2866ff672c232969fa8eeec27d5c31"
+      "sha256": "4e88d1fb78b431207bd9b69af03fc734e4225911da4b8e6657997d864fc6df3b"
     },
     {
       "path": "content/en/docs/packages/photoevidencekit.md",
@@ -1317,7 +1317,7 @@
         "photoevidencekit"
       ],
       "review_scope": "Audited 1.1.5: device-pixel scale and owned detected-face crops.",
-      "sha256": "264ac60581002f7cfd329af37af2b7e48cea8c9673f9d9aa09ac3e3e2626d340"
+      "sha256": "8b90f3c6ceac6b4a1b08191c9197ab39a56306de97d7b435f5db981690b36ec5"
     },
     {
       "path": "content/en/docs/packages/rawcullcore.md",
@@ -1331,7 +1331,7 @@
         "rawcullcore"
       ],
       "review_scope": "Audited 1.1.5, which has the same sources as 1.1.2, and corrected the saliency rule.",
-      "sha256": "c368002f2df6afc761bdff9726f53f1aa5b52bb66054269cefc57001632c2aaf"
+      "sha256": "0fdccc8a448de61f4f43866bf7c0bcae08d389d5334d292890fe57eda997d1ce"
     },
     {
       "path": "content/en/docs/packages/rawparserkit.md",
@@ -1345,7 +1345,7 @@
         "rawparserkit"
       ],
       "review_scope": "Audited 1.3.3, added the generic conformer to the main walkthrough and the host orientation rule.",
-      "sha256": "2a4fb77cda82db13e62c71db648cb0eb8fc1e46893130f6efdc709fa70158a94"
+      "sha256": "3e1e47dcaa666543a7a4f4a1877e16509d3b5e200c5c215a6bd6fe5128f05c5b"
     },
     {
       "path": "content/en/docs/performance.md",
@@ -1391,14 +1391,14 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "9316a3ac74affa72be510e9aaa50bbb583b9962464f9850135a5530e648b5f5d"
+      "sha256": "286400bdc5deda0af7b7b9c6c95ba4e2a665e691115f1d3e20b00a63fc87e203"
     },
     {
       "path": "content/en/docs/pushpull.md",
       "review_scope": "Retained the documentation-repository Git workflow.",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "38f368c2c99a73404937fc242cdd532b8aa402c2443413f395e45fcbc0fb5d30"
+      "sha256": "d08b741073a3c0050f92f308f793b2052cc3e3f71e6f96b426faf1a79e2288a3"
     },
     {
       "path": "content/en/docs/raw-inspection.md",
@@ -1431,7 +1431,7 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "bcf7c5022d9d92b4b61f9214c7fc38f71c1dc9609ec67335d1667ef2dd249a67"
+      "sha256": "83453efad15ddff65e9f9763fe8eae1fe63dbd4835e09006d5e93bd0cc8e60d3"
     },
     {
       "path": "content/en/docs/security.md",
@@ -1490,7 +1490,7 @@
         "rawparserkit",
         "rsyncprocessstreaming"
       ],
-      "sha256": "1eaa48289d6c34ec48117e6085874d0babd64b26287f81426d83b63dd342aae6"
+      "sha256": "99cfc8ed2e98554448247b2c42cb70547f312d67fcc86a67291e05c4475f902a"
     },
     {
       "path": "content/en/docs/sonymakernoteparser.md",
@@ -1502,7 +1502,7 @@
       "watch_packages": [
         "rawparserkit"
       ],
-      "sha256": "81849884287c7919d81ed633132a7269ce63a5f69d83569ee2e7487d49187631"
+      "sha256": "51f0a534e39a575d78af8cd335612481968bc379f5cc11b9b0ed9306c0ec8aa5"
     },
     {
       "path": "content/en/docs/thumbnail.md",
@@ -1544,7 +1544,7 @@
         "rawcullcore",
         "rawparserkit"
       ],
-      "sha256": "b2d36a2f3741007bea1e794780f6cfe4f7c84ba0bdab3c91cecf0f821d9d8278"
+      "sha256": "3987522ac09a5992f76d440be404d422c6443032def57b8ed70bea5fa59b6a55"
     },
     {
       "path": "content/en/docs/update.md",
@@ -1557,6 +1557,7 @@
         "Docs/review349.md",
         "RawCull/Actors/ThumbnailLoader.swift",
         "RawCull/Intelligence/BurstAnalysis/BurstAnalysisCoordinator.swift",
+        "RawCull/Intelligence/CombinedReview/Storage/CombinedReviewLease.swift",
         "RawCull/Intelligence/Composition/RawCullAIModelRuntime.swift",
         "RawCull/Intelligence/Persistence/BurstAnalysisCache.swift",
         "RawCull/Main/MCPAnalysisController+FollowUp.swift",
@@ -1570,6 +1571,8 @@
         "RawCull/Views/OutputViews/DetailsView.swift",
         "RawCull/Views/Settings/AISettingsTab.swift",
         "RawCullPerformanceTests/*",
+        "RawCullTests/BurstBatchAssessmentTests.swift",
+        "RawCullTests/MCPAnalysisControllerTests.swift",
         "TestManifests/*",
         "Tools/RawCullMCP/*"
       ],
@@ -1590,7 +1593,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "ff74dc727530ffe57d078b56297d648fe6318eae16f5fd3994dfabaa961e0d37"
+      "sha256": "fe54306ca05a23cadce1db56bd3da651302951f8ae070bc7b964891ef96a030d"
     },
     {
       "path": "content/en/docs/viewer-architecture.md",
@@ -1655,21 +1658,21 @@
         "photoevidencekit",
         "rawparserkit"
       ],
-      "sha256": "1087032e01286c705facb5bfdda04f339a4d5dc84f357ae2e58ba8f4747bddc8"
+      "sha256": "77641bcd84b4f046cf449d09772589d90285a3aa469d21354e4bb46d48ed5ee6"
     },
     {
       "path": "content/en/search.md",
       "review_scope": "Checked: no relevant delta.",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "ea54b66f429df22d50628d92b0a1e1259d7a61818d5758c1a4186c9e461bc932"
+      "sha256": "835747ae520684ca725458eafed9beeac60935ad03c4aaf2486276a80957dffe"
     },
     {
       "path": "content/en/site.md",
       "review_scope": "Checked: no relevant delta.",
       "watch_paths": [],
       "watch_packages": [],
-      "sha256": "eb8c590aea8049c59be14938ae0ae260f1848a1c47457a0fc5ac95e6a8f71324"
+      "sha256": "c3eee176986aa6f0b02a1484e503332804fec286851539229af6f563fcaa4daf"
     }
   ]
 }

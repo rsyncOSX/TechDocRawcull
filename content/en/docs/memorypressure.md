@@ -5,7 +5,7 @@ weight: 30
 mermaid: true
 lastmod: 2026-11-25
 
-reviewed_commit: "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit: "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version: "3.5.0"
 reviewed_build: 469
 reviewed_on: "2026-11-25"
@@ -20,12 +20,12 @@ RawCull can hold many images in memory while scanning and culling. The memory-pr
 
 | File | Role |
 |---|---|
-| [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Actors/SharedMemoryCache.swift) | Owns cache limits, memory-pressure dispatch source, pressure state, and cache clearing |
-| [Model/ViewModels/MemoryViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/MemoryViewModel.swift) | Samples total system memory, used system memory, app memory, and pressure threshold for the UI |
-| [Model/Cache/TrackedThumbnailCache.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/TrackedThumbnailCache.swift) | Serializes thumbnail storage, count/cost accounting, limit changes, and owned eviction callbacks |
-| [Model/Cache/CacheConfig.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Cache/CacheConfig.swift) | Contains `CacheRecommendationPolicy` and cache-limit calculation |
-| [Views/Settings/MemoryTab.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/Settings/MemoryTab.swift) | Displays memory stats, cache limits, and pressure status |
-| [Views/RawCullSidebarMainView/MemoryWarningLabelView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/RawCullSidebarMainView/MemoryWarningLabelView.swift) | Shows the sidebar warning during pressure |
+| [Actors/SharedMemoryCache.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Actors/SharedMemoryCache.swift) | Owns cache limits, memory-pressure dispatch source, pressure state, and cache clearing |
+| [Model/ViewModels/MemoryViewModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/MemoryViewModel.swift) | Samples total system memory, used system memory, app memory, and pressure threshold for the UI |
+| [Model/Cache/TrackedThumbnailCache.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Cache/TrackedThumbnailCache.swift) | Serializes thumbnail storage, count/cost accounting, limit changes, and owned eviction callbacks |
+| [Model/Cache/CacheConfig.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Cache/CacheConfig.swift) | Contains `CacheRecommendationPolicy` and cache-limit calculation |
+| [Views/Settings/MemoryTab.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/Settings/MemoryTab.swift) | Displays memory stats, cache limits, and pressure status |
+| [Views/RawCullSidebarMainView/MemoryWarningLabelView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/RawCullSidebarMainView/MemoryWarningLabelView.swift) | Shows the sidebar warning during pressure |
 
 ## Runtime Flow
 
@@ -175,15 +175,15 @@ for the implementation walkthrough.
 
 ## Validation When Limits Change
 
-Run the cache-policy tests in [RawCullTests/ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ThumbnailProviderTests.swift). They currently cover the production/testing relationship, explicit `CacheConfig` values, the 16 GB baseline, expansion and tier caps, user maxima, and warning-state rounding. Add fixtures for every new RAM tier, clamp, rounding rule, or pressure branch.
+Run the cache-policy tests in [RawCullTests/ThumbnailProviderTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ThumbnailProviderTests.swift). They currently cover the production/testing relationship, explicit `CacheConfig` values, the 16 GB baseline, expansion and tier caps, user maxima, and warning-state rounding. Add fixtures for every new RAM tier, clamp, rounding rule, or pressure branch.
 
-Retain [RawCullTests/CacheAccountingConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CacheAccountingConcurrencyTests.swift) for concurrent
+Retain [RawCullTests/CacheAccountingConcurrencyTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/CacheAccountingConcurrencyTests.swift) for concurrent
 replacement, clear/insert races, and eviction accounting in an isolated owner.
 Each test covers both preview and grid caches. The eviction test compares
 accounting with actual surviving entries rather than assuming a particular
 `NSCache` eviction order.
 
-Also retain the concurrency test in [RawCullVerifyTestsDataRaceDetectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/RawCullVerifyTestsDataRaceDetectionTests.swift), which samples `currentPressureLevel` concurrently.
+Also retain the concurrency test in [RawCullVerifyTestsDataRaceDetectionTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/RawCullVerifyTestsDataRaceDetectionTests.swift), which samples `currentPressureLevel` concurrently.
 
 For an operational limit change, capture a diagnostics session with the same representative catalog and workflow before and after the change:
 

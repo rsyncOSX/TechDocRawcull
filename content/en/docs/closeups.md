@@ -3,7 +3,7 @@ title = "Close Up"
 linkTitle = "Close Up"
 description = "Compare detail across frames using manual regions, pinned references, recorded autofocus points and detected crops."
 weight = 42
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -99,7 +99,7 @@ measures local luminance gradients and is separate from ratings and burst
 ranking. If the strip reports that detection is unavailable, use **Retry**.
 A manual card with a render failure offers **Retry image**.
 
-The automatic strip awaits PhotoAnalysisKit’s face and animal requests. Those requests use the same serial Vision queue as sharpness and feature-print indexing. RawCull also bounds work in the detected-evidence loader with `BurstEvidenceWorkLimiter`, which hands a finished slot straight to the next waiter. Face results are cached on disk for 30 days. Animal regions are cached in memory for 64 previews. A manual crop uses PhotoEvidenceKit’s renderer and can be inspected independently of detection. [BurstDetectedFacesView](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift)
+The automatic strip awaits PhotoAnalysisKit’s face and animal requests. Those requests use the same serial Vision queue as sharpness and feature-print indexing. RawCull also bounds work in the detected-evidence loader with `BurstEvidenceWorkLimiter`, which hands a finished slot straight to the next waiter. Face results are cached on disk for 30 days. Animal regions are cached in memory for 64 previews. A manual crop uses PhotoEvidenceKit’s renderer and can be inspected independently of detection. [BurstDetectedFacesView](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstDetectedFacesView.swift)
 
 ## Example workflow for a wildlife burst
 

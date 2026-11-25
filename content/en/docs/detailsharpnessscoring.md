@@ -8,7 +8,7 @@ tags = ["sharpness", "focus", "scoring", "vision", "metal", "saliency"]
 categories = ["technical details"]
 mermaid = true
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -116,7 +116,7 @@ the scalar score. After a non-cancelled,
 nonempty result, RawCull merges scores and subject labels into `CullingModel`
 and reapplies catalog sorting.
 
-Protected by: [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CullingModelTests.swift) target-scope and
+Protected by: [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/CullingModelTests.swift) target-scope and
 `calibrateAndScoreCurrentCatalog` tests.
 
 ### Preset And Quality
@@ -143,9 +143,9 @@ so the f/8 aperture fallback can reduce Auto's subject weight to 0.55.
 
 The effective maximum pixel size is clamped between the quality minimum
 and 2048; a nonpositive setting resolves to 2048. RAW demosaic further caps
-concurrency at two. Embedded-preview scoring uses the quality limit in the table. The shared Vision gate serializes blocking request bodies across these jobs. [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
+concurrency at two. Embedded-preview scoring uses the quality limit in the table. The shared Vision gate serializes blocking request bodies across these jobs. [SharpnessScoringModel](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/FocusandSharpness/SharpnessScoringModel.swift)
 
-Protected by: [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift) preset, quality, size,
+Protected by: [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/SharpnessScoringTests.swift) preset, quality, size,
 and concurrency assertions; package policy also has
 [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift).
 
@@ -167,8 +167,8 @@ files and does not choose a source. The AF point is already in upright image
 coordinates. `SharpnessScoringSignature.inputPipelineVersion` 1 records both facts,
 so scores made before AF rotation and sRGB encoding are not reused.
 
-Protected by: [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/PhotoAnalysisKitIntegrationTests.swift) and adapter
-overrides in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift).
+Protected by: [RawCullTests/PhotoAnalysisKitIntegrationTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/PhotoAnalysisKitIntegrationTests.swift) and adapter
+overrides in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/SharpnessScoringTests.swift).
 
 ## 2. Package Defaults And Per-Image Resolution
 
@@ -206,7 +206,7 @@ The effective weight is the explicit preset override, else the aperture override
 else `salientWeight`. Each is clamped to 0–1, and a nonfinite value is skipped.
 
 Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) and
-[RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift).
+[RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/SharpnessScoringTests.swift).
 
 ## 3. Normalization And Vision
 
@@ -326,7 +326,7 @@ is the standard deviation of finite Laplacian samples, accumulated in `Double` s
 large region does not lose precision.
 
 Protected by: [PhotoAnalysisKitTests/SharpnessMetricsTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessMetricsTests.swift) and the
-forwarding checks in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift).
+forwarding checks in [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/SharpnessScoringTests.swift).
 
 ## 6. Subject Construction
 
@@ -478,8 +478,8 @@ and modification date on reload. Legacy descriptors decode but are stale.
 Protected by:
 
 - [PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift](https://github.com/rsyncOSX/PhotoAnalysisKit/blob/2f41e8b756f006e0218f86b103801ebb47cf8983/Tests/PhotoAnalysisKitTests/SharpnessAnalysisDescriptorTests.swift);
-- [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/SharpnessScoringTests.swift);
-- [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/CullingModelTests.swift).
+- [RawCullTests/SharpnessScoringTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/SharpnessScoringTests.swift);
+- [RawCullTests/CullingModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/CullingModelTests.swift).
 
 ## Assessment And Validation Priorities
 
@@ -554,7 +554,7 @@ or recommended winners. This hydrates evidence; it does not change the formula.
 
 `make releaseafcomparison RELEASE_CATALOG="/path/to/photos"` exports the fixed
 Wildlife / Balanced / 1024 px / embedded-preview recipe.
-[CompareAFSharpness.py](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/Scripts/CompareAFSharpness.py) compares exported AF scores against
+[CompareAFSharpness.py](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/Scripts/CompareAFSharpness.py) compares exported AF scores against
 Laplacian variance and mean Sobel magnitude on matching crops. Production
 filtering retains full-frame context; baselines use crop-local OpenCV boundaries.
 Compare pair ordering, never absolute scores or units. Keep intended-subject
@@ -562,7 +562,7 @@ pairs and blinded photographer labels fixed; track unavailable evidence,
 photographer ties, model ties and uncertain labels alongside agreement.
 
 Follow the optional NumPy/OpenCV setup and labeling protocol in
-[Release test guide](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullReleaseTests/README.md). The report does not
+[Release test guide](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullReleaseTests/README.md). The report does not
 claim statistical significance or change app scoring. This documentation pass
 did not run this opt-in comparison or qualify photographic accuracy.
 

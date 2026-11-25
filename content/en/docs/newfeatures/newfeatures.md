@@ -9,7 +9,7 @@ tags = ["roadmap", "features", "culling", "ai", "competition", "xmp", "faces", "
 categories = ["technical details"]
 weight = 10
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -30,7 +30,7 @@ on, not from adding more models.
 
 | Item | Value |
 | --- | --- |
-| Application source | [`5169ffd3`](https://github.com/rsyncOSX/RawCull/commit/5169ffd3487fe4ddc005d511fffa38172657d703) on `main`, **3.5.0 build 469**, checked 25 November 2026 |
+| Application source | [`328b570b`](https://github.com/rsyncOSX/RawCull/commit/328b570bf14d44bcf33efc58dc23da94bfadf439) on `version-3.5.0`, not yet on `main`, **3.5.0 build 469**, checked 25 November 2026 |
 | Release status | No `v3.5.0` tag exists yet. The local `v3.4.9` tag points to [3c8e7aba](https://github.com/rsyncOSX/RawCull/commit/3c8e7aba0c72e00b05f2f6c88a1868565075e6b3). App Store availability was outside this source review. |
 | Platform | Apple silicon, macOS 27 |
 | Competitor evidence | Vendor documentation checked **5 November 2026**, not requalified for this revision |
@@ -69,10 +69,10 @@ Detailed behavior: [RAW Formats and Exposure Inspection]({{< relref "/docs/raw-i
 [RawCull MCP]({{< relref "/docs/mcp.md" >}}) and
 [AI Models in RawCull]({{< relref "/docs/ai/aiinrawcull.md" >}}). Source
 boundaries:
-[model choices](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
-[decision persistence](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
-[Review](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift)
-and [build settings](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull.xcodeproj/project.pbxproj).
+[model choices](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/Contracts/RawCullAIModels.swift),
+[decision persistence](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/JSON/WriteSavedFilesJSON.swift),
+[Review](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Intelligence/CombinedReview/CombinedReviewFeature.swift)
+and [build settings](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull.xcodeproj/project.pbxproj).
 
 ### What changed in 3.5.0
 

@@ -9,7 +9,7 @@ tags = ["image-analysis", "sharpness", "focus-mask", "vision", "swift-package", 
 categories = ["technical details"]
 mermaid = true
 weight = 20
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -546,7 +546,7 @@ that concern belongs in RawCull's adapter or policy layer.
 | Metal source and compiled resource   | `Sources/PhotoAnalysisKit/Resources/`                                             |
 | Extraction decisions                 | `Documentation/ExtractionMap.md`                                                  |
 | Public behavior tests                | `Tests/PhotoAnalysisKitTests/`                                                    |
-| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
+| RawCull decode and result adapter    | [RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/FocusandSharpness/RawCullPhotoAnalysisAdapter.swift)    |
 
 Next, see how package-neutral measurements become culling-domain decisions in
 [How RawCullCore Is Constructed](../rawcullcore/).

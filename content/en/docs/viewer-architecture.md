@@ -7,7 +7,7 @@ description = "Trace loupe, zoom, burst, comparison and AI presentation through 
 weight = 15
 mermaid = true
 
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -25,13 +25,13 @@ analysis, and event routing. Read this guide after
 
 | Screen entry | Persistent screen/session owner | Work and presentation helpers |
 | --- | --- | --- |
-| [LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift) | `LoupeSessionModel` owns selected source and loaded source images | `LoupeFocusPresentationModel`, `SubjectOutlinePresentationModel`, `LoupeKeyboardController` |
-| [ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ZoomViews/ZoomOverlayView.swift) | `ZoomSessionModel` owns viewport, source, overlays and exposure inspection | `ZoomNavigationPresentation`, `ZoomOverlayAnalysisCoordinator`, `ZoomKeyboardController` |
-| [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift) | `BurstWorkspaceSessionModel` owns viewport and bounded frame cache | `BurstWorkspaceImageCoordinator`, `BurstKeyboardController` |
-| [ComparisonGridView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/ComparisonGridView.swift) | `ComparisonSessionModel` owns image loading and display scope | `ComparisonPager`, `ComparisonPane`, `ComparisonKeyboardController` |
-| [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/CullingGrid/CullingGridView.swift) | Existing projection and selection coordinator | `CullingQueueHeader`, `CullingBurstGroupCard`, `CullingGridThumbnail` |
-| [CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAnalysis/CombinedReviewView.swift) | `CombinedReviewFeature` for run and results, local `CombinedReviewRoute` for the inspector page | `CombinedReviewPhotoLayout`, `CombinedReviewInspectorPane`, `ReviewMagnifier`, `CombinedReviewRecordWindow` |
-| [AIAssessmentWorkspace.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAssessments/AIAssessmentWorkspace.swift) | `AIAssessmentNavigation` for entries and the return target | `AIAssessmentComparison`, `AIAssessmentFilmstrip`, `BurstFramePicksBar` |
+| [LoupeMainImageView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ThumbnailComponents/LoupeMainImageView.swift) | `LoupeSessionModel` owns selected source and loaded source images | `LoupeFocusPresentationModel`, `SubjectOutlinePresentationModel`, `LoupeKeyboardController` |
+| [ZoomOverlayView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ZoomViews/ZoomOverlayView.swift) | `ZoomSessionModel` owns viewport, source, overlays and exposure inspection | `ZoomNavigationPresentation`, `ZoomOverlayAnalysisCoordinator`, `ZoomKeyboardController` |
+| [BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift) | `BurstWorkspaceSessionModel` owns viewport and bounded frame cache | `BurstWorkspaceImageCoordinator`, `BurstKeyboardController` |
+| [ComparisonGridView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/ComparisonGridView.swift) | `ComparisonSessionModel` owns image loading and display scope | `ComparisonPager`, `ComparisonPane`, `ComparisonKeyboardController` |
+| [CullingGridView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/CullingGrid/CullingGridView.swift) | Existing projection and selection coordinator | `CullingQueueHeader`, `CullingBurstGroupCard`, `CullingGridThumbnail` |
+| [CombinedReviewView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAnalysis/CombinedReviewView.swift) | `CombinedReviewFeature` for run and results, local `CombinedReviewRoute` for the inspector page | `CombinedReviewPhotoLayout`, `CombinedReviewInspectorPane`, `ReviewMagnifier`, `CombinedReviewRecordWindow` |
+| [AIAssessmentWorkspace.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAssessments/AIAssessmentWorkspace.swift) | `AIAssessmentNavigation` for entries and the return target | `AIAssessmentComparison`, `AIAssessmentFilmstrip`, `BurstFramePicksBar` |
 
 The main actor owns these observable models. A separate view type limits which
 properties a section reads: zoom controls observe their session viewport;
@@ -61,14 +61,14 @@ and metadata sections; burst has a stage, header, filmstrip and evidence shelf.
 ## Trace an asynchronous zoom request
 
 1. `ZoomOverlayView.reload()` cancels `zoomOverlay.extractionTask` and replaces
-   it with the task returned by [ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
+   it with the task returned by [ZoomPreviewHandler.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Handlers/ZoomPreviewHandler.swift).
 2. The handler chooses thumbnail, embedded JPEG or developed RAW. It keeps a
    dedicated thumbnail analysis image distinct from the display render.
 3. A `FocusMaskTaskID` combines analysis-image object identity, selected source
    and file ID. SwiftUI replaces its task when those inputs change; it waits
    300 ms before analysis. Focus-configuration edits use a separate stored task
    with a 400 ms debounce.
-4. [ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift) checks
+4. [ZoomOverlayAnalysisCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Handlers/ZoomOverlayAnalysisCoordinator.swift) checks
    cancellation, file ID, analysis-image identity and source both before and
    after the awaited focus computation. Only the current request publishes the
    mask, breakdown and saliency.
@@ -84,7 +84,7 @@ passed to the analysis coordinator when diagnosing a surprising overlay.
 
 ## Loupe results have their own lifetime
 
-[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift) owns a task
+[LoupeFocusPresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/LoupeFocusPresentationModel.swift) owns a task
 and generation counter. `cancel()` increments the generation and cancels work;
 `reset()` also clears image/source identity. Publication requires the same
 generation and a noncancelled task. A completed URL/source pair can reuse its
@@ -95,18 +95,18 @@ but keeps the normalized mask visible until replacement work completes. On a
 new URL or changed configuration, it resets the presentation. Do not replace
 these different transitions with one unconditional clear.
 
-[SubjectOutlinePresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/SubjectOutlinePresentationModel.swift) applies
+[SubjectOutlinePresentationModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/SubjectOutlinePresentationModel.swift) applies
 the same generation principle to outline publication. The shared
-[ImageReviewSubjectOutlineLoader.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/ImageReviewSubjectOutlineLoader.swift) loads a
+[ImageReviewSubjectOutlineLoader.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Handlers/ImageReviewSubjectOutlineLoader.swift) loads a
 retained subject mask from Review and uses the original mask if outline rendering
 cannot produce a contour.
 
 ## Burst decoding is a bounded working set
 
-[BurstWorkspaceImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/Handlers/BurstWorkspaceImageCoordinator.swift) derives the
+[BurstWorkspaceImageCoordinator.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/Handlers/BurstWorkspaceImageCoordinator.swift) derives the
 window from `BurstFrameCachePolicy`: selected index plus at most one neighbor on
 each side, for capacity three. It prunes other keys, decodes the selected frame
-first, then neighbors. [BurstFrameCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstFrameCacheKey.swift)
+first, then neighbors. [BurstFrameCacheKey.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstFrameCacheKey.swift)
 combines file ID and image source; a thumbnail cannot satisfy a developed-RAW key.
 An edge selection can have only two cached frames.
 
@@ -133,7 +133,7 @@ Every task checks `Task.isCancelled` after its await. The magnifier, mask and fo
 tasks also compare their key again before they publish.
 Making the key optional is what keeps a hidden layer from doing any work. The lens
 itself is a `ViewModifier` with local hover state, so pointer movement redraws the
-lens overlay and nothing else. [CombinedReviewLayouts](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAnalysis/CombinedReviewLayouts.swift) · [ReviewMagnifier](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAnalysis/ReviewMagnifier.swift)
+lens overlay and nothing else. [CombinedReviewLayouts](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAnalysis/CombinedReviewLayouts.swift) · [ReviewMagnifier](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAnalysis/ReviewMagnifier.swift)
 
 ## Comparison publication has a known gap
 
@@ -152,13 +152,13 @@ help here. Every step is serialized, and the result can still be wrong.
 The lesson is that the unit of publication should match the unit of invalidation.
 Per-file revisions, and merging only the fields that the work produced, would
 close both gaps. See [open source findings]({{< relref "update.md" >}}#open-source-findings).
-[ComparisonSessionModel](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/ComparisonSessionModel.swift)
+[ComparisonSessionModel](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/ComparisonSessionModel.swift)
 
 ## Shared geometry keeps overlays registered
 
-[ImageReviewGeometry.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ImageReviewGeometry.swift) returns one centered aspect-fit
+[ImageReviewGeometry.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ImageReviewGeometry.swift) returns one centered aspect-fit
 rectangle, or zero for nonfinite/nonpositive dimensions.
-Review records the source-space bounds and encoder geometry for each inspected crop. Selecting a finding in the inspector highlights its associated region on the photo. Region details expose the retained rectangle and its provenance. [CombinedReviewInspectorPane](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/AIAnalysis/CombinedReviewInspectorPane.swift)
+Review records the source-space bounds and encoder geometry for each inspected crop. Selecting a finding in the inspector highlights its associated region on the photo. Region details expose the retained rectangle and its provenance. [CombinedReviewInspectorPane](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/AIAnalysis/CombinedReviewInspectorPane.swift)
 
 `ImageReviewRasterOverlay` shares raster drawing; `OverlayControlCapsule` shares
 control chrome. Neither chooses the analysis source or changes mask semantics.
@@ -167,12 +167,12 @@ its offset clamp keeps the transformed image within the viewport bounds.
 
 ## Keyboard registration and keyboard policy are separate
 
-[ReviewKeyMonitor.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/Modifiers/ReviewKeyMonitor.swift) owns one AppKit local
+[ReviewKeyMonitor.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/Modifiers/ReviewKeyMonitor.swift) owns one AppKit local
 monitor token. Installing removes the previous monitor; removal is idempotent.
 The supplied handler returns `.handled` to consume the event and `.ignored` to
 let it continue. The helper does not decide which screen owns a key.
 
-[ReviewKeyboardScope.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/Modifiers/ReviewKeyboardScope.swift) accepts an event only
+[ReviewKeyboardScope.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/Modifiers/ReviewKeyboardScope.swift) accepts an event only
 when it belongs to the anchored key window, no attached sheet or modal window
 owns input, Command/Control/Option are absent, and a native text/control responder
 does not own the keys. The representable anchor updates its weak window and
@@ -195,11 +195,11 @@ refuses movement during inspection. See
 
 | Contract | Executable reference |
 | --- | --- |
-| Cancelled focus/outline completions cannot replace newer state | [OverlayPresentationModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/OverlayPresentationModelTests.swift) |
-| Section observation and narrow/desktop rendering | [ReviewViewBoundaryTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ReviewViewBoundaryTests.swift) |
-| Window, sheet and native-control routing | [ReviewKeyboardScopeTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ReviewKeyboardScopeTests.swift) |
-| Inspection key suppression and outline availability | [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ZoomKeyboardControllerTests.swift) |
-| Inspection snapshot, restore and navigation | [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/ZoomSessionModelTests.swift) |
+| Cancelled focus/outline completions cannot replace newer state | [OverlayPresentationModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/OverlayPresentationModelTests.swift) |
+| Section observation and narrow/desktop rendering | [ReviewViewBoundaryTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ReviewViewBoundaryTests.swift) |
+| Window, sheet and native-control routing | [ReviewKeyboardScopeTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ReviewKeyboardScopeTests.swift) |
+| Inspection key suppression and outline availability | [ZoomKeyboardControllerTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ZoomKeyboardControllerTests.swift) |
+| Inspection snapshot, restore and navigation | [ZoomSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/ZoomSessionModelTests.swift) |
 
 These tests document intended behavior. This documentation review read the
 fixtures; it did not run the application tests or qualify visual performance.
@@ -207,7 +207,7 @@ fixtures; it did not run the application tests or qualify visual performance.
 ## Review decisions are separate from the viewport
 
 `BurstWorkspaceSessionModel` still owns viewport state and its bounded image
-cache. The view model retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
+cache. The view model retains [BurstReviewSessionModel.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/BurstReviewSessionModel.swift)
 for decisions, explicit states, queue filter, comparison group and undo entry.
 Its identity survives reset while its data is cleared. Facade observation still
 works, but result/state writes use session commands.
@@ -272,14 +272,14 @@ Nonpreserved loads, thumbnail transitions and `closeZoomOverlay()` clear both
 optional values. An embedded-JPEG completion publishes nil RAW metadata.
 
 The November 2 fixture in
-[RAWPreviewRendererTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/RAWPreviewRendererTests.swift)
+[RAWPreviewRendererTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/RAWPreviewRendererTests.swift)
 checks a reduced preview held during a gated native replacement, the completed
 native flag and clearing after a failed nonpreserved request. The test was
 inspected, not rerun in this documentation pass.
 
 ## Close-ups: a second inspection working set
 
-[BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)
+[BurstCullingWorkspaceView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstCullingWorkspaceView.swift)
 owns `showCloseUps`, URL-based comparison membership, a `CloseUpModel` with an
 injected store, and a `BurstCloseUpRenderer`. These are separate from the main
 stage's `BurstWorkspaceSessionModel` and three-frame image cache. The panel is
@@ -298,7 +298,7 @@ RAW 9 only if every relevant URL supports it; individual crop labels retain the
 actual source/decoder attribution. This does not force the main stage and every
 crop to share an identical decoded buffer or resolution.
 
-[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
+[BurstCloseUpsView.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Views/ComparisonGridView/BurstCloseUpsView.swift)
 builds file/render identities, retains access during loading, updates pinned
 metadata independently of selection and passes through the upright AF points that
 the catalog scan produced.
@@ -317,8 +317,8 @@ cannot activate a missing file.
 Burst's focused SwiftUI arrow, Escape and character handlers now check
 `ReviewKeyboardScope.controlOwnsKeys` before acting, so native controls retain
 their keys. This supplements the existing window-scoped local-monitor rules.
-See [BurstCloseUpTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/BurstCloseUpTests.swift) and
-[BurstWorkspaceSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCullTests/BurstWorkspaceSessionModelTests.swift) for inspected fixtures;
+See [BurstCloseUpTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/BurstCloseUpTests.swift) and
+[BurstWorkspaceSessionModelTests.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCullTests/BurstWorkspaceSessionModelTests.swift) for inspected fixtures;
 no new execution result is claimed here.
 
 ## Detected crop strip and stage navigation

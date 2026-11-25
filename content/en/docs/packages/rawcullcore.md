@@ -9,7 +9,7 @@ tags = ["culling", "burst", "ranking", "metadata", "swift-package", "architectur
 categories = ["technical details"]
 mermaid = true
 weight = 30
-reviewed_commit = "5169ffd3487fe4ddc005d511fffa38172657d703"
+reviewed_commit = "328b570bf14d44bcf33efc58dc23da94bfadf439"
 reviewed_version = "3.5.0"
 reviewed_build = 469
 reviewed_on = "2026-11-25"
@@ -110,7 +110,7 @@ It contains both strings and numbers because they serve different purposes:
 RawCull or an adapter constructs this value from RawParserKit's
 `RawImageMetadata`. RawCullCore does not know where the values came from.
 
-At the app boundary, [RawCull/Main/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Main/RawCullFileItem.swift) deliberately preserves
+At the app boundary, [RawCull/Main/RawCullFileItem.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Main/RawCullFileItem.swift) deliberately preserves
 familiar app names:
 
 ```swift
@@ -473,7 +473,7 @@ Use these constraints when adding a rule:
 | Ranking and confidence                           | [Sources/RawCullCore/BurstRankingEngine.swift](https://github.com/rsyncOSX/RawCullCore/blob/ea8ac2fc6611949af2b55ec433456bfe502cf886/Sources/RawCullCore/BurstRankingEngine.swift)                                                         |
 | Histogram                                        | [Sources/RawCullCore/HistogramCalculator.swift](https://github.com/rsyncOSX/RawCullCore/blob/ea8ac2fc6611949af2b55ec433456bfe502cf886/Sources/RawCullCore/HistogramCalculator.swift)                                                        |
 | Behavior tests                                   | `Tests/RawCullCoreTests/`                                                                              |
-| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/5169ffd3487fe4ddc005d511fffa38172657d703/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift) |
+| RawCull metadata adapter and burst orchestration | [RawCull/Model/RawImageLoading.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/RawImageLoading.swift), [RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift](https://github.com/rsyncOSX/RawCull/blob/328b570bf14d44bcf33efc58dc23da94bfadf439/RawCull/Model/ViewModels/BurstWorkflowController+Grouping.swift) |
 
 Return to the package overview in [RawCull Packages](/docs/packages/), or
 continue with the file-decoding layer in
