@@ -319,13 +319,30 @@ release and throws `CancellationError` if its own caller is cancelled.
 `RawCullSimilarityFeature.index` and semantic search return early while the
 lease is held.
 
-Because preparation also goes through the lease, code that already *holds* the
-lease must not start a model refresh. At this revision two callers do:
-`BurstBatchAssessment.run` and the MCP follow-up both call their prepare
-closure after acquiring the lease, if Qwen has no identity yet. The refresh then
-invalidates its own caller. This path is only reached when Qwen was not already
-validated at launch. It is recorded under
-[known source limits]({{< relref "/docs/update.md" >}}#open-source-findings).
+Because preparation also goes through the lease, a run that *holds* the lease must
+not start an ordinary model refresh: the refresh stops the lease owner, which is the
+caller. At commit `5169ffd3` two callers do this. `BurstBatchAssessment.run` and the
+MCP follow-up refresh the models after acquiring the lease, if Qwen has no identity
+yet, and so cancel themselves.
+
+The fix, made on 25 November 2026 after that commit, keeps the lease held. The caller
+wraps its preparation in `lease.refreshModels(for: owner, …)`, which sets a
+`@TaskLocal` owner for the duration:
+
+```swift
+func refreshModels(for owner: UUID, _ refresh: @MainActor () async -> Void) async {
+    await Self.$refreshingOwner.withValue(owner) {
+        await refresh()
+    }
+}
+```
+
+`invalidate()` and `invalidateAndWait()` do nothing when the current task's value
+matches the lease owner. A task-local value suits this well. It follows the awaited
+call chain through Settings and the model runtime without adding a parameter to every
+method, and a refresh started by any *other* task does not see it, so it still stops
+the run. Moving the refresh ahead of `acquire` would also avoid the self-cancel, but
+another AI run could then start in the gap.
 
 The in-app batch and MCP follow-ups use `assessForMCP`, which binds each request
 to one model generation, retries one invalid response, and throws

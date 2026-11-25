@@ -463,7 +463,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "28f52533a3a10d321c98d964b4f5b9177a84fd1e90e316b66ea78493cf8ed89f"
+      "sha256": "4940b8f3965e567da7bcd7e6b510bd868b604c79049ba8ecf0ed71431b32f432"
     },
     {
       "path": "content/en/docs/ai/full-review.md",
@@ -1590,7 +1590,7 @@
         "xgrammar",
         "yyjson"
       ],
-      "sha256": "4ad063888f9828576f72c61c618673f300a130ab274df7c478235a2b15b577f5"
+      "sha256": "ff74dc727530ffe57d078b56297d648fe6318eae16f5fd3994dfabaa961e0d37"
     },
     {
       "path": "content/en/docs/viewer-architecture.md",
